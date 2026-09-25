@@ -41,7 +41,7 @@ python -m cascade.surge --folder data/raw/rescuenet/images --out runs/surge01 --
 python eval/run_eval.py --manifest data/eval_v1/manifest.jsonl --run runs/eval_v1_run1 --name eval_v1_run1
 
 # demo UI
-streamlit run app/streamlit_app.py
+streamlit run app/streamlit_app.py   # tabs: Inspect run, Drop & grade, Batch, Reports, Eval matrix, Why this approach
 
 # tests (no model, no network)
 pytest -q
