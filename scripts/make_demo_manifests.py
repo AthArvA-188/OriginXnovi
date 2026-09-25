@@ -25,6 +25,7 @@ def main() -> int:
     ap.add_argument("--dev", default=str(ROOT / "data" / "dev" / "manifest.jsonl"))
     ap.add_argument("--out", default=str(ROOT / "data" / "demo"))
     ap.add_argument("--n", type=int, default=10)
+    ap.add_argument("--mixed", type=int, default=3, help="rows per dataset in the mixed sample (round-robin across all four asset classes)")
     args = ap.parse_args()
     records = read_manifest(Path(args.dev))
     by_ds: dict = {}
@@ -36,6 +37,15 @@ def main() -> int:
         out = Path(args.out) / ds / "manifest.jsonl"
         write_manifest(chosen, out)
         print(f"{ds}: {len(chosen)} rows -> {out}")
+    # mixed sample: round-robin so the first rows already span every asset class
+    per_ds = {}
+    for ds, recs in sorted(by_ds.items()):
+        recs = sorted(recs, key=lambda r: (r.labels.get("grade_native") is None, not r.labels.get("damage_present", False), r.image_id))
+        per_ds[ds] = [r for r in recs if Path(r.path).exists()][: args.mixed]
+    mixed = [r for i in range(args.mixed) for ds in sorted(per_ds) if i < len(per_ds[ds]) for r in [per_ds[ds][i]]]
+    out = Path(args.out) / "mixed" / "manifest.jsonl"
+    write_manifest(mixed, out)
+    print(f"mixed: {len(mixed)} rows -> {out}")
     return 0
 
 

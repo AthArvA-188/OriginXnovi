@@ -8,6 +8,8 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 - Pending: team confirmation of D-001, D-002 and D-008 at the Friday 2026-09-25 09:00 sync.
 
 ### Product (2026-09-25, morning)
+- Added the mixed demo manifest (`--mixed` in `scripts/make_demo_manifests.py`) as the default dataset; landing preview grouped by asset class.
+- UI polish: CSS animations, progress bar with stage and cost, toasts; FR-19 agreement timeline (`ReviewLog.timeline`); in-app bootstrap scoring button and scored-report viewer; demo script on the landing page. 42 tests.
 - Rebuilt `app/streamlit_app.py` with six tabs: Inspect run (image galleries with level badges), Drop & grade (drag-and-drop inference), Batch (multi-dataset runs), Reports (stored `report.md`/`report.json` per run, comparison charts), Eval matrix (gate and grading confusion heatmaps), Why this approach (sourced incumbent comparison with measured column).
 - Added `src/cascade/evalmetrics.py` (gate 2x2, per-class confusion, exact / within-one / QWK / U rate; bridge MBEI CS predictions now mappable) and `src/cascade/report.py` (`run_metrics`, `write_run_report`); every run now writes `report.md` and `report.json`. 7 new tests (41 total).
 - Added `RunConfig.force_route_classes` (default `pv_module`): forced routing to the grader per asset class, gate verdict preserved in `gate.jsonl` with a `[forced: ...]` reason suffix. `--force-route` CLI flag, app sidebar checkbox, two tests (34 total).

@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from .schema import Finding, Level
 
@@ -52,6 +52,16 @@ class ReviewLog:
         )
         self.conn.commit()
         return f
+
+    def timeline(self, run_id: Optional[str] = None) -> List[dict]:
+        """FR-19: one row per decision in order, with the running agreement rate (accepted / decisions so far)."""
+        q = "SELECT reviewed_at, finding_id, action, prior_level, new_level, reviewer FROM reviews" + (" WHERE run_id=?" if run_id else "") + " ORDER BY id"
+        rows = self.conn.execute(q, (run_id,) if run_id else ()).fetchall()
+        out, acc = [], 0
+        for n, (ts, fid, action, prior, new, reviewer) in enumerate(rows, start=1):
+            acc += int(action == "accepted")
+            out.append({"n": n, "reviewed_at": ts, "finding_id": fid, "action": action, "prior_level": prior, "new_level": new, "reviewer": reviewer, "agreement_rate": acc / n})
+        return out
 
     def agreement(self, run_id: Optional[str] = None) -> dict:
         q = "SELECT action, COUNT(*) FROM reviews" + (" WHERE run_id=?" if run_id else "") + " GROUP BY action"

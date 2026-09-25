@@ -182,3 +182,18 @@ def test_force_route_disabled_keeps_gate_routing(tmp_path):
     g0 = next(g for g in load_run(out)["gate"] if g["image_id"] == "img_0")
     assert g0["routed"] is False and "[forced" not in g0["reason"]
     assert summary["routed_to_grader"] == 1
+
+
+def test_review_timeline_running_agreement(tmp_path):
+    recs = make_records(tmp_path, n=4)
+    out = tmp_path / "run"
+    run_cascade(recs, out, RunConfig(gate="none"), gate_fn=fake_gate, grade_fn=fake_grade)
+    findings = load_run(out)["findings"]
+    log = ReviewLog(out / "reviews.sqlite")
+    log.apply("run", findings[0], "accepted", "r1")
+    log.apply("run", findings[1], "overridden", "r1", "S1")
+    log.apply("run", findings[2], "accepted", "r2")
+    tl = log.timeline("run")
+    assert [r["n"] for r in tl] == [1, 2, 3]
+    assert [round(r["agreement_rate"], 2) for r in tl] == [1.0, 0.5, 0.67]
+    assert tl[1]["new_level"] == "S1" and tl[2]["reviewer"] == "r2"

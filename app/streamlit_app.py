@@ -12,6 +12,7 @@ Run:  streamlit run app/streamlit_app.py
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import time
 from datetime import date
@@ -44,12 +45,32 @@ DEV_MANIFEST = ROOT / "data" / "dev" / "manifest.jsonl"
 EVAL_MANIFEST = ROOT / "data" / "eval_v1" / "manifest.jsonl"
 DEMO_DIR = ROOT / "data" / "demo"
 DATASET_LABELS = {
+    "mixed": "Mixed sample: all four asset classes",
     "corrosion_cs": "Steel coating: corrosion condition state (bridge steel)",
     "dacl10k": "Bridge elements: concrete defects (dacl10k)",
     "ir_solar": "PV thermal modules (InfraredSolarModules)",
     "rescuenet": "Post-disaster UAV (RescueNet), surge mode",
 }
 ASSET_CLASSES = ["bridge_element", "steel_coating", "pv_module", "building_disaster"]
+ASSET_LABEL = {"bridge_element": "Bridge element (concrete)", "steel_coating": "Steel coating (corrosion)", "pv_module": "PV module (thermal)", "building_disaster": "Building (post-disaster)"}
+ASSET_ICON = {"bridge_element": "\U0001F309", "steel_coating": "\U0001F529", "pv_module": "\u2600\ufe0f", "building_disaster": "\U0001F3DA\ufe0f"}
+CSS = """
+<style>
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.55); } 50% { box-shadow: 0 0 0 7px rgba(220,38,38,0); } }
+div[data-testid="stImage"] { animation: fadeUp .45s ease both; }
+div[data-testid="stImage"] img { border-radius: 10px; transition: transform .18s ease, box-shadow .18s ease; }
+div[data-testid="stImage"] img:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+div[data-testid="stMetric"] { animation: fadeUp .4s ease both; border-radius: 10px; padding: 6px 10px; background: rgba(127,127,127,.07); }
+.badge { display:inline-block; color:white; padding:1px 8px; border-radius:9px; font-weight:600; letter-spacing:.2px; transition: transform .15s ease; }
+.badge:hover { transform: translateY(-1px); }
+.badge-S4 { animation: pulse 1.6s ease-out infinite; }
+.chip { display:inline-block; padding:2px 10px; margin:2px 4px 2px 0; border-radius:999px; background: rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.35); font-size: .85em; }
+button[kind="primary"] { transition: transform .12s ease, filter .12s ease; }
+button[kind="primary"]:hover { transform: translateY(-1px); filter: brightness(1.08); }
+div[data-testid="stMarkdownContainer"] table { animation: fadeUp .4s ease both; }
+</style>
+"""
 LEVEL_COLOR = {"S0": "#7a7a7a", "S1": "#3b82f6", "S2": "#f59e0b", "S3": "#f97316", "S4": "#dc2626", "U": "#8b5cf6"}
 LEVEL_MEANING = {
     "S0": "no defect found in the graded region",
@@ -60,7 +81,8 @@ LEVEL_MEANING = {
     "U": "unassessable: refusal, missing metadata or unusable image; never counted as S0",
 }
 
-st.set_page_config(page_title="Inspection grading cascade", layout="wide")
+st.set_page_config(page_title="Inspection grading cascade", layout="wide", page_icon="\U0001F50D")
+st.markdown(CSS, unsafe_allow_html=True)
 
 
 # ---------- helpers ----------
@@ -70,7 +92,7 @@ def list_manifests() -> dict:
     """label -> manifest path. Demo manifests first, then the dev set."""
     out = {}
     if DEMO_DIR.exists():
-        for p in sorted(DEMO_DIR.glob("*/manifest.jsonl")):
+        for p in sorted(DEMO_DIR.glob("*/manifest.jsonl"), key=lambda q: (q.parent.name != "mixed", q.parent.name)):
             out[f"demo: {DATASET_LABELS.get(p.parent.name, p.parent.name)}"] = p
     if DEV_MANIFEST.exists():
         out["dev set (all four datasets, 50 images)"] = DEV_MANIFEST
@@ -117,7 +139,7 @@ def thumbnail(path: str, mtime: float, size: int = 320) -> Optional[Image.Image]
 
 def badge(level: str, text: str = "") -> str:
     color = LEVEL_COLOR.get(level, "#555")
-    return f"<span style='background:{color};color:white;padding:1px 7px;border-radius:8px;font-weight:600'>{level}</span> {text}"
+    return f"<span class='badge badge-{level}' style='background:{color}'>{level}</span> {text}"
 
 
 def gallery(records: List[ImageRecord], captions: Optional[Dict[str, str]] = None, levels: Optional[Dict[str, str]] = None, cols: int = 5, max_n: int = 30, key: str = "g"):
@@ -227,11 +249,15 @@ def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use
     out.mkdir(parents=True, exist_ok=True)
     write_manifest(records, out / "manifest.jsonl")
     counters = st.empty()
+    bar = st.progress(0.0, text="starting")
     log_box = st.empty()
     lines: List[str] = []
+    n_total = max(1, len(records))
 
     def on_progress(p: Progress):
         render_counters(counters, p, cfg)
+        done = min(n_total, p.gated if p.stage == "gate" else max(p.gated, p.graded))
+        bar.progress(min(0.99, done / n_total), text=f"{p.stage} - {p.current_image} - {done}/{n_total} images - ${p.usd:.3f}")
         entry = f"{p.current_image} -> {p.stage}"
         if p.current_image and (not lines or lines[-1] != entry):
             lines.append(entry)
@@ -244,9 +270,12 @@ def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use
             if surge:
                 write_surge_report(surge_counts(load_run(out)["findings"]), summary, out)
             write_run_report(out, {r.image_id: r for r in records})
+            bar.progress(1.0, text="done")
+            st.toast(f"Run {out.name} finished: {summary['findings']} findings", icon="\u2705")
             st.success(f"Done: {summary['findings']} findings from {summary['images']} images, ${summary['usd_total']} total, routed {summary['routed_to_grader']} of {summary['gated']}. Report stored in runs/{out.name}/report.md.")
             return summary
         except Exception as e:  # partial outputs stay on disk; the run is resumable
+            st.toast(f"Run {out.name} stopped", icon="\u26a0\ufe0f")
             st.error(f"Run stopped: {type(e).__name__}: {e}. Outputs so far are in runs/{out.name}; press Run again with the same name to resume.")
             return None
 
@@ -276,7 +305,7 @@ if source == "Dataset":
     if choice in manifests and manifests[choice] == DEV_MANIFEST:
         pick = st.sidebar.selectbox("Filter dev set", ["all"] + list(DATASET_LABELS), format_func=lambda k: "all" if k == "all" else DATASET_LABELS[k])
         dataset_filter = None if pick == "all" else pick
-    limit = st.sidebar.slider("Max images", 1, 50, 10)
+    limit = st.sidebar.slider("Max images", 1, 50, 12)
     if choice in manifests:
         records = records_for(manifests[choice], dataset_filter, limit)
         if surge:
@@ -344,9 +373,29 @@ Or drop images straight into **Drop & grade**, run several datasets under **Batc
 Numbers shown here are measured from each run's call log. Accuracy claims live only in `eval/reports/` and the **Eval matrix** tab.
 """
         )
+        with st.expander("60-second demo script"):
+            st.markdown(
+                """
+1. Open the **mixed sample** (four asset classes) and press **Run cascade**. Counters tick: gated, routed, graded, cost, seconds.
+2. Click one finding: evidence crop, native grade with the rubric criterion quoted verbatim, unified level, confidence, action.
+3. Open the **Work queue**: any S4 at the top with same-day escalation; multipliers visible per row.
+4. **Override** one grade as a reviewer; the log shows prior value and reviewer; the queue re-ranks; the agreement timeline updates.
+5. Same pipeline, different rubric: PV thermal gives IEC classes, RescueNet gives FEMA classes and U counts (**Surge counts**).
+6. **Export** the queue CSV and the stored report. End on **Eval matrix**: gate recall and within-one-grade accuracy with n.
+"""
+            )
         if records:
+            classes = pd.Series([r.asset_class for r in records]).value_counts()
             st.subheader(f"Selected images ({len(records)})")
-            gallery(records, captions={r.image_id: f"{r.asset_class} · {r.width}x{r.height}" for r in records}, key="preview")
+            st.markdown(" ".join(f"<span class='chip'>{ASSET_ICON.get(k, '')} {ASSET_LABEL.get(k, k)} · {v}</span>" for k, v in classes.items()), unsafe_allow_html=True)
+            if len(classes) > 1:
+                for ac in ASSET_CLASSES:
+                    group = [r for r in records if r.asset_class == ac]
+                    if group:
+                        st.markdown(f"**{ASSET_ICON.get(ac, '')} {ASSET_LABEL.get(ac, ac)}** · {len(group)}")
+                        gallery(group, captions={r.image_id: f"{r.width}x{r.height} · {r.source_dataset}" for r in group}, cols=6, key=f"preview_{ac}")
+            else:
+                gallery(records, captions={r.image_id: f"{r.asset_class} · {r.width}x{r.height}" for r in records}, key="preview")
     else:
         out = RUNS / active_run
         run = load_run(out)
@@ -452,11 +501,20 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                         review_log.apply(active_run, f, action[0], reviewer, action[1])
                         save_findings(findings, out, recs)
                         write_run_report(out, imgs)
-                        st.success(f"Logged {action[0]} by {reviewer}; prior level {f.review.prior_level}. Queue re-ranked, report refreshed.")
+                        st.toast(f"{action[0]} by {reviewer}, prior {f.review.prior_level}", icon="\U0001F4DD")
                         st.rerun()
                 agg = review_log.agreement(active_run)
                 rate = f", agreement {agg['agreement_rate']:.0%}" if agg["agreement_rate"] is not None else ""
                 st.caption(f"Review log: {agg['total']} decisions, accepted {agg['accepted']}, overridden {agg['overridden']}, marked U {agg['marked_u']}{rate} · persisted in reviews.sqlite")
+                tl = review_log.timeline(active_run)
+                if tl:
+                    st.markdown("**Model vs reviewer agreement over time (FR-19)**")
+                    tdf = pd.DataFrame(tl)
+                    line = alt.Chart(tdf).mark_line(point=True, interpolate="monotone").encode(
+                        x=alt.X("n:Q", title="decision #"), y=alt.Y("agreement_rate:Q", title="running agreement", scale=alt.Scale(domain=[0, 1])),
+                        tooltip=["n", "reviewed_at", "finding_id", "action", "prior_level", "new_level", "reviewer"],
+                    ).properties(height=200)
+                    st.altair_chart(line, width="stretch")
 
         with sub_queue:
             st.markdown("`score = severity_weight[S] × criticality × consequence × urgency`. Any **S4** sorts first and is escalated same day. **U** is listed, never scored as S0. Criticality is 1 unless supplied per asset.")
@@ -674,6 +732,19 @@ with tab_eval:
             if g["misses"]:
                 st.markdown("**Missed damaged images** (routed = no):")
                 gallery([imgs_e[i] for i in g["misses"] if i in imgs_e], captions={i: "missed by gate" for i in g["misses"]}, key="eval_misses", max_n=10)
+        sc1, sc2 = st.columns([1, 3])
+        if sc1.button("Score with bootstrap CIs", key="eval_score", help="runs eval/run_eval.py on this run's manifest; writes eval/reports/<run>.md and .json, no model calls"):
+            mp = RUNS / pick / "manifest.jsonl"
+            if not mp.exists():
+                mp = DEV_MANIFEST
+            with st.spinner("bootstrapping 1000 resamples"):
+                proc = subprocess.run([sys.executable, str(ROOT / "eval" / "run_eval.py"), "--manifest", str(mp), "--run", str(RUNS / pick), "--name", pick], capture_output=True, text=True, cwd=str(ROOT))
+            if proc.returncode == 0:
+                st.toast(f"eval/reports/{pick}.md written", icon="\U0001F4CA")
+                st.rerun()
+            else:
+                st.error(proc.stderr[-1500:] or proc.stdout[-1500:])
+        sc2.caption("The scored report carries n and 95% bootstrap CIs per metric; the matrices below are raw counts.")
         st.markdown("#### Grading (stage C): worst finding per image vs truth")
         if not em["grading"]:
             st.info("No routed image with a grade label in this run. Use a demo or dev dataset with the grader on.")
@@ -697,6 +768,14 @@ with tab_eval:
                         st.dataframe(pd.DataFrame(gr["pairs"]), width="stretch", hide_index=True)
                 if gr["u_images"]:
                     st.caption("U images: " + ", ".join(gr["u_images"][:20]))
+        st.divider()
+        st.markdown("#### Scored eval reports (eval/reports)")
+        reports = sorted((ROOT / "eval" / "reports").glob("*.md"), key=lambda q: q.stat().st_mtime, reverse=True)
+        if not reports:
+            st.info("No scored report yet. Press Score with bootstrap CIs above, or run eval/run_eval.py.")
+        else:
+            rp = st.selectbox("Report", reports, format_func=lambda q: q.name, index=next((i for i, q in enumerate(reports) if q.stem == pick), 0), key="eval_report_pick")
+            st.markdown(rp.read_text(encoding="utf-8"))
 
 # ---------- Why this approach ----------
 
