@@ -50,6 +50,8 @@ Times Pacific. Deadlines: Devpost Sun 2026-09-27 23:59; check-out form Mon 2026-
 
 - ~10:45 to 11:10 UI polish and FR-19. `scripts/make_demo_manifests.py --mixed 3` writes `data/demo/mixed/manifest.jsonl` (12 rows, round-robin over the four datasets); it is the default dataset and the landing page groups the preview by asset class with count chips. CSS animations (fade-in on images and metrics, hover lift, pulsing S4 badge), a progress bar with stage and cost during runs, toasts on run end and reviewer actions. FR-19 done: `ReviewLog.timeline()` and a running model-vs-reviewer agreement chart in Findings & review. Eval matrix gained a "Score with bootstrap CIs" button (runs `eval/run_eval.py` on the run's manifest, no model calls) and the scored-report viewer. 60-second demo script (plan section 6) shown on the landing page. 42 tests pass. Remaining plan items that are not code: eval_v1 grading run (spend decision), team grading of dacl10k (kappa), interviews, deck, video, Devpost.
 
+- ~11:10 Architecture tab added to the app (animated data-flow diagram with live counts, plus the startup-level flow). Committed locally, not pushed on the team lead's instruction.
+
 ## Blockers
 
 - None technical yet. The team roster, owners per workstream and the registration form status are unknown to this log.

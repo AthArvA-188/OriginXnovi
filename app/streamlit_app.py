@@ -280,6 +280,103 @@ def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use
             return None
 
 
+def architecture_svg(stats: Optional[dict] = None) -> str:
+    """Animated data-flow diagram of the cascade. `stats` (from run_metrics) overlays live counts per stage."""
+    st_ = stats or {}
+
+    def n(key, fmt="{}"):
+        v = st_.get(key)
+        return fmt.format(v) if v is not None and st_ else "-"
+
+    stages = [
+        ("ingest", "1 Ingest", "hash, EXIF, GSD,\nmanifest.jsonl", f"{n('images')} images", "#64748b"),
+        ("gate", "2 Gate", "small VLM, JSON schema\nusable? damage? conf", f"{n('routed')} routed of {n('gated')}", "#3b82f6"),
+        ("crop", "3 Crop", "1568 px tiles, overlap,\ncoords kept as evidence", "tiles on demand", "#0ea5e9"),
+        ("grade", "4 Grade", "heavy VLM, rubric rows,\nschema-enforced finding", f"{n('findings')} findings, U {n('U')}", "#f59e0b"),
+        ("prio", "5 Prioritize", "severity x criticality x\nconsequence x urgency", f"S4 {n('S4')}  S3 {n('S3')}", "#f97316"),
+        ("review", "6 Review", "accept / override / U,\nprior value logged", f"{n('reviews')} decisions", "#8b5cf6"),
+        ("export", "7 Export", "queue.csv, findings.json,\nbridge_entry.csv, report.md", n("usd_total", "${}"), "#22c55e"),
+    ]
+    W, H, bw, bh, gap, y0 = 1400, 560, 168, 96, 30, 190
+    x0 = (W - (bw * len(stages) + gap * (len(stages) - 1))) // 2
+    out = [f"<svg viewBox='0 0 {W} {H}' xmlns='http://www.w3.org/2000/svg' style='width:100%;height:auto;font-family:Inter,system-ui,sans-serif'>",
+           "<defs><marker id='ah' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto'><path d='M0,0 L0,6 L9,3 z' fill='#94a3b8'/></marker>",
+           "<style>.flow{stroke:#94a3b8;stroke-width:2.5;fill:none;stroke-dasharray:8 6;animation:dash 1.2s linear infinite;marker-end:url(#ah)}"
+           ".side{stroke:#64748b;stroke-width:1.8;fill:none;stroke-dasharray:4 5;animation:dash 2s linear infinite;marker-end:url(#ah)}"
+           "@keyframes dash{to{stroke-dashoffset:-28}} .box{rx:12;fill:#111827;stroke-width:2.5} .t{fill:#e5e7eb;font-size:15px;font-weight:700}"
+           ".s{fill:#9ca3af;font-size:11.5px} .live{fill:#fbbf24;font-size:12.5px;font-weight:600} .lane{fill:#0b1220;stroke:#1f2937;stroke-dasharray:6 4;rx:14}"
+           ".lt{fill:#94a3b8;font-size:12px;font-weight:700;letter-spacing:.6px} .pill{rx:9;fill:#1f2937;stroke:#374151} .pt{fill:#cbd5e1;font-size:11.5px}</style></defs>"]
+    out.append(f"<rect class='lane' x='20' y='20' width='{W-40}' height='120'/><text class='lt' x='34' y='42'>INPUTS AND KNOWLEDGE (data, not code)</text>")
+    out.append(f"<rect class='lane' x='20' y='{y0-30}' width='{W-40}' height='{bh+60}'/><text class='lt' x='34' y='{y0-12}'>ENGINE: one resumable loop, every call logged with tokens, dollars, seconds</text>")
+    out.append(f"<rect class='lane' x='20' y='{y0+bh+60}' width='{W-40}' height='{H-(y0+bh+60)-20}'/><text class='lt' x='34' y='{y0+bh+82}'>FEEDBACK AND PROOF</text>")
+    pills = [("Drone / phone / thermal capture", 40), ("Customer asset metadata: id, class, GSD, date", 330), ("Rubric files: MBEI CS, NBI, IEC 62446-3, FEMA PDA (verbatim rows)", 690), ("Dev-set exemplars (FR-13)", 1140)]
+    for text, x in pills:
+        w = 9 * len(text) + 20
+        out.append(f"<rect class='pill' x='{x}' y='62' width='{w}' height='30'/><text class='pt' x='{x+10}' y='82'>{text}</text>")
+    xs = []
+    for i, (key, title, sub, live, color) in enumerate(stages):
+        x = x0 + i * (bw + gap)
+        xs.append(x)
+        out.append(f"<rect class='box' x='{x}' y='{y0}' width='{bw}' height='{bh}' stroke='{color}'/>")
+        out.append(f"<text class='t' x='{x+12}' y='{y0+24}'>{title}</text>")
+        for j, line in enumerate(sub.split("\n")):
+            out.append(f"<text class='s' x='{x+12}' y='{y0+44+j*15}'>{line}</text>")
+        out.append(f"<text class='live' x='{x+12}' y='{y0+bh-12}'>{live}</text>")
+        if i:
+            out.append(f"<path class='flow' d='M{x-gap+2},{y0+bh//2} L{x-6},{y0+bh//2}'/>")
+    out.append(f"<path class='side' d='M120,92 L120,{y0-32} L{xs[0]+bw//2},{y0-32} L{xs[0]+bw//2},{y0-4}'/>")
+    out.append(f"<path class='side' d='M980,92 L980,{y0-40} L{xs[3]+bw//2},{y0-40} L{xs[3]+bw//2},{y0-4}'/>")
+    out.append(f"<path class='side' d='M1250,92 L1250,{y0-48} L{xs[3]+bw//2+30},{y0-48} L{xs[3]+bw//2+30},{y0-4}'/>")
+    out.append(f"<path class='side' d='M{xs[1]+bw//2},{y0+bh+4} L{xs[1]+bw//2},{y0+bh+34} L{xs[6]+bw//2},{y0+bh+34} L{xs[6]+bw//2},{y0+bh+4}'/>")
+    out.append(f"<text class='s' x='{xs[3]}' y='{y0+bh+30}'>clean and confident: skip the heavy stage (recall-first threshold tuned on dev only)</text>")
+    by = y0 + bh + 100
+    items = [
+        (xs[0], "Cost log", "calls.jsonl: model, tokens,\nUSD, seconds per call"),
+        (xs[2] - 10, "Review log (SQLite)", "prior value, reviewer, time;\nagreement over time (FR-19)"),
+        (xs[4] - 20, "Frozen eval (D-007)", "eval_v1 manifest, class-to-\nseverity maps written first"),
+        (xs[6] - 10, "Reports", "report.md per run, eval report\nwith n and 95% CI"),
+    ]
+    for x, title, sub in items:
+        out.append(f"<rect class='box' x='{x}' y='{by}' width='{bw+40}' height='78' stroke='#334155'/><text class='t' x='{x+12}' y='{by+22}'>{title}</text>")
+        for j, line in enumerate(sub.split("\n")):
+            out.append(f"<text class='s' x='{x+12}' y='{by+42+j*15}'>{line}</text>")
+    out.append(f"<path class='side' d='M{xs[5]+bw//2},{y0+bh+4} L{xs[5]+bw//2},{by+30} L{xs[2]+bw+30},{by+30}'/>")
+    out.append(f"<path class='side' d='M{xs[2]+bw//2},{by+78} L{xs[2]+bw//2},{by+100} L{xs[3]+bw//2},{by+100} L{xs[3]+bw//2},{y0+bh+40}'/>")
+    out.append(f"<text class='s' x='{xs[2]+bw//2+8}' y='{by+114}'>overrides become dev-set exemplars and eval cases, never touch eval_v1</text>")
+    out.append(f"<path class='side' d='M{xs[6]+bw//2},{y0+bh+4} L{xs[6]+bw//2},{by-4}'/>")
+    out.append("</svg>")
+    return "".join(out)
+
+
+def startup_svg() -> str:
+    """Business-level flow: who pays, what goes in, what comes out, where the moat is."""
+    W, H = 1400, 330
+    cols = [
+        ("Customers", ["Bridge inspection consultants", "County and DOT bridge owners", "PV O&M operators", "Disaster agencies, insurers"], "#22c55e"),
+        ("They already have", ["Drone and phone imagery", "Standards they must report to", "Deadlines and fines for late entry", "Too few inspectors"], "#64748b"),
+        ("The engine", ["Rubrics as data, not code", "Cheap gate, heavy grade", "Explicit U, verbatim criteria", "Consequence-ranked queue"], "#3b82f6"),
+        ("They get", ["Pre-filled condition states", "Work list ranked by risk", "Evidence crop per finding", "Surge counts after an event"], "#f59e0b"),
+        ("The moat", ["Frozen eval per asset class", "Review log: agreement over time", "Exemplars from accepted grades", "New asset class = new rubric file"], "#8b5cf6"),
+    ]
+    bw, gap, y0, bh = 240, 40, 40, 230
+    x0 = (W - (bw * 5 + gap * 4)) // 2
+    out = [f"<svg viewBox='0 0 {W} {H}' xmlns='http://www.w3.org/2000/svg' style='width:100%;height:auto;font-family:Inter,system-ui,sans-serif'>",
+           "<defs><marker id='ah2' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto'><path d='M0,0 L0,6 L9,3 z' fill='#94a3b8'/></marker>"
+           "<style>.f2{stroke:#94a3b8;stroke-width:2.5;fill:none;stroke-dasharray:8 6;animation:d2 1.2s linear infinite;marker-end:url(#ah2)}@keyframes d2{to{stroke-dashoffset:-28}}"
+           ".b2{rx:12;fill:#111827;stroke-width:2.5}.h2{fill:#e5e7eb;font-size:16px;font-weight:700}.i2{fill:#cbd5e1;font-size:12.5px}</style></defs>"]
+    for i, (title, items, color) in enumerate(cols):
+        x = x0 + i * (bw + gap)
+        out.append(f"<rect class='b2' x='{x}' y='{y0}' width='{bw}' height='{bh}' stroke='{color}'/><text class='h2' x='{x+14}' y='{y0+28}'>{title}</text>")
+        for j, it in enumerate(items):
+            out.append(f"<text class='i2' x='{x+14}' y='{y0+62+j*34}'>{it}</text>")
+        if i:
+            out.append(f"<path class='f2' d='M{x-gap+2},{y0+bh//2} L{x-6},{y0+bh//2}'/>")
+    out.append(f"<path class='f2' d='M{x0+4*(bw+gap)+bw//2},{y0+bh+4} L{x0+4*(bw+gap)+bw//2},{y0+bh+30} L{x0+2*(bw+gap)+bw//2},{y0+bh+30} L{x0+2*(bw+gap)+bw//2},{y0+bh+6}'/>")
+    out.append(f"<text class='i2' x='{x0+2*(bw+gap)+bw//2+10}' y='{y0+bh+48}'>every reviewed run makes the next run cheaper to trust</text>")
+    out.append("</svg>")
+    return "".join(out)
+
+
 def gate_caption(g: dict) -> str:
     verdict = "unusable" if not g["usable"] else ("damage" if g["damage_present"] else "clean")
     routing = "routed" if g["routed"] else "not routed"
@@ -344,7 +441,7 @@ if open_run != "(none)" and not run_clicked:
     active_run = open_run
     st.session_state["active_run"] = open_run
 
-tab_run, tab_drop, tab_batch, tab_reports, tab_eval, tab_why = st.tabs(["Inspect run", "Drop & grade", "Batch", "Reports", "Eval matrix", "Why this approach"])
+tab_run, tab_arch, tab_drop, tab_batch, tab_reports, tab_eval, tab_why = st.tabs(["Inspect run", "Architecture", "Drop & grade", "Batch", "Reports", "Eval matrix", "Why this approach"])
 
 # ---------- Inspect run ----------
 
@@ -570,6 +667,38 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                 if fp.exists():
                     st.download_button(f"Download {name}", fp.read_bytes(), file_name=f"{active_run}_{name}", key=f"dl_{name}")
             st.caption("queue.csv columns are documented in src/cascade/export.py (QUEUE_COLUMNS). bridge_entry.csv carries element, condition state and quantity columns for SNBI-style entry (FR-17). report.md is the stored run report shown under Reports.")
+
+# ---------- Architecture ----------
+
+with tab_arch:
+    st.subheader("How an image becomes a ranked, reviewed finding")
+    arch_stats = None
+    if active_run and (RUNS / active_run / "gate.jsonl").exists():
+        try:
+            arch_stats = run_metrics(RUNS / active_run)
+        except Exception:
+            arch_stats = None
+    st.caption(("Yellow numbers are live from run `" + active_run + "`.") if arch_stats else "Open or run a cascade to overlay live counts on each stage.")
+    st.markdown(architecture_svg(arch_stats), unsafe_allow_html=True)
+    with st.expander("Stage by stage, in words", expanded=False):
+        st.markdown(
+            """
+| Stage | Input | What happens | Output | Where |
+|---|---|---|---|---|
+| 1 Ingest | folder, upload or manifest | hash, dimensions, EXIF date, GSD and irradiance if given; missing values stay null | `manifest.jsonl` | `cascade.ingest` |
+| 2 Gate | one image | small VLM answers a fixed JSON schema: usable, damage_present, confidence, reason; recall-first threshold; forced routing per asset class | `gate.jsonl` | `cascade.gate` |
+| 3 Crop | routed image | tiles above 1,568 px with overlap; tile coordinates travel with the finding as evidence | tiles in memory | `cascade.crop` |
+| 4 Grade | tile + rubric rows + exemplars | heavy VLM returns the finding contract, schema-enforced: native value, criteria quoted verbatim, unified S0 to S4 or U, measurements or not_measurable, action | `findings.json` | `cascade.grade`, `rubrics/*.json` |
+| 5 Prioritize | all findings | score = severity x criticality x consequence x urgency; any S4 first, same-day | `queue.csv` | `cascade.prioritize` |
+| 6 Review | one finding | accept, override or mark U; prior value, reviewer and time logged; queue re-ranks | `reviews.sqlite` | `cascade.review` |
+| 7 Export | run folder | queue CSV, findings JSON, bridge entry CSV, surge report, run report | `runs/<name>/` | `cascade.export`, `cascade.report` |
+
+Every model call is logged with model, tokens, dollars and seconds (`calls.jsonl`). The loop is resumable: rerun with the same name and finished images are skipped.
+"""
+        )
+    st.subheader("The startup around the engine")
+    st.markdown(startup_svg(), unsafe_allow_html=True)
+    st.caption("Wedge per D-001: bridge elements graded to AASHTO/NBIS scales, sold first to inspection consultants and county owners. Solar PV thermal second (D-002). Surge mode is a feature of the same engine (D-003). Sources: docs/decisions.md, docs/PRD.md.")
 
 # ---------- Drop & grade ----------
 

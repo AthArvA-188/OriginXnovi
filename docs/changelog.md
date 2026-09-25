@@ -8,6 +8,7 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 - Pending: team confirmation of D-001, D-002 and D-008 at the Friday 2026-09-25 09:00 sync.
 
 ### Product (2026-09-25, morning)
+- Added the Architecture tab: animated SVG data-flow diagram of the seven stages with live counts from the open run, the inputs lane (capture, metadata, rubric files, exemplars), the feedback lane (cost log, review log, frozen eval, reports), a stage-by-stage table, and a startup-level flow (customers, what they have, engine, outputs, moat).
 - Added the mixed demo manifest (`--mixed` in `scripts/make_demo_manifests.py`) as the default dataset; landing preview grouped by asset class.
 - UI polish: CSS animations, progress bar with stage and cost, toasts; FR-19 agreement timeline (`ReviewLog.timeline`); in-app bootstrap scoring button and scored-report viewer; demo script on the landing page. 42 tests.
 - Rebuilt `app/streamlit_app.py` with six tabs: Inspect run (image galleries with level badges), Drop & grade (drag-and-drop inference), Batch (multi-dataset runs), Reports (stored `report.md`/`report.json` per run, comparison charts), Eval matrix (gate and grading confusion heatmaps), Why this approach (sourced incumbent comparison with measured column).
