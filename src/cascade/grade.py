@@ -81,23 +81,42 @@ def build_user_content(img: Image.Image, metadata: dict, exemplars: Optional[Lis
     return content
 
 
+EFFORT = "high"  # pinned: the Opus 5 default; an id swap to Opus 5.5 (default medium) cannot silently change behaviour
+GRADE_MAX_TOKENS = 4096  # hashed into the run fingerprint (drift.fingerprint), so a change is a config change
+OLLAMA_OPTIONS = {"temperature": 0}  # likewise hashed; the local grader is deterministic by request
+
+
+def response_meta(response) -> dict:
+    """Served model id, request id and refusal category from a Claude response, with getattr defaults so a fake
+    or older SDK object never raises. Logged per call so drift.check_models can pin the identity (M1)."""
+    stop_details = getattr(response, "stop_details", None)
+    return {
+        "served_model": getattr(response, "model", None),
+        "request_id": getattr(response, "_request_id", None),
+        "stop_category": getattr(stop_details, "category", None) if getattr(response, "stop_reason", None) == "refusal" else None,
+    }
+
+
 def grade_claude(img: Image.Image, asset_class: AssetClass, rubric: dict, metadata: dict, exemplars=None, model: Optional[str] = None):
-    """Returns (GraderOutput or None, usage dict, stop_reason)."""
+    """Returns (GraderOutput or None, usage dict, stop_reason, meta dict). No sampling parameters: Opus 5 and
+    Sonnet 5 reject temperature/top_p/top_k; effort is pinned through output_config."""
     import anthropic
 
     model = model or os.getenv("GRADER_MODEL", "claude-opus-5")
     client = anthropic.Anthropic()
     response = client.messages.parse(
         model=model,
-        max_tokens=4096,
+        max_tokens=GRADE_MAX_TOKENS,
         system=build_system(asset_class, rubric),
         messages=[{"role": "user", "content": build_user_content(img, metadata, exemplars)}],
         output_format=GraderOutput,
+        output_config={"effort": EFFORT},
     )
     usage = {"input_tokens": response.usage.input_tokens, "output_tokens": response.usage.output_tokens}
+    meta = response_meta(response)
     if response.stop_reason == "refusal":
-        return None, usage, "refusal"
-    return response.parsed_output, usage, response.stop_reason
+        return None, usage, "refusal", meta
+    return response.parsed_output, usage, response.stop_reason, meta
 
 
 def grade_ollama(img: Image.Image, asset_class: AssetClass, rubric: dict, metadata: dict, exemplars=None, model: Optional[str] = None, url: Optional[str] = None, timeout: int = 600):
@@ -110,7 +129,7 @@ def grade_ollama(img: Image.Image, asset_class: AssetClass, rubric: dict, metada
         "model": model,
         "stream": False,
         "format": GraderOutput.model_json_schema(),
-        "options": {"temperature": 0},
+        "options": dict(OLLAMA_OPTIONS),
         "messages": [
             {"role": "system", "content": build_system(asset_class, rubric)},
             {"role": "user", "content": text, "images": images},
@@ -120,10 +139,11 @@ def grade_ollama(img: Image.Image, asset_class: AssetClass, rubric: dict, metada
     r.raise_for_status()
     data = r.json()
     usage = {"input_tokens": int(data.get("prompt_eval_count", 0)), "output_tokens": int(data.get("eval_count", 0))}
+    meta = {"served_model": data.get("model"), "request_id": None, "stop_category": None}
     try:
-        return GraderOutput.model_validate_json(data["message"]["content"]), usage, "end_turn"
+        return GraderOutput.model_validate_json(data["message"]["content"]), usage, "end_turn", meta
     except Exception as e:  # invalid JSON from a local model becomes U, not a crash
-        return None, usage, f"parse_error: {e}"
+        return None, usage, f"parse_error: {e}", meta
 
 
 def grade_image(
@@ -146,15 +166,15 @@ def grade_image(
     with Timer() as t:
         if backend == "claude":
             model = os.getenv("GRADER_MODEL", "claude-opus-5")
-            out, usage, stop = grade_claude(img, asset_class, rubric, metadata, exemplars)
+            out, usage, stop, meta = grade_claude(img, asset_class, rubric, metadata, exemplars)
         elif backend == "local":
             model = os.getenv("GRADER_LOCAL_MODEL", "qwen3-vl:8b-instruct")
-            out, usage, stop = grade_ollama(img, asset_class, rubric, metadata, exemplars)
+            out, usage, stop, meta = grade_ollama(img, asset_class, rubric, metadata, exemplars)
         else:
             raise ValueError(f"unknown grader backend {backend}")
     usd = 0.0
     if log is not None:
-        row = log.record(stage="grade", model=model, image_id=image_id, input_tokens=usage["input_tokens"], output_tokens=usage["output_tokens"], seconds=t.seconds, note=str(stop))
+        row = log.record(stage="grade", model=model, image_id=image_id, input_tokens=usage["input_tokens"], output_tokens=usage["output_tokens"], seconds=t.seconds, note=str(stop), **meta)
         usd = row["usd"]
     if out is None:
         return unassessable_finding(finding_id=finding_id, asset_class=asset_class, standard=standard, evidence=evidence, reason=f"grader returned no contract ({stop})", model=model)

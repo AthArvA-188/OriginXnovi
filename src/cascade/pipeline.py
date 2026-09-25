@@ -148,6 +148,23 @@ def run_cascade(
     log = log or CallLog(path=out / "calls.jsonl")
     if cfg.limit:
         records = records[: cfg.limit]
+    # M1: version fingerprint written before the first call; kept as-is on resume so a mid-run .env edit shows up
+    # as `fingerprint_at_finish` in summary.json and as mixed models in health.json, never as a silent overwrite.
+    fp_id: Optional[str] = None
+    fp_now: Optional[str] = None
+    try:
+        from . import drift
+
+        fp_now = drift.fingerprint(cfg, exemplar_ids=getattr(exemplars, "ids", None))
+        fp_path = out / "fingerprint.json"
+        if fp_path.exists():
+            fp_id = json.loads(fp_path.read_text(encoding="utf-8"))["id"]
+        else:
+            fp_path.write_text(json.dumps(fp_now, indent=1), encoding="utf-8")
+            fp_id = fp_now["id"]
+        fp_now = fp_now["id"]
+    except Exception:  # fingerprinting must never stop a run
+        pass
 
     gate_path, findings_path = out / "gate.jsonl", out / "findings.jsonl"
     done_gate = {row["image_id"]: row for row in _read_jsonl(gate_path)}
@@ -270,6 +287,9 @@ def run_cascade(
     tick("prioritize")
     ranked = save_findings(findings, out, records)
     summary = summarize(records, gate_rows, ranked, log, cfg)
+    summary["fingerprint"] = fp_id
+    if fp_now and fp_now != fp_id:
+        summary["fingerprint_at_finish"] = fp_now
     (out / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     tick("done")
     return summary

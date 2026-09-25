@@ -17,6 +17,7 @@ conda activate origin_hack
 copy .env.example .env                     # then fill ANTHROPIC_API_KEY
 ollama pull qwen3-vl:4b-instruct           # local gate
 ollama pull qwen3-vl:8b-instruct           # optional local grader
+# video ingestion (FR-4) shells out to ffmpeg/ffprobe on PATH; no Python video package is needed
 ```
 
 If the env already exists: `conda activate origin_hack; pip install -e .[dev,ui]`.
@@ -41,7 +42,16 @@ python -m cascade.surge --folder data/raw/rescuenet/images --out runs/surge01 --
 python eval/run_eval.py --manifest data/eval_v1/manifest.jsonl --run runs/eval_v1_run1 --name eval_v1_run1
 
 # demo UI
-streamlit run app/streamlit_app.py   # tabs: Inspect run, Drop & grade, Batch, Reports, Eval matrix, Why this approach
+streamlit run app/streamlit_app.py   # tabs: Inspect run, Architecture, Drop & grade, Batch, Reports, Client reports, Eval matrix, Model health, Why this approach
+
+# video to frames (every 2 s, near-duplicates dropped by dHash), then an ordinary run
+python -m cascade.video --video data/demo/video/bridge_walkthrough.mp4 --out runs/v1/frames --every 2
+
+# per-client HTML/markdown reports for a finished run
+python -m cascade.clientreport --run runs/ui_0925_0856
+
+# model health (zero model calls) is written to runs/<run>/health.json by the app; the canary re-grade refuses without --confirm
+python -m cascade.canary --gate claude --grader claude   # prints the cost estimate and exits
 
 # tests (no model, no network)
 pytest -q

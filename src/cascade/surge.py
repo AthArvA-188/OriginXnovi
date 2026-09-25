@@ -42,7 +42,8 @@ def surge_records(folder: Optional[Path] = None, manifest: Optional[Path] = None
 
 def surge_counts(findings: List[Finding]) -> dict:
     """Counts per FEMA class and unified level, U count, mean confidence, ranked list."""
-    by_class = Counter(f.native_scale.value for f in findings)
+    # U-level findings count as U whatever native value they carry (a U is never a FEMA class; drift W4)
+    by_class = Counter("U" if f.unified.level == "U" else f.native_scale.value for f in findings)
     by_level = Counter(f.unified.level for f in findings)
     assessed = [f for f in findings if f.unified.level != "U"]
     conf = [f.measurements.confidence for f in assessed]

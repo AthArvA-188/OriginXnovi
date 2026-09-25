@@ -1,0 +1,5 @@
+# Streamlit server settings for the cascade UI.
+# maxUploadSize is in MB. The default (200 MB, measured with Streamlit 1.64 and no config file)
+# is too small for a minute of 4K drone video (typically several hundred MB; assumption, no clip measured).
+[server]
+maxUploadSize = 1024

@@ -22,10 +22,18 @@ PRICES_PER_MTOK = {
 }
 
 
+def price_key(model: str) -> Optional[str]:
+    """Longest PRICES_PER_MTOK key that `model` starts with, so a dated or suffixed id the SDK reports
+    (`claude-haiku-4-5-20251001`) prices as its family; None when unknown (the call is then 'unpriced')."""
+    keys = [k for k in PRICES_PER_MTOK if model == k or model.startswith(k + "-")]
+    return max(keys, key=len) if keys else None
+
+
 def usd_for(model: str, input_tokens: int, output_tokens: int) -> float:
-    if model not in PRICES_PER_MTOK:
+    key = price_key(model or "")
+    if key is None:
         return 0.0
-    pin, pout = PRICES_PER_MTOK[model]
+    pin, pout = PRICES_PER_MTOK[key]
     return (input_tokens * pin + output_tokens * pout) / 1_000_000
 
 
@@ -45,6 +53,9 @@ class CallLog:
         seconds: float,
         usd: Optional[float] = None,
         note: str = "",
+        served_model: Optional[str] = None,
+        request_id: Optional[str] = None,
+        stop_category: Optional[str] = None,
     ) -> dict:
         row = {
             "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -56,6 +67,10 @@ class CallLog:
             "usd": usd if usd is not None else usd_for(model, input_tokens, output_tokens),
             "seconds": round(seconds, 3),
             "note": note,
+            # model identity as served (drift M1): the id the provider reports, the request id, and the refusal category
+            "served_model": served_model,
+            "request_id": request_id,
+            "stop_category": stop_category,
         }
         self.rows.append(row)
         if self.path is not None:

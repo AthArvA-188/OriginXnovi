@@ -109,7 +109,8 @@ def bridge_row(f: Finding) -> dict:
         "element": f.defect_type.split(" (")[-1].rstrip(")") if " (" in f.defect_type else "",
         "defect": f.defect_type,
         "standard": f.native_scale.standard,
-        "condition_state": f.native_scale.value,
+        # a U finding never carries a condition state into the entry form, whatever native value the model wrote (drift W4)
+        "condition_state": "U" if f.unified.level == "U" else f.native_scale.value,
         "quantity": round(area / 10_000, 4) if area is not None else "",
         "unit": "m2" if area is not None else "",
         "unified_level": f.unified.level,

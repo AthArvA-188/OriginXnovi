@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 from .exemplars import exemplar_provider
-from .ingest import read_manifest
+from .ingest import read_manifest, write_manifest
 from .pipeline import Progress, RunConfig, run_cascade
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,6 +55,8 @@ def main(argv=None) -> int:
             bar.update(1)
         bar.set_postfix(routed=p.routed, graded=p.graded, usd=f"{p.usd:.3f}")
 
+    # the run folder carries its own manifest so health checks (drift.py) and eval can read labels and sha256s later
+    write_manifest(records[: args.limit] if args.limit else records, Path(args.out) / "manifest.jsonl")
     summary = run_cascade(records, Path(args.out), cfg, exemplars=provider, progress=on_progress)
     bar.close()
     print(json.dumps(summary, indent=1))

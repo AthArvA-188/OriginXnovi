@@ -21,8 +21,8 @@ def candidates(records: List[ImageRecord], asset_class: str) -> List[ImageRecord
     """Dev records of this class with a usable native grade, stable order."""
     out = []
     for r in records:
-        if r.asset_class != asset_class or r.split == "eval":
-            continue
+        if r.asset_class != asset_class or r.split in ("eval", "eval_v1"):
+            continue  # split guard; drift.eval_guard (sha256 of the frozen manifest) is the real protection
         grade = r.labels.get("grade_native")
         if grade is None or r.labels.get("grade_source") in (None, ""):
             continue
@@ -69,4 +69,6 @@ def exemplar_provider(dev_manifest: Path, k: int = 3) -> Callable[[str], List[Ex
             cache[asset_class] = [to_exemplar(r) for r in select_exemplars(records, asset_class, k)]
         return cache[asset_class]
 
+    # exemplar ids per class without opening images, so the run fingerprint (drift M1) can hash them
+    provide.ids = {ac: [r.image_id for r in select_exemplars(records, ac, k)] for ac in sorted({r.asset_class for r in records})}  # type: ignore[attr-defined]
     return provide

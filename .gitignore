@@ -9,6 +9,7 @@ dist/
 data/raw/
 data/cache/
 data/demo/
+data/canary/
 runs/
 demo/*.mp4
 .DS_Store

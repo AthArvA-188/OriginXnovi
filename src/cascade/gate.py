@@ -103,7 +103,9 @@ def gate_claude(img: Image.Image, *, model: Optional[str] = None) -> tuple[GateO
     else:
         out = response.parsed_output
     usage = {"input_tokens": response.usage.input_tokens, "output_tokens": response.usage.output_tokens}
-    return out, usage
+    from .grade import response_meta  # served model id, request id, refusal category (drift M1)
+
+    return out, usage, response_meta(response)
 
 
 def run_gate(
@@ -114,12 +116,13 @@ def run_gate(
     log: Optional[CallLog] = None,
     no_damage_min_conf: float = 0.7,
 ) -> GateRecord:
+    meta: dict = {}
     with Timer() as t:
         if backend == "local":
             out, usage = gate_ollama(img)
             model = os.getenv("GATE_LOCAL_MODEL", "qwen3-vl:4b-instruct")
         elif backend == "claude":
-            out, usage = gate_claude(img)
+            out, usage, meta = gate_claude(img)
             model = os.getenv("GATE_CLOUD_MODEL", "claude-haiku-4-5")
         elif backend == "none":
             out, usage, model = GateOutput(usable=True, damage_present=True, confidence=1.0, reason="gate disabled"), {"input_tokens": 0, "output_tokens": 0}, "none"
@@ -127,7 +130,7 @@ def run_gate(
             raise ValueError(f"unknown gate backend {backend}")
     usd = 0.0
     if log is not None:
-        row = log.record(stage="gate", model=model, image_id=image_id, input_tokens=usage["input_tokens"], output_tokens=usage["output_tokens"], seconds=t.seconds)
+        row = log.record(stage="gate", model=model, image_id=image_id, input_tokens=usage["input_tokens"], output_tokens=usage["output_tokens"], seconds=t.seconds, **meta)
         usd = row["usd"]
     return GateRecord(
         image_id=image_id,

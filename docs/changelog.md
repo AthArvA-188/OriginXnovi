@@ -7,6 +7,14 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 ### Docs
 - Pending: team confirmation of D-001, D-002 and D-008 at the Friday 2026-09-25 09:00 sync.
 
+### Product (2026-09-25, midday)
+- Added `src/cascade/video.py` (FR-4): ffmpeg/ffprobe frame extraction at a fixed interval or on scene changes, dHash near-duplicate suppression, `frames.json` sidecar, `ingest_video`, CLI; `.streamlit/config.toml` raises the upload cap to 1 GB.
+- Added `src/cascade/clientreport.py`: per-client HTML + markdown + JSON reports with inline SVG charts and embedded evidence thumbnails; `clients/index.json`; CLI.
+- Added `src/cascade/workforce.py`: review-desk workload estimate with sourced public figures, labelled assumptions, sensitivity tornado, per-client split; `render_markdown` for report.md.
+- Added `src/cascade/drift.py`, `drift_thresholds.json`, `canary.py`: fingerprint, contract audit, U-rate p-chart, gate / review / ops / input health, baseline cards, promotion checklist, eval ledger and guard, canary CLI (cost estimate, `--confirm` required).
+- Changed `schema.ImageRecord` (+ `client_id`, `asset_id`, `source_video`, `frame_time_s`), `ingest_folder` (client and asset passthrough), `pipeline` (fingerprint.json, summary fingerprint), `run.py` (manifest copy), `costlog` (prefix pricing; served model, request id, stop category), `grade.py` (effort pinned high, response metadata), `gate.py` (response metadata), `review.py` (migrate, blind rows, decisions), `export.py` and `surge.py` (U never written as a native grade), `exemplars.py` (eval_v1 excluded), `eval/run_eval.py` (fingerprint guard and ledger).
+- App: video uploads and frame strips, client id inputs, Client reports tab, Workforce impact panel, Model health tab, demo video button (ingest only), de-duplicated queue galleries. 123 tests.
+
 ### Product (2026-09-25, morning)
 - Added the Architecture tab: animated SVG data-flow diagram of the seven stages with live counts from the open run, the inputs lane (capture, metadata, rubric files, exemplars), the feedback lane (cost log, review log, frozen eval, reports), a stage-by-stage table, and a startup-level flow (customers, what they have, engine, outputs, moat).
 - Added the mixed demo manifest (`--mixed` in `scripts/make_demo_manifests.py`) as the default dataset; landing preview grouped by asset class.

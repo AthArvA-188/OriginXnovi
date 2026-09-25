@@ -105,6 +105,30 @@ def main() -> int:
     ap.add_argument("--name", required=True)
     args = ap.parse_args()
     run = Path(args.run)
+    # One-look rule on the frozen set (D-007, drift M10): the manifest hash must match FROZEN.sha256, the fingerprint
+    # must not have been scored before, and no canary or exemplar image may be inside the eval set.
+    fingerprint = None
+    is_frozen_eval = Path(args.manifest).resolve() == (ROOT / "data/eval_v1/manifest.jsonl").resolve()
+    if is_frozen_eval:
+        from cascade import drift  # noqa: E402
+
+        fpp = run / "fingerprint.json"
+        fingerprint = json.loads(fpp.read_text(encoding="utf-8")) if fpp.exists() else None
+        fp_id = fingerprint["id"] if fingerprint else f"reconstructed:{run.name}"
+        extra = []
+        if drift.CANARY_MANIFEST.exists():
+            extra += [r.sha256 for r in read_manifest(drift.CANARY_MANIFEST)] + [r.image_id for r in read_manifest(drift.CANARY_MANIFEST)]
+        if fingerprint:
+            for k, v in fingerprint["components"].items():
+                if k.startswith("exemplar_ids."):
+                    extra += list(v)
+        try:
+            drift.eval_guard(Path(args.manifest), fp_id, extra)
+        except RuntimeError as e:
+            print(f"eval refused: {e}")
+            for row in drift._ledger_rows(drift.LEDGER):
+                print(json.dumps(row))
+            return 2
     records = {r.image_id: r for r in read_manifest(Path(args.manifest))}
     gate = {}
     gp = run / "gate.jsonl"
@@ -190,7 +214,13 @@ def main() -> int:
     out_json = ROOT / "eval/reports" / f"{args.name}.json"
     out_md = ROOT / "eval/reports" / f"{args.name}.md"
     out_json.parent.mkdir(parents=True, exist_ok=True)
+    if is_frozen_eval:
+        report["fingerprint"] = fingerprint
     out_json.write_text(json.dumps(report, indent=1), encoding="utf-8")
+    if is_frozen_eval:
+        import hashlib
+
+        drift.ledger_append(fp_id, run.name, hashlib.sha256(Path(args.manifest).read_bytes()).hexdigest(), f"scored:{args.name}")
 
     def pct(x):
         return "n/a" if x is None else f"{100 * x:.1f}%"

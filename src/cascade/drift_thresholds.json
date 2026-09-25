@@ -1,0 +1,69 @@
+{
+ "_note": "Every threshold the drift checks use, with its basis. This file's bytes are hashed into the run fingerprint, so changing a value is a config change, never a silent re-scoring of old runs.",
+ "contract": {
+  "hard_alarm_min": {"value": 2, "basis": "assumption: one hard contract breach in a run can be transient; two is a pattern"},
+  "hard_rate": {"value": 0.05, "basis": "assumption: PRD section 10 asks for 100 percent schema validity; 5 percent is the largest breach rate a reviewer can still absorb by hand"}
+ },
+ "refusal": {
+  "alarm_per_run": {"value": 2, "basis": "rule of three: one refusal at n=14 has a 21 percent upper bound, so a single event is not evidence; two in one run are"},
+  "clean_calls_for_rate": {"value": 60, "basis": "rule of three: 0 events in 60 clean calls bounds the rate at 5 percent (3/60); below that the per-run count rule applies"},
+  "binomial_tail": {"value": 0.01, "basis": "assumption: alarm when P(X >= k | n, 3/n_base) is under 1 percent"}
+ },
+ "u": {
+  "sigma": {"value": 3, "basis": "Shewhart p-chart convention: 3-sigma limits"},
+  "min_n": {"value": 10, "basis": "assumption: below 10 findings the binomial limits are wider than the chart"}
+ },
+ "shift": {
+  "min_shared": {"value": 20, "basis": "assumption: fewer than 20 shared images cannot separate a 10-point move from noise"},
+  "u_delta_watch": {"value": 0.15, "basis": "95 percent CI half-width on a proportion near 0.3 at n=50 is about 13 points"},
+  "collapse_points": {"value": 0.10, "basis": "assumption: U down and S0 up by 10 points each is the abstention-collapse signature"},
+  "moved2_block": {"value": 3, "basis": "D-004: the contract's +/-1 band makes a 2-level move outside declared uncertainty; 3 of 50 blocks promotion"}
+ },
+ "gate": {
+  "dead_min_damaged": {"value": 8, "basis": "runs/dev_gate02: 0 of 12 ir_solar routed; rule of three puts the recall upper bound at 3/8 with 8 damaged"},
+  "template_ratio": {"value": 0.5, "basis": "dev_gate02 ir_solar: 3 distinct reasons over 12 rows = 0.25; 0.5 leaves room for honest repetition"},
+  "template_min_rows": {"value": 10, "basis": "assumption: below 10 rows a low distinct-reason ratio is expected"},
+  "fallback_alarm": {"value": 2, "basis": "assumption: one laptop-GPU timeout per run is expected; two is a serving problem"},
+  "inert_min_rows": {"value": 30, "basis": "dev_gate02: 47 of 50 confidences at 0.95 or 0.98, nothing below 0.7; needs about 30 rows to say the threshold has no effect"},
+  "routing_delta_watch": {"value": 0.15, "basis": "same CI reasoning as shift.u_delta_watch"}
+ },
+ "review": {
+  "upward_share": {"value": 0.5, "basis": "FHWA: inspectors agree within one point 68 percent of the time, so 20 percent over 30 decisions would block on ordinary disagreement; half of overrides going up is under-grading"},
+  "min_overrides": {"value": 10, "basis": "assumption: direction over fewer than 10 overrides is noise"},
+  "rolling_window": {"value": 30, "basis": "assumption: 30 decisions is one reviewer session"},
+  "agreement_watch": {"value": 0.70, "basis": "FHWA 68 percent within-one across inspectors, rounded"},
+  "reviewer_spread": {"value": 0.25, "basis": "assumption: a reviewer 25 points from the others with n>=20 each is a calibration problem, not a model problem"},
+  "reviewer_min_n": {"value": 20, "basis": "assumption: per-reviewer agreement needs 20 decisions"},
+  "blind_floor": {"value": 0.68, "basis": "FHWA human within-one floor"},
+  "blind_min_n": {"value": 10, "basis": "assumption: report-only below 10 blind pairs"},
+  "critical_miss_block": {"value": 2, "basis": "zero baseline: first S4 miss alarms, two within 100 decisions block the fingerprint"}
+ },
+ "ops": {
+  "tokens_ratio": {"value": 1.5, "basis": "runs/ui_0925_0856: $0.0567 per grade call; 1.5x output tokens is where that cost line stops holding"},
+  "seconds_ratio": {"value": 2.0, "basis": "UI states 10 to 40 s per grade; 2x the baseline median breaches it"}
+ },
+ "input": {
+  "null_gsd_delta": {"value": 0.30, "basis": "MBEI and PV rubrics force U when GSD or irradiance is missing, so a 30-point change in null share moves the U rate by itself"},
+  "below_256_share": {"value": 0.2, "basis": "research note R03: 82.6 percent label flips under resolution change"},
+  "min_frame_gap_s": {"value": 1.0, "basis": "assumption: frames closer than 1 s from one video are near-duplicates"}
+ },
+ "canary": {
+  "tail": {"value": 0.02, "basis": "assumption: alarm when P(X >= k | 12, f0) is under 2 percent; at f0=1/12 that is k>=4"},
+  "n_repeats": {"value": 3, "basis": "assumption: three repeats per image bound the noise floor at about $2.38 (42 calls at $0.0567)"}
+ },
+ "promote": {
+  "within_one_margin": {"value": 0.05, "basis": "SE of a proportion at n about 40 per class is about 7 points; 5 is the smallest margin that can be reasoned about"},
+  "recall_margin": {"value": 0.03, "basis": "a gate miss is a skipped inspection and eval_v1 has more damaged images, so recall gets the tighter margin"},
+  "u_margin": {"value": 0.10, "basis": "assumption: U may rise 10 points before it costs more reviewer time than it saves"},
+  "usd_ratio": {"value": 1.25, "basis": "assumption: a quarter more per image is the budget line"},
+  "min_n": {"value": 20, "basis": "assumption: below 20 assessed images per class the comparison is insufficient_n"}
+ },
+ "floors": {
+  "config": {"value": 1, "basis": "one call is enough to check model identity"},
+  "gate": {"value": 8, "basis": "same as gate.dead_min_damaged"},
+  "grade": {"value": 10, "basis": "same as u.min_n"},
+  "review": {"value": 10, "basis": "same as review.min_overrides"},
+  "ops": {"value": 2, "basis": "one call is the cold start; medians need a second"},
+  "input": {"value": 1, "basis": "one record"}
+ }
+}

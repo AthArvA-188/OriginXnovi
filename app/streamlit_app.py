@@ -11,17 +11,20 @@ Run:  streamlit run app/streamlit_app.py
 
 from __future__ import annotations
 
+import json
 import os
+import shutil
 import subprocess
 import sys
 import time
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import altair as alt
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw
 
@@ -29,6 +32,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 load_dotenv(ROOT / ".env")
 
+from cascade import drift, workforce  # noqa: E402
+from cascade.canary import cost_estimate  # noqa: E402
+from cascade.clientreport import ACTION_COLOR, ACTION_ORDER, LEVEL_COLOR, LEVEL_MEANING, _workload_lines, worst_levels, write_client_reports  # noqa: E402
 from cascade.evalmetrics import eval_matrix  # noqa: E402
 from cascade.exemplars import exemplar_provider  # noqa: E402
 from cascade.export import finding_row  # noqa: E402
@@ -39,11 +45,24 @@ from cascade.report import REPORT_FIELDS, run_metrics, write_run_report  # noqa:
 from cascade.review import ReviewLog  # noqa: E402
 from cascade.schema import Finding, ImageRecord  # noqa: E402
 from cascade.surge import surge_counts, write_surge_report  # noqa: E402
+from cascade.video import VIDEO_EXTS, VideoError, ffmpeg_available, ingest_video, slug_of  # noqa: E402
 
 RUNS = ROOT / "runs"
 DEV_MANIFEST = ROOT / "data" / "dev" / "manifest.jsonl"
 EVAL_MANIFEST = ROOT / "data" / "eval_v1" / "manifest.jsonl"
 DEMO_DIR = ROOT / "data" / "demo"
+DEMO_VIDEO = DEMO_DIR / "video" / "bridge_walkthrough.mp4"
+FF_OK, FF_MSG = ffmpeg_available()
+UPLOAD_TYPES = ["jpg", "jpeg", "png"] + (sorted(e.lstrip(".") for e in VIDEO_EXTS) if FF_OK else [])
+UPLOAD_LABEL = "JPEG / PNG" + (" / MP4 / MOV / AVI / MKV" if FF_OK else "")
+DEDUP_HELP = (
+    "A frame whose dHash Hamming distance to the last kept frame is at or below this is dropped as a near-duplicate "
+    "(0 = exact repeats only). Measured on data/demo/video/bridge_walkthrough.mp4 (12 s, 1280x960, ffmpeg 8.0.1): "
+    "frames 2 s apart sit at distances 28, 29, 34, 35, 33; sampling every 1 s extracts 12 and drops 6 at distance 0."
+)
+BLOCKING_RULES = drift.BLOCKING_RULES  # contract_hard, abstention_collapse, moved_2plus, critical_miss; never demoted by the alert budget
+NEUTRAL_BOX = "#9ca3af"  # bbox colour for blind QC: the level colour would leak the model's grade
+STATUS_COLOR = {"in_control": "#22c55e", "watch": "#f59e0b", "alarm": "#dc2626", "insufficient_n": "#9ca3af", "candidate": "#3b82f6"}
 DATASET_LABELS = {
     "mixed": "Mixed sample: all four asset classes",
     "corrosion_cs": "Steel coating: corrosion condition state (bridge steel)",
@@ -71,16 +90,6 @@ button[kind="primary"]:hover { transform: translateY(-1px); filter: brightness(1
 div[data-testid="stMarkdownContainer"] table { animation: fadeUp .4s ease both; }
 </style>
 """
-LEVEL_COLOR = {"S0": "#7a7a7a", "S1": "#3b82f6", "S2": "#f59e0b", "S3": "#f97316", "S4": "#dc2626", "U": "#8b5cf6"}
-LEVEL_MEANING = {
-    "S0": "no defect found in the graded region",
-    "S1": "minor; monitor at the next routine cycle",
-    "S2": "moderate; schedule within the SLA",
-    "S3": "severe; prioritize this cycle",
-    "S4": "critical; same-day escalation, top of queue",
-    "U": "unassessable: refusal, missing metadata or unusable image; never counted as S0",
-}
-
 st.set_page_config(page_title="Inspection grading cascade", layout="wide", page_icon="\U0001F50D")
 st.markdown(CSS, unsafe_allow_html=True)
 
@@ -112,12 +121,14 @@ def list_runs() -> list:
     return sorted([p.name for p in RUNS.iterdir() if p.is_dir() and not p.name.startswith("_") and (p / "gate.jsonl").exists()], reverse=True)
 
 
-def draw_evidence(f: Finding, rec: ImageRecord) -> Image.Image:
+def draw_evidence(f: Finding, rec: ImageRecord, neutral: bool = False) -> Image.Image:
+    """Evidence image with the tile bbox outlined in the level colour; `neutral` draws it in NEUTRAL_BOX so a blind
+    grader sees where to look but not what the model graded."""
     img = Image.open(rec.path).convert("RGB")
     if f.evidence.bbox and f.evidence.tile != "full":
         d = ImageDraw.Draw(img)
         x0, y0, x1, y1 = f.evidence.bbox
-        d.rectangle([x0, y0, x1, y1], outline=LEVEL_COLOR.get(f.unified.level, "#ffffff"), width=max(3, img.width // 300))
+        d.rectangle([x0, y0, x1, y1], outline=NEUTRAL_BOX if neutral else LEVEL_COLOR.get(f.unified.level, "#ffffff"), width=max(3, img.width // 300))
     if max(img.size) < 320:  # 24x40 thermal crops
         s = 320 / max(img.size)
         img = img.resize((int(img.width * s), int(img.height * s)), Image.NEAREST)
@@ -165,15 +176,256 @@ def gallery(records: List[ImageRecord], captions: Optional[Dict[str, str]] = Non
         st.caption(f"Showing {max_n} of {len(records)} images.")
 
 
-def worst_levels(findings: List[Finding]) -> Dict[str, str]:
-    order = {lvl: i for i, lvl in enumerate(["S0", "S1", "S2", "S3", "S4", "U"])}
-    out: Dict[str, str] = {}
-    for f in findings:
-        for iid in f.evidence.image_ids:
-            cur = out.get(iid)
-            if cur is None or (f.unified.level != "U" and (cur == "U" or order[f.unified.level] > order[cur])):
-                out[iid] = f.unified.level
-    return out
+def run_records(out: Path, imgs: Dict[str, ImageRecord]) -> Dict[str, ImageRecord]:
+    """Only the records the run gated. `load_records_for_run` also merges the dev and eval manifests as a path
+    fallback, which would inflate any per-run count (input stats, client buckets, workforce N)."""
+    gp = out / "gate.jsonl"
+    if not gp.exists():
+        return imgs
+    ids = [json.loads(line)["image_id"] for line in gp.read_text(encoding="utf-8").splitlines() if line.strip()]
+    sub = {i: imgs[i] for i in ids if i in imgs}
+    return sub or imgs
+
+
+def video_options(key: str) -> dict:
+    """Collapsed 'Video options' expander; returns the extraction kwargs for `ingest_video`."""
+    with st.expander("Video options", expanded=False):
+        if not FF_OK:
+            st.caption(f"Video upload off: {FF_MSG}")
+        every = st.number_input("Sample every N seconds", 0.5, 30.0, 2.0, 0.5, key=f"{key}_every")
+        scene = st.checkbox("Scene-change mode: keep frames where the picture changes", value=False, key=f"{key}_scene")
+        thr = st.slider("Scene threshold", 0.1, 0.9, 0.3, 0.05, key=f"{key}_thr", disabled=not scene)
+        gap = st.number_input("Scene mode: longest gap without a frame, s", 1.0, 60.0, 10.0, 1.0, key=f"{key}_gap", disabled=not scene)
+        max_frames = st.number_input("Max frames per video", 10, 1000, 200, 10, key=f"{key}_max")
+        dedup = st.slider("Near-duplicate threshold (dHash distance)", 0, 12, 3, key=f"{key}_dedup", help=DEDUP_HELP)
+    return {
+        "every_s": float(every),
+        "scene_threshold": float(thr) if scene else None,
+        "scene_max_gap_s": float(gap) if scene else None,
+        "max_frames": int(max_frames),
+        "dedup_max_distance": int(dedup),
+    }
+
+
+def ingest_uploads(files, base: Path, asset_class: str, client_id: Optional[str], id_prefix: str, vopts: dict) -> Tuple[List[ImageRecord], List[dict], str]:
+    """Write uploads under base/images, base/video/<file> and base/frames/<slug>/ (frames never sit inside the
+    folder `ingest_folder` rglobs), ingest stills and videos, return (records, extraction dicts, summary line)."""
+    img_dir, vid_dir = base / "images", base / "video"
+    img_dir.mkdir(parents=True, exist_ok=True)
+    videos: List[Path] = []
+    for fobj in files:
+        if Path(fobj.name).suffix.lower() in VIDEO_EXTS:
+            vid_dir.mkdir(parents=True, exist_ok=True)
+            (vid_dir / fobj.name).write_bytes(fobj.getbuffer())
+            videos.append(vid_dir / fobj.name)
+        else:
+            (img_dir / fobj.name).write_bytes(fobj.getbuffer())
+    records: List[ImageRecord] = []
+    if any(img_dir.iterdir()):
+        records = ingest_folder(img_dir, asset_class=asset_class, source_dataset="upload", split="upload", id_prefix=id_prefix, client_id=client_id or None)
+    n_img = len(records)
+    exts: List[dict] = []
+    for vp in videos:
+        try:
+            recs, ext = ingest_video(vp, base / "frames" / slug_of(vp), asset_class=asset_class, client_id=client_id or None, captured_on_from_mtime=False, source_dataset="upload", split="upload", **vopts)
+        except VideoError as e:
+            st.error(str(e))
+            continue
+        records += recs
+        exts.append(ext.to_json())
+    n_kept, n_dropped = sum(e["n_kept"] for e in exts), sum(e["n_dropped"] for e in exts)
+    line = f"{n_img} images ingested; hash, size and EXIF date recorded, missing metadata stays null"
+    if videos:
+        line = f"{n_img} images + {n_kept} frames from {len(exts)} videos ingested ({n_dropped} near-duplicate frames dropped, dHash ≤ {vopts['dedup_max_distance']})"
+    return records, exts, line
+
+
+def video_strip(ext: dict, records: List[ImageRecord], key: str) -> None:
+    """Header measured from frames.json, kept frames with timestamps, dropped frames in an expander."""
+    v = ext["video"]
+    name = Path(v["path"]).name
+    mode = f"every {ext['every_s']:.1f} s" if ext["mode"] == "interval" else f"scene threshold {ext['scene_threshold']}"
+    st.markdown(
+        f"**{name}** · {v['duration_s']:.1f} s · {v['width']}×{v['height']} @ {v['fps']:.2f} fps · {mode} · extracted {ext['n_extracted']}, kept {ext['n_kept']}, "
+        f"dropped {ext['n_dropped']} near-duplicates (dHash ≤ {ext['dedup_max_distance']}) · ffmpeg {ext['seconds_ffmpeg']:.1f} s, dedup {ext['seconds_dedup']:.2f} s"
+    )
+    if ext.get("truncated"):
+        st.warning(f"Max frames ({ext['max_frames']}) reached: only the first {max(f['t_s'] for f in ext['frames']):.0f} s of {v['duration_s']:.1f} s were sampled.")
+    recs = [r for r in records if r.source_video and Path(r.source_video).name == name]
+    gallery(recs, captions={r.image_id: f"t = {r.frame_time_s:.1f} s" for r in recs}, cols=8, max_n=24, key=key)
+    dropped = [f for f in ext["frames"] if not f["kept"]]
+    if dropped:
+        with st.expander(f"Dropped as near-duplicates ({len(dropped)})"):
+            st.table(pd.DataFrame([{"t_s": f["t_s"], "distance to last kept frame": f["distance"]} for f in dropped]))
+
+
+def stored_extractions(out: Path) -> List[dict]:
+    """frames.json copies under runs/<run>/videos/, so the strip survives a restart."""
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted((out / "videos").glob("*.json"))] if (out / "videos").exists() else []
+
+
+def write_reports(out: Path, imgs: Dict[str, ImageRecord]) -> Path:
+    """report.md/report.json from report.py, then the workforce section appended (laborSpec 5.8), one client
+    report per client_id (clientReportSpec 11) and health.json (driftSpec). Each add-on fails soft."""
+    rp = write_run_report(out, imgs)
+    recs = run_records(out, imgs)
+    try:
+        est = workforce.estimate(workforce.measured_inputs(out, records=recs))
+        with rp.open("a", encoding="utf-8") as fh:
+            fh.write("\n\n" + workforce.render_markdown(est))
+        rj = out / "report.json"
+        doc = json.loads(rj.read_text(encoding="utf-8"))
+        doc["workforce"] = workforce.to_json(est)
+        rj.write_text(json.dumps(doc, indent=1), encoding="utf-8")
+    except Exception as e:
+        st.warning(f"Workforce section skipped: {type(e).__name__}: {e}")
+    try:
+        write_client_reports(out, recs)
+    except Exception as e:
+        st.warning(f"Client reports skipped: {type(e).__name__}: {e}")
+    try:
+        drift.health(out, records=recs)
+    except Exception as e:
+        st.warning(f"health.json skipped: {type(e).__name__}: {e}")
+    return rp
+
+
+def health_for(out: Path, imgs: Dict[str, ImageRecord], refresh: bool = False) -> Optional[dict]:
+    """runs/<run>/health.json, recomputed (zero model calls) when missing, stale or asked for."""
+    hp = out / "health.json"
+    newest = max((p.stat().st_mtime for p in [out / "findings.json", out / "gate.jsonl", out / "calls.jsonl", out / "reviews.sqlite"] if p.exists()), default=0.0)
+    if hp.exists() and not refresh and hp.stat().st_mtime >= newest:
+        try:
+            return json.loads(hp.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    try:
+        return drift.health(out, records=run_records(out, imgs))
+    except Exception as e:
+        st.warning(f"Model health not computed: {type(e).__name__}: {e}")
+        return None
+
+
+def status_badge(status: Optional[str], text: str = "") -> str:
+    status = status or "n/a"
+    return f"<span class='badge' style='background:{STATUS_COLOR.get(status, '#555')}'>{status.replace('_', ' ')}</span> {text}"
+
+
+def agreement_chart(rows: List[dict]) -> alt.Chart:
+    """FR-19 running agreement line; tooltip uses whichever columns the rows carry."""
+    tdf = pd.DataFrame(rows)
+    tips = [c for c in ["n", "reviewed_at", "finding_id", "action", "prior_level", "new_level", "reviewer", "agreement_rate"] if c in tdf.columns]
+    return (
+        alt.Chart(tdf)
+        .mark_line(point=True, interpolate="monotone")
+        .encode(x=alt.X("n:Q", title="decision #"), y=alt.Y("agreement_rate:Q", title="running agreement", scale=alt.Scale(domain=[0, 1])), tooltip=tips)
+        .properties(height=200)
+    )
+
+
+def est_note(est: workforce.WorkforceEstimate, key: str) -> str:
+    """Mirrors workforce._est_label: a measured input (m_rev after ten review gaps) is not an assumption."""
+    uses = [k for k in est.uses.get(key, []) if est.assumptions[k].kind != "measured"]
+    return f"estimate (uses {len(uses)} assumption{'s' if len(uses) != 1 else ''}: {', '.join(uses)})" if uses else f"Measured (run {est.inputs.run})"
+
+
+def workforce_panel(out: Path, imgs: Dict[str, ImageRecord], key: str, client_id: Optional[str] = None) -> None:
+    """laborSpec 4 and 5: measured counts on the left, estimates on the right, four sliders, a tornado chart.
+    Every figure carries its badge; hours, percent and dollars are always labelled estimate."""
+    st.markdown(f"*{workforce.DISCLAIMER}*")
+    s1, s2, s3, s4 = st.columns(4)
+    m_man = s1.slider("Minutes per image, manual review today", 0.05, 6.0, 3.0, 0.05, key=f"{key}_m_man", help="Public figure: T&D World, 3 to 5 min per image of utility T&D imagery; not a bridge or solar figure. Ticks: 0.067 AEP Ohio skim (derived from a public figure), 3 and 5 analysis.")
+    m_rev = s2.slider("Minutes per routed image with the cascade", 0.25, 5.0, 1.0, 0.25, key=f"{key}_m_rev", help="Team assumption: the reviewer sees the evidence crop, the pre-filled native grade and the quoted rubric row, then accepts / overrides / marks U. Replaced by the measured review-gap median x findings per image once 10 gaps are logged.")
+    a_pct = s3.slider("Audit sample rate on auto-cleared images, %", 0, 50, 10, 1, key=f"{key}_a", help="Team assumption: random audit of the images the gate cleared without a heavy grade.")
+    w = s4.slider("Loaded hourly rate, USD", 40.0, 250.0, 113.03, 1.0, key=f"{key}_w", help="Public figure: WSDOT bridge inspector $113.03/h (one state's undated rate); co-inspector 94.43, report writing 112. Moves dollars only.")
+    ov: Dict[str, float] = {"m_man": m_man, "m_rev": m_rev, "a": a_pct / 100.0, "w": w}
+    with st.expander("Advanced assumptions (all Team assumption)", expanded=False):
+        ov["H"] = float(st.slider("Hours per inspector-week", 20, 60, 40, key=f"{key}_H"))
+        same = st.checkbox("Minutes per audited image = manual minutes", value=True, key=f"{key}_same")
+        if not same:
+            ov["m_aud"] = st.slider("Minutes per audited image", 0.05, 6.0, 3.0, 0.05, key=f"{key}_m_aud")
+        ov["m_xf"] = st.slider("Minutes per additional finding on the same image", 0.0, 3.0, 0.0, 0.25, key=f"{key}_m_xf")
+        ov["gap_cap"] = float(st.slider("Review break cap, min (longer gaps between decisions are breaks)", 5, 30, 10, key=f"{key}_gap"))
+    try:
+        inp = workforce.measured_inputs(out, records=run_records(out, imgs), client_id=client_id, gap_cap_min=ov["gap_cap"])
+        est = workforce.estimate(inp, ov)
+    except Exception as e:
+        st.info(f"No workforce estimate for this run: {type(e).__name__}: {e}")
+        return
+    if est.m_rev_measured is not None:
+        s2.caption(f"median {inp.gap_median_min:.2f} min between decisions × {est.fpi:.2f} findings per image = {est.m_rev_measured:.2f} min · Measured (run {inp.run}), n = {inp.gap_n} gaps; indicative only")
+        if s2.checkbox("Use the measured value instead of the slider", value=False, key=f"{key}_usem"):
+            ov.pop("m_rev", None)
+            ov["use_measured_m_rev"] = 1
+            est = workforce.estimate(inp, ov)
+    else:
+        s2.caption(f"Team assumption; {inp.gap_n} of 10 review gaps logged")
+
+    st.markdown("**Estimated with the assumptions above** · per 1,000 images at this run's routing fraction, then this run")
+    k = st.columns(6)
+    k[0].metric("Manual review h / 1,000 (estimate)", f"≈ {est.manual_h_1000:.1f}", help=est_note(est, "manual_h_1000"))
+    k[1].metric("Cascade review h / 1,000 (estimate)", f"≈ {est.cascade_h_1000:.1f}", help=est_note(est, "cascade_h_1000"))
+    k[2].metric("Hours freed / 1,000 (estimate)", f"≈ {est.saved_h_1000:+.1f}", help=est_note(est, "saved_h_1000"))
+    k[3].metric("Percent saved, this run (estimate)", f"≈ {est.saved_pct:+.1f}%" if est.saved_pct is not None else "n/a", help=est_note(est, "saved_pct"))
+    k[4].metric("Inspector-equivalents of review time freed / 1,000 images / week (estimate)", f"≈ {est.ie_per_1000_week:.2f}", help=est_note(est, "ie_per_1000_week"))
+    k[5].metric("Cost per image, human vs cascade (estimate)", f"≈ ${est.cost_img_human:.2f} vs ${est.cost_img_cascade:.2f}", help=est_note(est, "cost_img_cascade") + " · " + workforce.COST_SCOPE)
+    st.caption(f"*Every figure above is an estimate: this run's measured counts multiplied by the assumptions. Routing fraction r = {est.routing_fraction:.2f} (measured on {', '.join(inp.source_datasets) or 'uploads'}, not a fleet number).*" if est.routing_fraction is not None else "*Every figure above is an estimate.*")
+    if est.saved_pct is not None and est.saved_pct < 0:
+        st.markdown(f"<span style='color:#dc2626'><b>{est.saved_pct:+.1f}%</b> {workforce.NEGATIVE_SENTENCE}</span>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    badge_m = workforce.badge_text("measured", inp.run)
+    gap = f"{inp.gap_median_min:.2f} min / {inp.gap_n}" if inp.gap_median_min is not None else f"n/a / {inp.gap_n}"
+    measured_rows = [
+        ("Images (N)", inp.images, "summary.json"), ("Gated (G)", inp.gated, "gate.jsonl"), ("Routed to grader (R)", inp.routed, "gate.jsonl"),
+        ("Auto-cleared (A = G - R)", est.auto_cleared, "gate.jsonl"), ("Unusable (UN)", inp.unusable, "gate.jsonl"), ("Graded images (GI)", inp.graded_images, "findings.json"),
+        ("Findings (F)", inp.findings, "findings.json"), ("U findings (never counted as S0)", inp.u_findings, "findings.json"), ("API dollars, all stages (C)", f"${inp.usd_total:.4f}", "calls.jsonl"),
+        ("Model seconds per image", f"{est.model_s_per_image:.1f} s" if est.model_s_per_image is not None else "n/a", "calls.jsonl"), ("Reviewer decisions (V)", inp.reviews, "findings.json"),
+        ("Review gap median / gaps kept", gap, "reviews.sqlite"), ("Routing fraction (r = R / G)", f"{est.routing_fraction:.2f}" if est.routing_fraction is not None else "n/a", "gate.jsonl"),
+    ]
+    with c1:
+        st.markdown("**Measured from this run**")
+        st.markdown("\n".join(["| Quantity | Value | Badge | File |", "|---|---|---|---|"] + [f"| {q} | {v} | {badge_m} | `{src}` |" for q, v, src in measured_rows]))
+    est_rows = [
+        ("Manual review minutes, this run", "manual_min", f"{est.manual_min:.1f} min"), ("Cascade review minutes, this run", "cascade_min", f"{est.cascade_min:.1f} min"),
+        ("Minutes saved, this run", "saved_min", f"{est.saved_min:+.1f} min"), ("Percent saved, this run", "saved_pct", f"{est.saved_pct:+.1f}%" if est.saved_pct is not None else "n/a"),
+        ("Break-even manual minutes per image", "break_even_m_man", f"{est.break_even_m_man:.2f} min" if est.break_even_m_man is not None else "none (no pre-filled grade in this run)"),
+        ("Manual hours per 1,000", "manual_h_1000", f"{est.manual_h_1000:.1f} h"), ("Cascade hours per 1,000", "cascade_h_1000", f"{est.cascade_h_1000:.1f} h"), ("Hours freed per 1,000", "saved_h_1000", f"{est.saved_h_1000:+.1f} h"),
+        ("Percent saved per 1,000", "saved_pct_1000", f"{est.saved_pct_1000:+.1f}%" if est.saved_pct_1000 is not None else "n/a"), ("Inspector-equivalents freed per 1,000 per week", "ie_per_1000_week", f"{est.ie_per_1000_week:.3f}"),
+        ("Cost per image, human", "cost_img_human", f"${est.cost_img_human:.2f}"), ("Cost per image, cascade API (measured)", "cost_img_cascade_api", f"${est.cost_img_cascade_api:.4f}"),
+        ("Cost per image, cascade human", "cost_img_cascade_hum", f"${est.cost_img_cascade_hum:.2f}"), ("Cost per image, cascade total", "cost_img_cascade", f"${est.cost_img_cascade:.2f}"),
+    ]
+    with c2:
+        st.markdown("**Estimated with the assumptions above**")
+        lines = ["| Quantity | Value | Label |", "|---|---|---|"]
+        for q, k_, v in est_rows:
+            uses = est.uses.get(k_, [])
+            lines.append(f"| {q} | {'≈ ' + v if uses else v} | {'*' + est_note(est, k_) + '*' if uses else est_note(est, k_)} |")
+        st.markdown("\n".join(lines))
+    a_1000 = 1000 - int(round(1000 * (est.routing_fraction or 0)))
+    bound = workforce.rule_of_three_bound(est.audit_1000)
+    st.caption(f"Run figure audits {est.audit_n} of {est.auto_cleared} auto-cleared images (rounded up to at least 1); at 1,000 images the same settings audit {est.audit_1000} of {a_1000}."
+               + (f" If that audit finds no miss, the 95% upper bound on the miss rate among the auto-cleared images is about {bound:.1%} (rule of three, Hanley and Lippman-Hand 1983); it applies to this run's cleared population only, after the audit is done and logged." if bound else ""))
+    st.markdown("**Assumptions used**  " + " · ".join(f"`{k_}` = {asm.value:g} {asm.unit} ({workforce.badge_text(asm.kind, inp.run)})" for k_, asm in est.assumptions.items() if k_ in ("m_man", "m_rev", "m_aud", "a", "w", "H", "m_xf")))
+    for wmsg in est.warnings:
+        st.caption(f"⚠ {wmsg}")
+    st.caption(workforce.COST_SCOPE)
+    trows = workforce.tornado(inp, ov)
+    tdf = pd.DataFrame(trows)
+    tdf["setting"] = tdf.apply(lambda r: f"{r['lever']} = {r['value']:.3g} ({'what-if on a cleaner fleet' if r['hypothetical'] else r['label']})" if r["value"] is not None else f"{r['lever']} (not measurable)", axis=1)
+    tdf["kind"] = tdf["hypothetical"].map({True: "what-if on a cleaner fleet", False: "one assumption changed"})
+    tornado_chart = (
+        alt.Chart(tdf.dropna(subset=["saved_pct_1000"]))
+        .mark_bar()
+        .encode(
+            y=alt.Y("setting:N", sort=None, title=None),
+            x=alt.X("saved_pct_1000:Q", title="percent of review time saved per 1,000 images (estimate)"),
+            color=alt.Color("kind:N", scale=alt.Scale(domain=["one assumption changed", "what-if on a cleaner fleet"], range=["#3b82f6", "#9ca3af"]), title=None),
+            tooltip=["lever", "value", "label", "saved_pct_1000", "ie_per_1000_week"],
+        )
+        .properties(height=360, title="Sensitivity, one lever at a time (estimate)")
+    )
+    st.altair_chart(tornado_chart, width="stretch")
+    st.markdown(f"*{workforce.FOOTER}*")
 
 
 def multipliers(f: Finding, rec) -> dict:
@@ -244,10 +496,16 @@ def confusion_chart(labels: List[str], matrix: List[List[int]], title: str) -> a
     return (heat + text).properties(title=title, height=max(240, 70 * len(labels) + 80), width=max(300, 90 * len(labels) + 120))
 
 
-def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use_exemplars: bool, surge: bool) -> Optional[dict]:
-    """Run the cascade with live counters in the current container. Returns the summary or None on error."""
+def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use_exemplars: bool, surge: bool, extractions: Optional[List[dict]] = None) -> Optional[dict]:
+    """Run the cascade with live counters in the current container. Returns the summary or None on error.
+    `extractions` (frames.json dicts) are copied into runs/<name>/videos/<slug>.json so the run is self-contained."""
     out.mkdir(parents=True, exist_ok=True)
     write_manifest(records, out / "manifest.jsonl")
+    for ext in extractions or []:
+        src = Path(ext["out_dir"]) / "frames.json"
+        if src.exists():
+            (out / "videos").mkdir(exist_ok=True)
+            shutil.copyfile(src, out / "videos" / f"{slug_of(Path(ext['video']['path']))}.json")
     counters = st.empty()
     bar = st.progress(0.0, text="starting")
     log_box = st.empty()
@@ -269,7 +527,7 @@ def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use
             summary = run_cascade(records, out, cfg, exemplars=provider, progress=on_progress)
             if surge:
                 write_surge_report(surge_counts(load_run(out)["findings"]), summary, out)
-            write_run_report(out, {r.image_id: r for r in records})
+            write_reports(out, {r.image_id: r for r in records})
             bar.progress(1.0, text="done")
             st.toast(f"Run {out.name} finished: {summary['findings']} findings", icon="\u2705")
             st.success(f"Done: {summary['findings']} findings from {summary['images']} images, ${summary['usd_total']} total, routed {summary['routed_to_grader']} of {summary['gated']}. Report stored in runs/{out.name}/report.md.")
@@ -356,7 +614,7 @@ def startup_svg() -> str:
         ("They already have", ["Drone and phone imagery", "Standards they must report to", "Deadlines and fines for late entry", "Too few inspectors"], "#64748b"),
         ("The engine", ["Rubrics as data, not code", "Cheap gate, heavy grade", "Explicit U, verbatim criteria", "Consequence-ranked queue"], "#3b82f6"),
         ("They get", ["Pre-filled condition states", "Work list ranked by risk", "Evidence crop per finding", "Surge counts after an event"], "#f59e0b"),
-        ("The moat", ["Frozen eval per asset class", "Review log: agreement over time", "Exemplars from accepted grades", "New asset class = new rubric file"], "#8b5cf6"),
+        ("The moat", ["Frozen eval per asset class", "Review log: agreement over time", "Exemplars from adjudicated dev grades", "New asset class = new rubric file"], "#8b5cf6"),
     ]
     bw, gap, y0, bh = 240, 40, 40, 230
     x0 = (W - (bw * 5 + gap * 4)) // 2
@@ -394,6 +652,7 @@ source = st.sidebar.radio("Images", ["Dataset", "Upload"], horizontal=True)
 
 manifests = list_manifests()
 records: List[ImageRecord] = []
+sidebar_exts: List[dict] = []
 if source == "Dataset":
     if not manifests:
         st.sidebar.error("No manifests found. Run `python scripts/make_demo_manifests.py` first.")
@@ -409,15 +668,23 @@ if source == "Dataset":
             records = [r for r in records if r.asset_class == "building_disaster"]
 else:
     asset_class = "building_disaster" if surge else st.sidebar.selectbox("Asset class", ASSET_CLASSES)
-    files = st.sidebar.file_uploader("JPEG / PNG", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key="sidebar_upload")
+    sidebar_client = st.sidebar.text_input("Client id (optional; groups the client report)", value="", key="sidebar_client")
+    files = st.sidebar.file_uploader(UPLOAD_LABEL, type=UPLOAD_TYPES, accept_multiple_files=True, key="sidebar_upload")
+    if not FF_OK:
+        st.sidebar.caption(f"Video upload off: {FF_MSG}")
+    with st.sidebar:
+        sidebar_vopts = video_options("sb")
     if files:
-        up = RUNS / "_uploads" / time.strftime("%Y%m%d_%H%M%S")
-        up.mkdir(parents=True, exist_ok=True)
-        for fobj in files:
-            (up / fobj.name).write_bytes(fobj.getbuffer())
-        records = ingest_folder(up, asset_class=asset_class, source_dataset="upload", split="upload", id_prefix="up")
-        write_manifest(records, up / "manifest.jsonl")
-        st.sidebar.success(f"{len(records)} images ingested; hash, size and EXIF date recorded, missing metadata stays null")
+        sig = (tuple((f.name, f.size) for f in files), asset_class, sidebar_client, tuple(sorted(sidebar_vopts.items())))
+        cache = st.session_state.get("sidebar_ingest")
+        if not cache or cache["sig"] != sig:  # ingest (and extract frames) once per distinct upload, not on every rerun
+            up = RUNS / "_uploads" / time.strftime("%Y%m%d_%H%M%S")
+            recs_up, exts_up, line_up = ingest_uploads(files, up, asset_class, sidebar_client, "up", sidebar_vopts)
+            write_manifest(recs_up, up / "manifest.jsonl")
+            cache = {"sig": sig, "records": recs_up, "exts": exts_up, "line": line_up}
+            st.session_state["sidebar_ingest"] = cache
+        records, sidebar_exts = cache["records"], cache["exts"]
+        st.sidebar.success(cache["line"])
 if records:
     st.sidebar.caption(f"{len(records)} images selected · " + ", ".join(f"{k} {v}" for k, v in pd.Series([r.asset_class for r in records]).value_counts().items()))
 
@@ -440,16 +707,33 @@ active_run = st.session_state.get("active_run")
 if open_run != "(none)" and not run_clicked:
     active_run = open_run
     st.session_state["active_run"] = open_run
+if run_clicked and records:  # decided before the tabs so the run pickers below follow the run about to finish
+    st.session_state["active_run"] = run_name
+    active_run = run_name
 
-tab_run, tab_arch, tab_drop, tab_batch, tab_reports, tab_eval, tab_why = st.tabs(["Inspect run", "Architecture", "Drop & grade", "Batch", "Reports", "Eval matrix", "Why this approach"])
+
+def sync_run_pickers(name: Optional[str]) -> None:
+    """The Reports / Client reports / Eval matrix / Model health pickers are keyed widgets: Streamlit keeps their
+    stored value after the first render, so `index=` alone never follows the sidebar. Set them once per change of
+    the active run, only to a run that is in their options (a finished run folder)."""
+    if name and st.session_state.get("_synced_run") != name and name in list_runs():
+        for k in ("report_pick", "client_run", "eval_pick", "health_pick"):
+            st.session_state[k] = name
+        st.session_state["_synced_run"] = name
+
+
+sync_run_pickers(active_run)
+
+tab_run, tab_arch, tab_drop, tab_batch, tab_reports, tab_clients, tab_eval, tab_health, tab_why = st.tabs(
+    ["Inspect run", "Architecture", "Drop & grade", "Batch", "Reports", "Client reports", "Eval matrix", "Model health", "Why this approach"]
+)
 
 # ---------- Inspect run ----------
 
 with tab_run:
     if run_clicked and records:
-        st.session_state["active_run"] = run_name
-        active_run = run_name
-        run_with_progress(records, RUNS / run_name, cfg, use_exemplars, surge)
+        run_with_progress(records, RUNS / run_name, cfg, use_exemplars, surge, extractions=sidebar_exts)
+        sync_run_pickers(active_run)  # the run folder exists now; the pickers below are instantiated later in this script
 
     if not active_run:
         st.title("Inspection grading cascade")
@@ -481,6 +765,10 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
 6. **Export** the queue CSV and the stored report. End on **Eval matrix**: gate recall and within-one-grade accuracy with n.
 """
             )
+        if sidebar_exts:
+            st.subheader("Ingested videos")
+            for i, ext in enumerate(sidebar_exts):
+                video_strip(ext, records, key=f"sb_strip_{i}")
         if records:
             classes = pd.Series([r.asset_class for r in records]).value_counts()
             st.subheader(f"Selected images ({len(records)})")
@@ -502,8 +790,13 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
         recs = list(imgs.values())
         review_log = ReviewLog(out / "reviews.sqlite")
         lvl_by_img = worst_levels(findings)
+        health_doc = health_for(out, imgs)
+        acked = (health_doc or {}).get("acknowledged") or {}
+        blocking = [a for a in (health_doc or {}).get("alarms", []) if a["rule"] in BLOCKING_RULES and a["rule"] not in set(acked.get("rules") or [])]
 
         st.title(f"Run `{active_run}`")
+        if health_doc:
+            st.markdown("Model health: " + "  ".join(status_badge(s["status"], f"{stage}" + (f" ({s['worst_rule']})" if s["worst_rule"] else "")) for stage, s in health_doc["stages"].items()) + " &nbsp; <small>details under the Model health tab</small>", unsafe_allow_html=True)
         sub_over, sub_find, sub_queue, sub_surge, sub_export = st.tabs(["Overview", "Findings & review", "Work queue", "Surge counts", "Export"])
 
         with sub_over:
@@ -549,6 +842,9 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
             if summary:
                 with st.expander("summary.json"):
                     st.json(summary)
+            st.subheader("Workforce impact: review desk time with a smaller team")
+            st.caption("Counts are measured from this run; hours, percent and dollars are estimates that move with the sliders. No field visit, flight or headcount claim is made.")
+            workforce_panel(out, imgs, key="wf_over")
 
         with sub_find:
             if not findings:
@@ -597,7 +893,7 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                     if action:
                         review_log.apply(active_run, f, action[0], reviewer, action[1])
                         save_findings(findings, out, recs)
-                        write_run_report(out, imgs)
+                        write_reports(out, imgs)
                         st.toast(f"{action[0]} by {reviewer}, prior {f.review.prior_level}", icon="\U0001F4DD")
                         st.rerun()
                 agg = review_log.agreement(active_run)
@@ -606,12 +902,7 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                 tl = review_log.timeline(active_run)
                 if tl:
                     st.markdown("**Model vs reviewer agreement over time (FR-19)**")
-                    tdf = pd.DataFrame(tl)
-                    line = alt.Chart(tdf).mark_line(point=True, interpolate="monotone").encode(
-                        x=alt.X("n:Q", title="decision #"), y=alt.Y("agreement_rate:Q", title="running agreement", scale=alt.Scale(domain=[0, 1])),
-                        tooltip=["n", "reviewed_at", "finding_id", "action", "prior_level", "new_level", "reviewer"],
-                    ).properties(height=200)
-                    st.altair_chart(line, width="stretch")
+                    st.altair_chart(agreement_chart(tl), width="stretch")
 
         with sub_queue:
             st.markdown("`score = severity_weight[S] × criticality × consequence × urgency`. Any **S4** sorts first and is escalated same day. **U** is listed, never scored as S0. Criticality is 1 unless supplied per asset.")
@@ -637,8 +928,15 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                     )
                 st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True, height=400)
                 st.subheader("Top of the queue, visually")
-                top = [imgs[f.evidence.image_ids[0]] for f in ranked[:10] if f.evidence.image_ids and f.evidence.image_ids[0] in imgs]
-                caps = {f.evidence.image_ids[0]: f"#{f.queue_rank} · {f.native_scale.value} · {f.action.code}" for f in ranked[:10] if f.evidence.image_ids}
+                seen_q, top, caps = set(), [], {}
+                for f in ranked:  # one thumbnail per image, captioned by its best-ranked finding
+                    iid = f.evidence.image_ids[0] if f.evidence.image_ids else None
+                    if iid and iid in imgs and iid not in seen_q:
+                        seen_q.add(iid)
+                        top.append(imgs[iid])
+                        caps[iid] = f"#{f.queue_rank} · {f.native_scale.value} · {f.action.code}"
+                    if len(top) >= 10:
+                        break
                 gallery(top, captions=caps, levels=lvl_by_img, key="queue")
             else:
                 st.info("Empty queue.")
@@ -662,10 +960,16 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                     st.download_button("Download surge_report.md", rp.read_bytes(), file_name="surge_report.md", key="dl_surge")
 
         with sub_export:
-            for name in ["report.md", "report.json", "queue.csv", "findings.json", "bridge_entry.csv", "gate.jsonl", "calls.jsonl", "summary.json", "surge_counts.json", "surge_report.md"]:
+            if blocking:
+                st.error("Model health alarm blocks the work-list exports until acknowledged under Model health: " + "; ".join(f"{a['rule']} ({a['stage']}, n={a['n']}): {a['action']}" for a in blocking))
+            elif acked and any(a["rule"] in BLOCKING_RULES for a in (health_doc or {}).get("alarms", [])):
+                st.caption(f"Blocking alarm acknowledged by {acked.get('by')} at {acked.get('at')}: exports released.")
+            for name in ["report.md", "report.json", "queue.csv", "findings.json", "bridge_entry.csv", "gate.jsonl", "calls.jsonl", "summary.json", "surge_counts.json", "surge_report.md", "health.json"]:
                 fp = out / name
                 if fp.exists():
-                    st.download_button(f"Download {name}", fp.read_bytes(), file_name=f"{active_run}_{name}", key=f"dl_{name}")
+                    st.download_button(f"Download {name}", fp.read_bytes(), file_name=f"{active_run}_{name}", key=f"dl_{name}", disabled=bool(blocking) and name in ("queue.csv", "bridge_entry.csv"))
+            if (out / "clients" / "index.json").exists():
+                st.caption("Per-client HTML reports are under the Client reports tab.")
             st.caption("queue.csv columns are documented in src/cascade/export.py (QUEUE_COLUMNS). bridge_entry.csv carries element, condition state and quantity columns for SNBI-style entry (FR-17). report.md is the stored run report shown under Reports.")
 
 # ---------- Architecture ----------
@@ -703,23 +1007,62 @@ Every model call is logged with model, tokens, dollars and seconds (`calls.jsonl
 # ---------- Drop & grade ----------
 
 with tab_drop:
-    st.subheader("Drop images, get graded findings")
-    st.caption("Drag files onto the box. They are hashed and ingested, then run through the cascade with the backends chosen in the sidebar. Each drop becomes its own stored run.")
+    st.subheader("Drop images or video, get graded findings")
+    st.caption("Drag files onto the box: camera JPEGs, drone stills, PNGs" + (", or a video (frames are sampled, near-duplicates dropped, each kept frame becomes an image record)" if FF_OK else "") + ". They are hashed and ingested, then run through the cascade with the backends chosen in the sidebar. Each drop becomes its own stored run.")
     d1, d2 = st.columns([2, 1])
-    drop_files = d1.file_uploader("Drop JPEG / PNG here", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key="drop_upload")
+    drop_files = d1.file_uploader(f"Drop {UPLOAD_LABEL} here", type=UPLOAD_TYPES, accept_multiple_files=True, key="drop_upload")
+    if not FF_OK:
+        d1.caption(f"Video upload off: {FF_MSG}")
+    with d1:
+        drop_vopts = video_options("drop")
     drop_class = d2.selectbox("Asset class", ASSET_CLASSES, index=ASSET_CLASSES.index("building_disaster") if surge else 0, key="drop_class")
+    drop_client = d2.text_input("Client id (optional; groups the client report)", value="", key="drop_client")
     d2.markdown(f"Backends: gate `{gate}`, grader `{grader}`" + (", surge posture" if surge else ""))
-    go = d2.button("Grade dropped images", type="primary", disabled=not drop_files, key="drop_go", width="stretch")
-    if go and drop_files:
+    go = d2.button("Grade dropped files", type="primary", disabled=not drop_files, key="drop_go", width="stretch")
+    demo_go = d2.button("Demo video: bridge_walkthrough.mp4", key="drop_demo", width="stretch", disabled=not (FF_OK and DEMO_VIDEO.exists()),
+                        help="12 s 1280x960 clip under data/demo/video, sampled with the Video options above and graded as bridge elements")
+    if (go and drop_files) or demo_go:
         name = f"drop_{time.strftime('%m%d_%H%M%S')}"
         out = RUNS / name
         up = out / "uploads"
         up.mkdir(parents=True, exist_ok=True)
-        for fobj in drop_files:
-            (up / fobj.name).write_bytes(fobj.getbuffer())
-        drop_recs = ingest_folder(up, asset_class=drop_class, source_dataset="upload", split="upload", id_prefix="drop")
-        st.session_state["drop_run"] = name
-        run_with_progress(drop_recs, out, cfg, use_exemplars, surge or drop_class == "building_disaster")
+        drop_exts: List[dict] = []
+        if demo_go:
+            drop_recs = []
+            try:
+                drop_recs, ext = ingest_video(DEMO_VIDEO, up / "frames" / slug_of(DEMO_VIDEO), asset_class="bridge_element", client_id=drop_client or None, captured_on_from_mtime=False, source_dataset="demo_video", split="demo", **drop_vopts)
+                drop_exts = [ext.to_json()]
+                drop_line = f"0 images + {ext.to_json()['n_kept']} frames from 1 video ingested ({ext.to_json()['n_dropped']} near-duplicate frames dropped, dHash ≤ {drop_vopts['dedup_max_distance']})"
+            except VideoError as e:
+                st.error(str(e))
+            drop_surge = surge
+        else:
+            drop_recs, drop_exts, drop_line = ingest_uploads(drop_files, up, drop_class, drop_client, "drop", drop_vopts)
+            drop_surge = surge or drop_class == "building_disaster"
+        if drop_recs:
+            st.session_state.setdefault("video_extractions", {})[name] = drop_exts
+            if demo_go:
+                # ingest only: grading is a separate, visible click so no model is called by surprise
+                st.session_state["drop_pending"] = {"name": name, "records": drop_recs, "exts": drop_exts, "surge": drop_surge, "line": drop_line}
+            else:
+                st.session_state["drop_run"] = name
+                st.success(drop_line)
+                for i, ext in enumerate(drop_exts):
+                    video_strip(ext, drop_recs, key=f"drop_pre_{i}")
+                run_with_progress(drop_recs, out, cfg, use_exemplars, drop_surge, extractions=drop_exts)
+        else:
+            st.warning("Nothing ingested.")
+    pend = st.session_state.get("drop_pending")
+    if pend and not (RUNS / pend["name"] / "gate.jsonl").exists():
+        st.success(pend["line"] + " · nothing graded yet")
+        for i, ext in enumerate(pend["exts"]):
+            video_strip(ext, pend["records"], key=f"drop_pend_{i}")
+        pc1, pc2 = st.columns([1, 2])
+        if pc1.button(f"Grade these {len(pend['records'])} frames", type="primary", key="drop_pending_go", width="stretch"):
+            st.session_state["drop_run"] = pend["name"]
+            st.session_state.pop("drop_pending", None)
+            run_with_progress(pend["records"], RUNS / pend["name"], cfg, use_exemplars, pend["surge"], extractions=pend["exts"])
+        pc2.caption(f"gate `{gate}`, grader `{grader}` from the sidebar; each routed frame is one grader call")
     drop_run = st.session_state.get("drop_run")
     if drop_run and (RUNS / drop_run / "gate.jsonl").exists():
         out = RUNS / drop_run
@@ -730,6 +1073,8 @@ with tab_drop:
             for iid in f.evidence.image_ids:
                 by_img.setdefault(iid, []).append(f)
         st.markdown(f"**Run `{drop_run}`** · {len(run['gate'])} images · {len(run['findings'])} findings · ${sum(c['usd'] for c in run['calls']):.3f}")
+        for i, ext in enumerate(st.session_state.get("video_extractions", {}).get(drop_run) or stored_extractions(out)):
+            video_strip(ext, list(imgs.values()), key=f"drop_post_{i}")
         for g in run["gate"]:
             rec = imgs.get(g["image_id"])
             if not rec:
@@ -739,7 +1084,7 @@ with tab_drop:
             with c1:
                 st.image(draw_evidence(fs[0], rec) if fs else thumbnail(rec.path, Path(rec.path).stat().st_mtime), width="stretch")
             with c2:
-                st.markdown(f"**{rec.image_id}** · {gate_caption(g)}")
+                st.markdown(f"**{rec.image_id}** · {gate_caption(g)}" + (f" · from {Path(rec.source_video).name} @ {rec.frame_time_s:.1f} s" if rec.source_video and rec.frame_time_s is not None else ""))
                 st.caption(f"gate reason: {g['reason']}")
                 if not fs:
                     st.write("Not graded (gate said clean, or grader set to none).")
@@ -817,8 +1162,8 @@ with tab_reports:
         pick = st.selectbox("Open a report", all_runs, index=all_runs.index(active_run) if active_run in all_runs else 0, key="report_pick")
         rp = RUNS / pick / "report.md"
         cA, cB = st.columns([1, 3])
-        if cA.button("Generate / refresh report.md", key="report_gen"):
-            write_run_report(RUNS / pick, load_records_for_run(RUNS / pick))
+        if cA.button("Generate / refresh report.md", key="report_gen", help="report.md with the workforce estimate section, report.json, per-client reports and health.json; no model calls"):
+            write_reports(RUNS / pick, load_records_for_run(RUNS / pick))
             st.rerun()
         if rp.exists():
             cB.download_button("Download report.md", rp.read_bytes(), file_name=f"{pick}_report.md", key="report_dl")
@@ -832,6 +1177,101 @@ with tab_reports:
                 gallery(top, captions={f.evidence.image_ids[0]: f"#{f.queue_rank} · {f.native_scale.value} · {f.action.code}" for f in ranked if f.evidence.image_ids}, levels=worst_levels(rr["findings"]), key="report_gallery")
         else:
             st.info("No report stored for this run yet. Press Generate.")
+
+# ---------- Client reports ----------
+
+with tab_clients:
+    st.subheader("Client reports: one page per client")
+    st.caption("Grouped by client_id, else the source dataset, else 'unassigned'. Each report is a single HTML file (embedded evidence thumbnails and SVG charts, no scripts, under 5 MB) with a markdown twin and report.json. U rows are listed separately and never counted as S0.")
+    all_runs = list_runs()
+    if not all_runs:
+        st.info("No runs yet.")
+    else:
+        cpick = st.selectbox("Run", all_runs, index=all_runs.index(active_run) if active_run in all_runs else 0, key="client_run")
+        crun = RUNS / cpick
+        g1, g2 = st.columns([1, 3])
+        if g1.button("Generate / refresh client reports", key="client_gen", type="primary"):
+            with st.spinner("rendering client reports (no model calls)"):
+                try:
+                    write_client_reports(crun, run_records(crun, load_records_for_run(crun)))
+                    st.toast("client reports written", icon="\U0001F4C4")
+                except Exception as e:
+                    st.error(f"{type(e).__name__}: {e}")
+            st.rerun()
+        idx = crun / "clients" / "index.json"
+        if not idx.exists():
+            st.info("No client reports yet. Press Generate.")
+        else:
+            crows = json.loads(idx.read_text(encoding="utf-8"))
+            labels = {r["client_id"]: f"{r['client_id']} · {r['images']} images · {r['findings']} findings" for r in crows}
+            g2.caption(" · ".join(f"{r['client_id']} ({r['basis']}): S4 {r['S4']}, U {r['U']}, ${r['usd']:.3f}" for r in crows))
+            cid = st.selectbox("Client", list(labels), format_func=lambda k_: labels[k_], key="client_pick")
+            crow = next(r for r in crows if r["client_id"] == cid)
+            m = json.loads((crun / crow["json"]).read_text(encoding="utf-8"))
+            st.markdown(f"### {m['client_id']} · run `{m['run']}` · grouped by {m['grouping_basis']} · generated {m['generated_at'][:19]}")
+            k = st.columns(8)
+            k[0].metric("Images", m["images"])
+            k[1].metric("Routed / gated", f"{m['routed']} / {m['gated']}")
+            k[2].metric("Findings", m["findings"])
+            k[3].metric("S4", m["levels"]["S4"], help=LEVEL_MEANING["S4"])
+            k[4].metric("S3", m["levels"]["S3"], help=LEVEL_MEANING["S3"])
+            k[5].metric("U", m["levels"]["U"], help="never counted as S0: " + LEVEL_MEANING["U"])
+            k[6].metric("Reviews pending", m["reviews"]["pending"])
+            k[7].metric("USD", f"{m['usd_total']:.3f}", help=f"{m['cost_source']}")
+            ch1, ch2, ch3 = st.columns(3)
+            ldf = pd.DataFrame([{"level": lvl, "count": m["levels"].get(lvl, 0)} for lvl in LEVELS])
+            lbase = alt.Chart(ldf).encode(y=alt.Y("level:N", sort=list(LEVELS), title=None), x=alt.X("count:Q", title="findings"))
+            lbar = lbase.mark_bar().encode(color=alt.Color("level:N", scale=alt.Scale(domain=list(LEVEL_COLOR), range=list(LEVEL_COLOR.values())), legend=None), tooltip=["level", "count"])
+            ltext = lbase.mark_text(align="left", dx=4).encode(text="count:Q")
+            ch1.altair_chart((lbar + ltext).properties(height=220, title="Findings by unified level (U listed, never S0)"), width="stretch")
+            adf = pd.DataFrame([{"action": a, "count": m["action_counts"].get(a, 0)} for a in ACTION_ORDER if m["action_counts"].get(a, 0)])
+            if not adf.empty:
+                donut = alt.Chart(adf).mark_arc(innerRadius=50).encode(theta=alt.Theta("count:Q"), color=alt.Color("action:N", sort=list(ACTION_ORDER), scale=alt.Scale(domain=list(ACTION_ORDER), range=[ACTION_COLOR[a] for a in ACTION_ORDER])), tooltip=["action", "count"]).properties(height=220, title="Actions")
+                ch2.altair_chart(donut, width="stretch")
+            else:
+                ch2.info("No actions yet.")
+            sdf = pd.DataFrame([r for r in m["sla"] if r.get("due_in_days") is not None])
+            if not sdf.empty:
+                pts = alt.Chart(sdf).mark_circle(size=90).encode(x=alt.X("due_in_days:Q", title="due in days (negative = overdue)"), y=alt.Y("action:N", sort=list(ACTION_ORDER), title=None),
+                                                                  color=alt.Color("level:N", scale=alt.Scale(domain=list(LEVEL_COLOR), range=list(LEVEL_COLOR.values()))), tooltip=["finding_id", "rank", "level", "action", "due_in_days"])
+                rule = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color="#dc2626").encode(x="x:Q")
+                ch3.altair_chart((pts + rule).properties(height=220, title="SLA calendar"), width="stretch")
+            else:
+                ch3.info("No dated SLA rows (rows without a due date are not chartable).")
+            if m["reviews"].get("timeline"):
+                st.markdown("**Model vs reviewer agreement over time for this client (FR-19)**")
+                st.altair_chart(agreement_chart(m["reviews"]["timeline"]), width="stretch")
+            st.markdown("**Assets**")
+            with st.container():
+                if m["assets"]:
+                    st.dataframe(pd.DataFrame(m["assets"]), width="stretch", hide_index=True)
+                else:
+                    st.info("No assets.")
+            st.markdown("**Workload, measured from this run**")
+            st.markdown("\n".join(f"- {line}" for line in _workload_lines(m)))
+            rr_c = load_run(crun)
+            imgs_c = load_records_for_run(crun)
+            seen_c, ctop, ccaps = set(), [], {}
+            for q in m["queue"]:  # one thumbnail per image: the first (best-ranked) finding captions it
+                if q["image_id"] in imgs_c and q["image_id"] not in seen_c:
+                    seen_c.add(q["image_id"])
+                    ctop.append(imgs_c[q["image_id"]])
+                    ccaps[q["image_id"]] = f"#{q['queue_rank']} · {q['native']} · {q['action_code']}"
+                if len(ctop) >= 10:
+                    break
+            if ctop:
+                st.markdown("**Top of this client's queue**")
+                gallery(ctop, captions=ccaps, levels=worst_levels(rr_c["findings"]), key="client_gallery")
+            html_path, md_path = crun / crow["html"], crun / crow["md"]
+            dl1, dl2, dl3 = st.columns(3)
+            if html_path.exists():
+                dl1.download_button("Download report.html", html_path.read_bytes(), file_name=f"{cpick}_{m['slug']}_report.html", mime="text/html", key="client_dl_html")
+            if md_path.exists():
+                dl2.download_button("Download report.md", md_path.read_bytes(), file_name=f"{cpick}_{m['slug']}_report.md", key="client_dl_md")
+            dl3.caption(f"thumbnails embedded {m['thumbs'].get('embedded')} of {m['thumbs'].get('findings')} ({m['thumbs'].get('encoding')}), html {html_path.stat().st_size / 1e6:.2f} MB" if html_path.exists() else "")
+            if html_path.exists():
+                with st.expander("Preview report.html", expanded=False):
+                    components.html(html_path.read_text(encoding="utf-8"), height=900, scrolling=True)  # inline HTML; st.iframe takes a URL/path, not markup
 
 # ---------- Eval matrix ----------
 
@@ -906,6 +1346,241 @@ with tab_eval:
             rp = st.selectbox("Report", reports, format_func=lambda q: q.name, index=next((i for i, q in enumerate(reports) if q.stem == pick), 0), key="eval_report_pick")
             st.markdown(rp.read_text(encoding="utf-8"))
 
+# ---------- Model health ----------
+
+with tab_health:
+    st.subheader("Model health: drift detection and validation loops")
+    st.caption("Everything here is computed from the run folder with zero model calls (src/cascade/drift.py, thresholds in drift_thresholds.json with a basis string each). Baseline comparisons are drawn per asset class, only when the run's model identity (fingerprint model_id: models, prompts, rubrics, grader backend) equals the class card's active id; otherwise the run is a candidate. Nothing is computed from eval_v1 except the one-look ledger: baseline freezes refuse eval_v1 records and gate recall from eval_v1 labels is skipped.")
+    all_runs = list_runs()
+    if not all_runs:
+        st.info("No runs yet.")
+    else:
+        h1, h2 = st.columns([3, 1])
+        hpick = h1.selectbox("Run", all_runs, index=all_runs.index(active_run) if active_run in all_runs else 0, key="health_pick")
+        hrun = RUNS / hpick
+        imgs_h = load_records_for_run(hrun)
+        hd = health_for(hrun, imgs_h, refresh=h2.button("Recompute health.json", key="health_recompute"))
+        if not hd:
+            st.info("health.json could not be computed for this run.")
+        else:
+            fpp = hrun / "fingerprint.json"
+            fp_doc = json.loads(fpp.read_text(encoding="utf-8")) if fpp.exists() else None
+            # 1. status strip
+            st.markdown("#### Status")
+            st.markdown(status_badge(hd["status"], f"run `{hpick}` · fingerprint `{hd['fingerprint_id'] or 'none'}` · model identity `{hd.get('model_id') or 'none'}` · baseline `{hd['baseline_id'] or 'candidate: no baseline'}`" + (f" · comparable classes {', '.join(hd['comparable_classes'])}" if hd.get("comparable_classes") else "") + f" · thresholds {hd['thresholds_sha8']} · generated {hd['generated_at'][:19]}"), unsafe_allow_html=True)
+            sc = st.columns(len(hd["stages"]))
+            for col, (stage, s) in zip(sc, hd["stages"].items()):
+                detail = f"n = {s['n']}" + (f", need {s['n_required']}" if s["n_required"] else "") + (f"<br><small>{s['worst_rule']}</small>" if s["worst_rule"] else "")
+                col.markdown(f"**{stage}**<br>{status_badge(s['status'])}<br><small>{detail}</small>", unsafe_allow_html=True)
+            mps = hd["models"]["models_per_stage"]
+            st.caption(("Models per stage " + ("(reconstructed from calls.jsonl; this run predates fingerprint.json): " if not fp_doc else "(requested): ") + "; ".join(f"{s}: {', '.join(ms)}" for s, ms in mps.items()))
+                       + (f" · served-model mismatches: {len(hd['models']['served_mismatch'])}" if hd["models"]["served_mismatch"] else " · served model ids match the requested ids where recorded"))
+            for kind, items in (("alarm", hd["alarms"]), ("watch", hd["watch"])):
+                if items:
+                    st.markdown(f"**{kind.capitalize()}s** (alert budget: one per stage, ranked)")
+                    st.table(pd.DataFrame([{k_: (", ".join(map(str, a[k_])) if isinstance(a[k_], list) else str(a[k_])) for k_ in ("rank", "stage", "rule", "severity", "value", "threshold", "n", "action")} | ({"demoted_from": a["demoted_from"]} if a.get("demoted_from") else {}) for a in items]))
+            if hd["info"]:
+                st.caption("Info: " + "; ".join(f"{i.get('rule')}: {i.get('detail', i.get('action', ''))}" for i in hd["info"]))
+            # 2. fingerprint diff
+            st.markdown("#### Fingerprint")
+            if not fp_doc:
+                st.info("This run predates fingerprint.json; no component list to diff. New runs write one before the first model call.")
+            else:
+                others = [r for r in all_runs if r != hpick and (RUNS / r / "fingerprint.json").exists()]
+                other = st.selectbox("Compare with run", ["(none)"] + others, key="health_fp_other")
+                if other != "(none)":
+                    fp_b = json.loads((RUNS / other / "fingerprint.json").read_text(encoding="utf-8"))
+                    diff = {name: (a, b) for name, a, b in drift.fingerprint_diff(fp_doc, fp_b)}
+                    rows_fp = [{"component": k_, hpick: str(v)[:60], other: str(fp_b.get("components", {}).get(k_))[:60], "same": "no" if k_ in diff else "yes"} for k_, v in fp_doc.get("components", {}).items()]
+                    st.caption(f"Label: {'identical fingerprint, runs comparable' if not diff else f'{len(diff)} components differ, runs are not comparable'}")
+                else:
+                    rows_fp = [{"component": k_, "value": str(v)[:80]} for k_, v in fp_doc.get("components", {}).items()]
+                st.table(pd.DataFrame(rows_fp))
+            # 3. contract audit
+            c = hd["contract"]
+            st.markdown(f"#### Contract audit · n = {c['n']} findings, {c['grade_calls']} grade calls")
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                st.table(pd.DataFrame([{"rule": r, "count": v, "kind": "hard"} for r, v in c["hard"].items()] + [{"rule": r, "count": v, "kind": "soft"} for r, v in c["soft"].items()]))
+                st.caption(f"hard total {c['hard_total']} on {c['findings_breached']} findings (rate {c['hard_rate']:.3f}) · parse failures {c['parse_fail']} · refusals {c['refusals']} · stop categories {', '.join(map(str, c['stop_categories'])) or 'none recorded'}")
+            with cc2:
+                udf = pd.DataFrame([{"cause": k_, "count": v} for k_, v in c["u_by_cause"].items()])
+                st.altair_chart(alt.Chart(udf).mark_bar(color="#8b5cf6").encode(x=alt.X("cause:N", title=None), y=alt.Y("count:Q", title="U findings"), tooltip=["cause", "count"]).properties(height=200, title="U by cause"), width="stretch")
+            if c["violations"]:
+                with st.container():
+                    st.dataframe(pd.DataFrame(c["violations"]), width="stretch", hide_index=True, height=200)
+                v1, v2 = st.columns([3, 1])
+                vfid = v1.selectbox("Flagged finding", sorted({v["finding_id"] for v in c["violations"]}), key="health_violation")
+                if v2.button("Open in Findings & review", key="health_open_finding"):
+                    st.session_state["active_run"] = hpick
+                    st.session_state["finding_pick"] = vfid
+                    st.rerun()
+            ack1, ack2 = st.columns([1, 3])
+            if ack1.button("Acknowledge alerts", key="health_ack", disabled=not (hd["alarms"] or hd["watch"])):
+                hd["acknowledged"] = {"by": reviewer, "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "rules": [a["rule"] for a in hd["alarms"] + hd["watch"]]}
+                (hrun / "health.json").write_text(json.dumps(hd, indent=1, default=str), encoding="utf-8")
+                st.rerun()
+            ack2.caption(f"acknowledged: {hd['acknowledged']} (carried across recomputes while the alarm rules stay inside it; releases queue.csv and bridge_entry.csv)" if hd.get("acknowledged") else "no acknowledgement recorded")
+            # 4. U-rate chart across runs with the same model identity (the selected run is always drawn)
+            uc = hd["u_chart"]
+            st.markdown(f"#### U-rate p-chart · status: {uc['status']}")
+            if uc.get("per_class"):
+                st.table(pd.DataFrame([{"asset_class": k_, "n": v["n"], "U": v["u"], "rate": v["rate"], "p0": v["p0"], "UCL": v["ucl"], "LCL": v["lcl"], "status": v["status"]} for k_, v in uc["per_class"].items()]))
+            same_fp = []
+            for r in all_runs:
+                fpr = RUNS / r / "fingerprint.json"
+                fid = drift.identity_of(json.loads(fpr.read_text(encoding="utf-8"))) if fpr.exists() else None
+                if (fid is not None and fid == hd.get("model_id")) or r == hpick:
+                    rr_h = load_run(RUNS / r)
+                    b = drift.u_breakdown(rr_h["findings"], rr_h["calls"])
+                    same_fp += [{"run": r, "cause": cause, "rate": d["rate"], "count": d["count"], "n": b["n"], "enough_n": b["n"] >= (uc.get("n_required") or 10)} for cause, d in b["by_cause"].items()]
+            if same_fp:
+                udf2 = pd.DataFrame(same_fp)
+                ubar = alt.Chart(udf2).mark_bar().encode(x=alt.X("run:N", title=None), y=alt.Y("rate:Q", title="U rate (stacked by cause)"), color=alt.Color("cause:N"), opacity=alt.condition("datum.enough_n", alt.value(1.0), alt.value(0.35)), tooltip=["run", "cause", "count", "n", "rate"])
+                layers = [ubar]
+                if uc["status"] in ("in_control", "alarm"):
+                    for name_, val, col_ in (("p0", uc["p0"], "#22c55e"), ("UCL", uc["ucl"], "#dc2626"), ("LCL", uc["lcl"], "#3b82f6")):
+                        if val is not None:
+                            layers.append(alt.Chart(pd.DataFrame({"y": [val], "line": [name_]})).mark_rule(color=col_, strokeDash=[6, 4]).encode(y="y:Q", tooltip=["line", "y"]))
+                st.altair_chart(alt.layer(*layers).properties(height=240, title=(f"runs with model identity {hd['model_id']}" if hd.get("model_id") else "this run only (no fingerprint to group by)") + " (faded bars: n below the floor)"), width="stretch")
+            st.caption(f"this run: U {uc['u']} of {uc['n']}" + (f" = {uc['rate']:.3f}" if uc.get("rate") is not None else "") + (f" · needs n ≥ {uc['n_required']} for limits" if uc["status"] == "insufficient_n" else "") + (f" · p0 {uc['p0']:.3f}, UCL {uc['ucl']:.3f}, LCL {uc['lcl']:.3f}" if uc.get("ucl") is not None else " · limits need a baseline card with this fingerprint")
+                       + (f" · not comparable: {uc['not_comparable']}" if uc.get("not_comparable") else ""))
+            # 5. output shift
+            st.markdown("#### Output shift versus baseline on identical images")
+            sh = hd.get("output_shift")
+            if not sh:
+                st.info("candidate: no baseline with this fingerprint, so no shift is drawn. Freeze a baseline below once a run is reviewed.")
+            else:
+                st.caption(f"status {sh['status']} · n shared {sh['n_shared']} (needs {sh.get('n_required')}) · tiles differ: {sh['tiles_differ']} · abstention collapse: {sh['abstention_collapse']}")
+                if sh.get("per_class"):
+                    st.table(pd.DataFrame([{"asset_class": k_, **{kk: str(vv) for kk, vv in v.items()}} for k_, v in sh["per_class"].items()]))
+            # 6. gate health
+            g = hd["gate"]
+            st.markdown("#### Gate health")
+            gdf = pd.DataFrame([{"group": k_, **{kk: vv for kk, vv in v.items() if kk != "conf_bins"}} for k_, v in g["groups"].items()])
+            if not gdf.empty:
+                st.table(gdf.set_index("group").T.astype(str).replace({"None": "n/a"}))
+                bins = pd.DataFrame([{"group": k_, "confidence": bk, "count": bv} for k_, v in g["groups"].items() for bk, bv in v["conf_bins"].items()])
+                gc1, gc2 = st.columns(2)
+                gc1.altair_chart(alt.Chart(bins).mark_bar().encode(x=alt.X("confidence:N", title="gate confidence bin", sort=None), y=alt.Y("count:Q"), color="group:N", tooltip=["group", "confidence", "count"]).properties(height=200, title="gate confidence"), width="stretch")
+                ge = (g.get("eval") or {}).get("gate") or {}  # eval is None for every upload / video / Drop & grade run
+                gc2.markdown(f"share of clean verdicts below the routing threshold: {g['below_min_conf_share']:.2f}" + (" · the threshold had no effect on this run" if g["min_conf_inert"] else "")
+                             + (f"  \nrecall on labelled damaged images, gate only (forced routing excluded): {ge['recall']:.2f} (tp {ge['tp']}, fn {ge['fn']}, n {ge['n']})" if ge.get("recall") is not None else f"  \n{(g.get('eval') or {}).get('note') or 'no damage labels in this run (uploads never carry them)'}")
+                             + (f"  \nmissed: {', '.join(ge['misses'])}" if ge.get("misses") else ""))
+            else:
+                st.info("No gate rows.")
+            # 7. reviewer loop
+            rv = hd["review"]
+            st.markdown(f"#### Reviewer loop · n = {rv['n']} decisions · attribution: {rv['attribution']}")
+            r1, r2 = st.columns(2)
+            with r1:
+                st.markdown(f"agreement all {rv['agreement_all']:.2f} · rolling {rv['agreement_rolling']:.2f}" if rv["agreement_all"] is not None else "agreement: insufficient n (needs 10 decisions)")
+                st.markdown(f"overrides {rv['overrides']['n']} (up {rv['overrides']['up']}, down {rv['overrides']['down']}) · marked U {rv['marked_u']} · big overrides {len(rv['big_overrides'])} · critical misses {len(rv['critical_misses'])} (zero tolerance) · blind grades {rv['blind']['n']}")
+                if rv["critical_misses"]:
+                    st.error("Critical misses: " + "; ".join(map(str, rv["critical_misses"])))
+                if rv["by_reviewer"]:
+                    st.table(pd.DataFrame([{"reviewer": k_, **v} for k_, v in rv["by_reviewer"].items()]))
+            with r2:
+                if (hrun / "reviews.sqlite").exists():
+                    tl_h = ReviewLog(hrun / "reviews.sqlite").timeline(hpick)
+                    if tl_h:
+                        st.altair_chart(agreement_chart(tl_h), width="stretch")
+            with st.expander("Blind QC: grade a sampled finding without seeing the model's grade", expanded=False):
+                rr_h = load_run(hrun)
+                done_blind = ReviewLog(hrun / "reviews.sqlite").blind_ids(hpick) if (hrun / "reviews.sqlite").exists() else set()
+                sample = drift.blind_sample(rr_h["findings"], per_class=10, seed=hd["fingerprint_id"] or hpick, exclude_ids=done_blind)
+                if not sample:
+                    st.info("No findings left to sample." + (f" {len(done_blind)} already blind-graded." if done_blind else ""))
+                else:
+                    bfid = st.selectbox("Sampled finding", [f.finding_id for f in sample], key="blind_pick")
+                    bf = next(f for f in sample if f.finding_id == bfid)
+                    brec = imgs_h.get(bf.evidence.image_ids[0]) if bf.evidence.image_ids else None
+                    if brec and Path(brec.path).exists():
+                        st.image(draw_evidence(bf, brec, neutral=True), width="stretch", caption=f"{brec.image_id} · {bf.asset_class} · tile {bf.evidence.tile} (box in neutral grey: the level colour would leak the grade)")
+                    blvl = st.radio("Your unified level", [lvl for lvl in LEVELS if lvl != "U"], horizontal=True, key="blind_level")
+                    if st.button("Record blind grade", key="blind_record"):
+                        ReviewLog(hrun / "reviews.sqlite").record_blind(hpick, bf, blvl, reviewer)
+                        health_for(hrun, imgs_h, refresh=True)
+                        st.rerun()
+            # 8. ops
+            op = hd["ops"]
+            st.markdown("#### Ops: latency, tokens, price")
+            if op["by_stage_model"]:
+                st.table(pd.DataFrame([{"stage/model": k_, **v} for k_, v in op["by_stage_model"].items()]).set_index("stage/model"))
+            st.caption((f"unpriced models ({len(op['unpriced'])} calls): {', '.join(sorted({c['model'] for c in op['unpriced']}))}" if op["unpriced"] else "every call priced from costlog list prices (local models $0)") + (f" · ratios vs baseline: {op['ratios']}" if op.get("ratios") else ""))
+            # 9. input
+            inp_h = hd["input"]
+            st.markdown(f"#### Input: imagery statistics · n = {inp_h['n']} records")
+            share = lambda x: f"{x:.2f}" if isinstance(x, (int, float)) else "n/a"  # noqa: E731
+            pcts = inp_h.get("long_side_pcts") or {}
+            st.table(pd.DataFrame([{"long side p10/p50/p90 px": f"{pcts.get('p10')} / {pcts.get('p50')} / {pcts.get('p90')}", "share below 256 px": share(inp_h.get("share_below_256px")),
+                                     "null GSD share": share(inp_h.get("null_gsd_share")), "null irradiance share": share(inp_h.get("null_irradiance_share")), "null capture date share": share(inp_h.get("captured_null_share")),
+                                     "duplicates within run": str(inp_h.get("dups_within") or "none"), "asset mix": ", ".join(f"{k_} {v}" for k_, v in (inp_h.get("asset_mix") or {}).items())}]).T.rename(columns={0: "value"}))
+            if inp_h.get("video"):
+                st.table(pd.DataFrame([{"source_video": Path(k_).name, **v} for k_, v in inp_h["video"].items()]))
+            # 10. canary and promotion
+            st.markdown("#### Canary and promotion gate")
+            fp_id_h = hd["fingerprint_id"]
+            model_id_h = hd.get("model_id")
+            cst = drift.canary_status(model_id_h)
+            ref_path = drift.CANARY_DIR / (model_id_h or "none") / "reference.json"
+            eff_grader = grader if grader != "none" else "claude"  # the canary CLI has no gate-only mode: it grades with claude
+            ce = cost_estimate(14, 1, gate, eff_grader)
+            st.caption((f"canary reference for this model identity: {cst['reference']} (built {cst['reference_built_on'] or '?'}) · latest canary: {cst['latest_run'] or 'none'} {cst['latest_status'] or ''}" if cst["reference"] else "no canary reference for this model identity yet (python -m cascade.canary --build-reference --confirm builds one, three repeats)")
+                       + f" · Run canary: 14 images, about ${ce['usd_estimate']:.2f} with gate {gate} and grader {eff_grader} ({ce['note']})")
+            cn1, cn2 = st.columns([1, 3])
+            confirm_canary = cn2.checkbox(f"I understand the canary calls the models (grader {eff_grader}) and spends the amount above", key="canary_confirm")
+            if cn1.button("Run canary", key="canary_run", disabled=not confirm_canary):
+                with st.spinner("running the frozen canary"):
+                    proc = subprocess.run([sys.executable, "-m", "cascade.canary", "--confirm", "--gate", gate, "--grader", eff_grader], capture_output=True, text=True, cwd=str(ROOT), env={**os.environ, "PYTHONPATH": str(ROOT / "src")})
+                (st.error if proc.returncode == 1 else st.success if proc.returncode == 0 else st.warning)(f"exit {proc.returncode} (1 = alarm)\n\n```\n{(proc.stdout + proc.stderr)[-2000:]}\n```")
+            ledger_rows = [json.loads(line) for line in drift.LEDGER.read_text(encoding="utf-8").splitlines() if line.strip()] if drift.LEDGER.exists() else []
+            looks = [r for r in ledger_rows if r.get("fingerprint") == fp_id_h or r.get("fp_id") == fp_id_h]
+            cand_eval = ROOT / "eval" / "reports" / f"{hpick}.json"
+            base_card = None
+            classes_h = sorted({f.asset_class for f in load_run(hrun)["findings"]} or {r.asset_class for r in run_records(hrun, imgs_h).values()})
+            base_card = next((card for card in (drift.load_baseline(ac) for ac in classes_h) if card), None)
+            base_eval = (ROOT / "eval" / "reports" / f"{base_card['built_from'][0]}.json") if base_card and base_card.get("built_from") else None
+            checks = [
+                ("fingerprint.json present", bool(fp_doc)),
+                ("hard contract violations = 0", c["hard_total"] == 0),
+                (f"no blocking alarm ({', '.join(BLOCKING_RULES)})", not any(a["rule"] in BLOCKING_RULES for a in hd["alarms"])),
+                ("no dead gate on a labelled run", not any(a["rule"] == "dead_gate" for a in hd["alarms"] + hd["watch"])),
+                (f"latest canary for this model identity passed and is newer than its reference ({cst['latest_run'] or 'no canary run'}: {cst['latest_status'] or 'n/a'})", cst["ok"]),
+                (f"one-look eval report for this run (eval/reports/{hpick}.json)", cand_eval.exists()),
+                ("baseline eval report to compare against", bool(base_eval and base_eval.exists())),
+                (f"eval ledger looks for this fingerprint: {len(looks)} (one allowed)", len(looks) <= 1),
+            ]
+            st.markdown("\n".join(f"- {'✅' if ok else '⬜'} {label}" for label, ok in checks))
+            pc = None
+            if cand_eval.exists() and base_eval and base_eval.exists():
+                pc = drift.promotion_check(json.loads(cand_eval.read_text(encoding="utf-8")), json.loads(base_eval.read_text(encoding="utf-8")), c, canary=cst)
+                st.caption(f"promotion_check verdict: {pc['verdict']} · gate recall delta {pc['gate_recall_delta']} · usd ratio {pc['usd_ratio']} · " + ("; ".join(pc["reasons"]) or "no holds"))
+                st.table(pd.DataFrame([{"asset_class": k_, **v} for k_, v in pc["per_class"].items()]))
+            can_promote = all(ok for _, ok in checks) and pc is not None and pc["verdict"] == "promote"
+            p1, p2, p3 = st.columns(3)
+            if p1.button("Promote this fingerprint", key="health_promote", disabled=not can_promote, help="greyed until every check above passes and promotion_check says promote"):
+                try:
+                    path = drift.promote(fp_doc, hpick, ref_path, str(cand_eval), reviewer)
+                    st.success(f"promoted: {path}")
+                except Exception as e:
+                    st.error(f"{type(e).__name__}: {e}")
+            if p2.button("Rollback to the previous baseline", key="health_rollback", disabled=not (drift.BASELINE_DIR / "active.json").exists()):
+                try:
+                    st.json(drift.rollback())
+                except Exception as e:
+                    st.error(f"{type(e).__name__}: {e}")
+            fz_class = p3.selectbox("Freeze this run as the baseline card for", classes_h or ["(no findings)"], key="health_freeze_class")
+            if p3.button("Freeze baseline", key="health_freeze", disabled=not classes_h, help="writes runs/_baseline/<asset_class>.json keyed by the model identity; later runs with the same identity are charted against it; refuses a run holding eval_v1 records"):
+                try:
+                    card = drift.baseline_freeze(hrun, fz_class)
+                    st.success(f"baseline card written: built from {card.get('built_from')}, fingerprint {card.get('fingerprint', hd['fingerprint_id'])}")
+                    health_for(hrun, imgs_h, refresh=True)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"{type(e).__name__}: {e}")
+            st.caption(f"Changelog line that promote() records (preview): promote fingerprint {fp_id_h or 'none'} from dev run {hpick}, eval report {cand_eval.name}, by {reviewer}. Sample-size helper: to detect a U-rate move from 0.10 to 0.25 at alpha 0.01, power 0.8 you need n = {drift.min_n_for_shift(0.10, 0.25)} findings per run.")
+
 # ---------- Why this approach ----------
 
 with tab_why:
@@ -941,6 +1616,12 @@ with tab_why:
         ("Human sign-off", "Not published",
          "Mandatory accept / override / mark U with the prior model value logged; agreement rate measured per run",
          measured(lambda: f"{live['reviews']} reviewer decisions logged")),
+        ("Review labor", "Throughput claims only (Buzz 25,000+ images/hr); no public per-image review time for bridges or solar; T&D World 3 to 5 min/image is utility imagery (R08)",
+         "Gate auto-clears clean images, the reviewer opens one pre-filled, rubric-cited finding per routed image, a random audit covers the cleared set; hours and dollars are estimates under Inspect run > Overview > Workforce impact, never measured",
+         measured(lambda: f"routed {live['routed']} of {live['gated']}, auto-cleared {live['gated'] - live['routed']}, U = {live['U']}")),
+        ("Video and drone footage", "Frame review is manual or vendor-specific; no published dedup rule",
+         "ffmpeg sampling at a fixed interval or on scene change, dHash near-duplicate drop, every kept frame carries source video and timestamp into the finding id",
+         measured(lambda: f"{sum(1 for r in load_records_for_run(RUNS / active_run).values() if r.source_video)} video frames in this run" if (RUNS / active_run / 'videos').exists() else "no video in this run")),
         ("Unit cost", "Quote-only pricing except Scopito (EUR 160 / 80 per turbine); $100 to $300 analytics add-on per turbine (R01, R04, R09)",
          "About $10 per 1,000 frames heavy-only, about $3 with a local gate at 30% pass-through (R06 estimate, Sonnet 5 Sept 2026 prices)",
          measured(lambda: f"${live['usd_per_image']:.4f} per image = ${1000 * live['usd_per_image']:.2f} per 1,000" if live["usd_per_image"] is not None else "no priced calls")),
