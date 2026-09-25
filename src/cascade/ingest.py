@@ -57,6 +57,8 @@ def ingest_folder(
     source_dataset: str = "",
     split: str = "",
     id_prefix: str = "img",
+    client_id: Optional[str] = None,
+    asset_id: Optional[str] = None,
 ) -> list[ImageRecord]:
     meta: dict = {}
     if sidecar and sidecar.exists():
@@ -81,6 +83,10 @@ def ingest_folder(
                 source_dataset=source_dataset,
                 split=split,
                 labels=m.get("labels", {}),
+                client_id=m.get("client_id", client_id),
+                asset_id=m.get("asset_id", asset_id),
+                source_video=m.get("source_video"),
+                frame_time_s=m.get("frame_time_s"),
             )
         )
     return records

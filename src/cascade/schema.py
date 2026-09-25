@@ -174,6 +174,12 @@ class ImageRecord(BaseModel):
     source_dataset: str = ""
     split: str = ""
     labels: dict = {}
+    # optional customer context (FR-2): who owns the asset and which asset the image shows; null when unknown
+    client_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    # video provenance (FR-4): source file and timestamp of the extracted frame; null for still images
+    source_video: Optional[str] = None
+    frame_time_s: Optional[float] = None
 
 
 class GateRecord(BaseModel):
