@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from PIL import Image
 
@@ -57,6 +57,10 @@ class RunConfig:
     gate_min_conf: float = 0.7
     rubric_file: Optional[str] = None  # bridge rubric override (bridge_nbi.json); other classes keep their default
     limit: int = 0
+    # Asset classes whose images go to the grader regardless of the gate verdict. The local gate routed 0 of 12
+    # thermal PV crops on the dev set (eval/reports/dev_gate02.md), so pv_module is forced by default. The gate
+    # still runs and its verdict is kept in gate.jsonl; only `routed` is overridden and the reason says so.
+    force_route_classes: Tuple[str, ...] = ("pv_module",)
 
 
 def _read_jsonl(path: Path) -> List[dict]:
@@ -195,6 +199,8 @@ def run_cascade(
             img = Image.open(rec.path)
             img.load()
             g = gate_fn(img, rec.image_id, backend=cfg.gate, log=log, no_damage_min_conf=cfg.gate_min_conf)
+            if rec.asset_class in cfg.force_route_classes and not g.routed:
+                g = g.model_copy(update={"routed": True, "reason": f"{g.reason} [forced: asset class {rec.asset_class}]"})
             gate_rows.append(g.model_dump())
             _append(gate_path, json.dumps(g.model_dump()))
             prog.gated += 1

@@ -161,3 +161,24 @@ def test_unknown_backend_raises():
 
     with pytest.raises(ValueError):
         run_gate(Image.new("RGB", (8, 8)), "x", backend="bogus", log=CallLog())
+
+
+def test_force_route_overrides_clean_gate_verdict_for_listed_class(tmp_path):
+    recs = make_records(tmp_path, n=2, asset_class="pv_module")
+    out = tmp_path / "run"
+    summary = run_cascade(recs, out, RunConfig(gate="none", grader="claude"), gate_fn=fake_gate, grade_fn=fake_grade)
+    run = load_run(out)
+    g0 = next(g for g in run["gate"] if g["image_id"] == "img_0")
+    assert g0["routed"] is True and g0["damage_present"] is False  # verdict kept, routing overridden
+    assert "[forced: asset class pv_module]" in g0["reason"]
+    assert summary["routed_to_grader"] == 2
+    assert {f.evidence.image_ids[0] for f in run["findings"]} == {"img_0", "img_1"}
+
+
+def test_force_route_disabled_keeps_gate_routing(tmp_path):
+    recs = make_records(tmp_path, n=2, asset_class="pv_module")
+    out = tmp_path / "run"
+    summary = run_cascade(recs, out, RunConfig(gate="none", grader="claude", force_route_classes=()), gate_fn=fake_gate, grade_fn=fake_grade)
+    g0 = next(g for g in load_run(out)["gate"] if g["image_id"] == "img_0")
+    assert g0["routed"] is False and "[forced" not in g0["reason"]
+    assert summary["routed_to_grader"] == 1

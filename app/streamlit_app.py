@@ -166,6 +166,7 @@ grader = st.sidebar.selectbox("Grader (stage C)", ["claude", "local", "none"], h
 tiles = st.sidebar.checkbox("Tile large images (FR-8)", value=False, disabled=surge, help="one grader call per 1568 px tile; surge mode always grades the whole frame")
 use_exemplars = st.sidebar.checkbox("Few-shot exemplars from dev set (FR-13)", value=False, disabled=not DEV_MANIFEST.exists())
 gate_min_conf = st.sidebar.slider("Route clean verdicts below confidence", 0.0, 1.0, 0.7, 0.05)
+force_pv = st.sidebar.checkbox("Always grade PV thermal crops (skip gate verdict)", value=True, help="the local gate routed 0 of 12 thermal crops on the dev set; the gate still runs and its verdict is logged")
 run_name = st.sidebar.text_input("Run name", value=f"ui_{time.strftime('%m%d_%H%M')}")
 reviewer = st.sidebar.text_input("Reviewer name (for the review log)", value=os.getenv("USERNAME", "reviewer"))
 run_clicked = st.sidebar.button("Run cascade", type="primary", disabled=not records, width="stretch")
@@ -175,7 +176,7 @@ open_run = st.sidebar.selectbox("Or open a finished run", ["(none)"] + list_runs
 
 # ---------- run ----------
 
-cfg = RunConfig(gate=gate, grader=grader, tiles=tiles and not surge, gate_min_conf=gate_min_conf)
+cfg = RunConfig(gate=gate, grader=grader, tiles=tiles and not surge, gate_min_conf=gate_min_conf, force_route_classes=("pv_module",) if force_pv else ())
 active_run = st.session_state.get("active_run")
 
 if run_clicked and records:

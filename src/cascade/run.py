@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--tiles", action="store_true", help="grade overlapping 1568 px tiles instead of the whole downscaled image (more calls, more cost)")
     ap.add_argument("--gate-min-conf", type=float, default=0.7, help="a no-damage verdict below this confidence is still routed to the grader")
+    ap.add_argument("--force-route", default="pv_module", help="comma-separated asset classes always sent to the grader regardless of the gate verdict; '' to disable")
     ap.add_argument("--rubric", default=None, help="bridge rubric override, e.g. bridge_nbi.json (default bridge_mbei.json)")
     ap.add_argument("--exemplars", default=None, metavar="DEV_MANIFEST", help="FR-13: include labelled dev-set exemplars per asset class in the grader prompt")
     ap.add_argument("--exemplars-k", type=int, default=3, help="exemplars per asset class, 2 to 5")
@@ -41,7 +42,7 @@ def main(argv=None) -> int:
     load_dotenv(ROOT / ".env")
     args = build_parser().parse_args(argv)
     records = read_manifest(Path(args.manifest))
-    cfg = RunConfig(gate=args.gate, grader=args.grader, tiles=args.tiles, gate_min_conf=args.gate_min_conf, rubric_file=args.rubric, limit=args.limit)
+    cfg = RunConfig(gate=args.gate, grader=args.grader, tiles=args.tiles, gate_min_conf=args.gate_min_conf, rubric_file=args.rubric, limit=args.limit, force_route_classes=tuple(c.strip() for c in args.force_route.split(',') if c.strip()))
     provider = exemplar_provider(Path(args.exemplars), k=args.exemplars_k) if args.exemplars else None
 
     total = min(len(records), args.limit) if args.limit else len(records)

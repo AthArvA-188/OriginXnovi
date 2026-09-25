@@ -7,6 +7,9 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 ### Docs
 - Pending: team confirmation of D-001, D-002 and D-008 at the Friday 2026-09-25 09:00 sync.
 
+### Product (2026-09-25, morning)
+- Added `RunConfig.force_route_classes` (default `pv_module`): forced routing to the grader per asset class, gate verdict preserved in `gate.jsonl` with a `[forced: ...]` reason suffix. `--force-route` CLI flag, app sidebar checkbox, two tests (34 total).
+
 ### Product (2026-09-25, early morning)
 - Added `src/cascade/pipeline.py`: `run_cascade()` extracted from the CLI so the CLI, surge mode and the UI share one resumable loop with a live `Progress` callback (stage counters, cost, latency); `load_run()` and `save_findings()` for the UI.
 - Added `src/cascade/exemplars.py` (FR-13): dev-set-only few-shot exemplars spread across grade values, never the image's own label; `--exemplars DEV_MANIFEST` and `--exemplars-k` on the CLI.

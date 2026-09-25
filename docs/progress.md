@@ -42,6 +42,10 @@ Times Pacific. Deadlines: Devpost Sun 2026-09-27 23:59; check-out form Mon 2026-
 - **[Team-measured, gate only, dev set, n=50]** `runs/dev_gate02` scored with `eval/run_eval.py` (`eval/reports/dev_gate02.md`): local gate (`qwen3-vl:4b-instruct`) recall 78.9 percent (95 percent CI 65.9 to 90.5), precision 81.1 percent, routing fraction 74 percent, 0 marked unusable, 304 s for 50 images, $0. Per dataset: corrosion 15/15 recall 1.00, dacl10k recall 1.00 at precision 0.71, RescueNet recall 1.00 at precision 0.63, **InfraredSolarModules recall 0.00: none of the 12 thermal 24x40 px crops was routed**, all 8 damaged ones missed. The gate as prompted does not recognise thermal module anomalies. Options to test on dev only (D-007): a thermal-specific gate prompt, forced routing for `pv_module`, or the Claude gate for thermal. Nothing tuned yet.
 - First push to `github.com/AthArvA-188/OriginXnovi` (repo was empty) on the team lead's go-ahead.
 
+### 2026-09-25 (Friday, morning)
+
+- ~10:00 Phase 3 started: gate tuning on dev only (D-007). Added `RunConfig.force_route_classes` (default `("pv_module",)`): images of a listed asset class go to the grader regardless of the gate verdict; the gate still runs and its verdict is kept in `gate.jsonl`, only `routed` is overridden and the reason is suffixed `[forced: asset class ...]`. Exposed as `--force-route` on the CLI (`''` disables) and a sidebar checkbox in the app. This addresses the 0/12 thermal recall in `dev_gate02` by construction, not by prompt change; the cost is that every PV crop is graded. 34 tests pass. No model run yet; the eval_v1 grading run and `eval/reports/eval_v1_run1.md` are still pending the 09:00 sync decision on grader spend.
+
 ## Blockers
 
 - None technical yet. The team roster, owners per workstream and the registration form status are unknown to this log.
