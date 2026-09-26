@@ -29,11 +29,20 @@ RUBRIC_FOR_CLASS = {
     "bridge_element": "bridge_mbei.json",
     "pv_module": "pv_iec62446_3.json",
     "building_disaster": "disaster_fema.json",
+    # multi-sensor scope (docs/research/10_multisensor_scope.md): underwater piers/piles from ROV or sonar frames,
+    # interior machinery graded on ISO 20816-3 zones from RMS-velocity metadata (an image alone grades U)
+    "underwater_structure": "underwater_nbis.json",
+    "interior_machinery": "machinery_iso.json",
 }
+# seismic/vibration series are graded by cascade.signals, not by the image grader; kept here so the drift
+# fingerprint and client reports can find the file by name
+SEISMIC_RUBRIC_FILE = "seismic_shm.json"
 
 
 def load_rubric(asset_class: AssetClass, rubric_file: Optional[str] = None) -> dict:
-    name = rubric_file or RUBRIC_FOR_CLASS[asset_class]
+    name = rubric_file or RUBRIC_FOR_CLASS.get(asset_class)
+    if name is None:
+        raise KeyError(f"no rubric for asset class {asset_class!r}: add a rubrics/*.json file and map it in RUBRIC_FOR_CLASS")
     return json.loads((RUBRIC_DIR / name).read_text(encoding="utf-8"))
 
 

@@ -11,11 +11,18 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-AssetClass = Literal["bridge_element", "steel_coating", "pv_module", "building_disaster"]
+# Multi-sensor scope (docs/research/10_multisensor_scope.md section 0): the engine stays, inputs widen.
+# underwater_structure = piers, piles, abutments seen by ROV camera or imaging sonar; interior_machinery = plant
+# and rotating equipment (whiteboard 2026-09-25). Seismic readings are a modality on an existing asset class.
+AssetClass = Literal["bridge_element", "steel_coating", "pv_module", "building_disaster", "underwater_structure", "interior_machinery"]
+Modality = Literal["rgb", "thermal", "sonar", "seismic", "lidar"]
+Sensor = Literal["accelerometer", "geophone", "strain", "tilt", "other"]
 Level = Literal["S0", "S1", "S2", "S3", "S4", "U"]
-Standard = Literal["NBI-0-9", "MBEI-CS", "ISO-4628-3", "IEC-62446-3-CoA", "FEMA-PDA", "CorrosionCS"]
+Standard = Literal["NBI-0-9", "MBEI-CS", "ISO-4628-3", "IEC-62446-3-CoA", "FEMA-PDA", "CorrosionCS", "NBIS-UW", "SHM-Seismic", "ISO-20816-3"]
 ActionCode = Literal["record", "monitor", "schedule", "prioritize", "escalate"]
 Flag = Literal["fire_shock_pathway", "load_posting_review", "section_loss", "not_measurable"]
+# how a crack dimension was obtained (R10 section 4.3 scale-source priority); None when no dimension was measured
+MeasurementBasis = Literal["gsd_metadata", "scale_object", "manual_two_points", "model_estimate"]
 
 LEVEL_ORDER = {"S0": 0, "S1": 1, "S2": 2, "S3": 3, "S4": 4}
 
@@ -48,6 +55,11 @@ class Measurements(BaseModel):
     percent_area_rusted: Optional[float]
     section_loss_pct: Optional[float]
     confidence: float = Field(ge=0.0, le=1.0)
+    # crack metrology (R10 section 4): filled by the scale-aware crack module, never guessed by the grader.
+    # These carry defaults so the six required fields above stay the model contract (tests/test_schema.py).
+    measurement_basis: Optional[MeasurementBasis] = None
+    crack_length_mm: Optional[float] = None
+    crack_width_uncertainty_mm: Optional[float] = None  # UI shows width +/- uncertainty, never a bare mm value
 
 
 class Action(BaseModel):
@@ -73,6 +85,9 @@ class Evidence(BaseModel):
     tile: Optional[str] = None
     gsd_mm_per_px: Optional[float] = None
     irradiance_wm2: Optional[float] = None
+    # signal findings (cascade.signals): the graded series and the baseline it was compared with
+    signal_id: Optional[str] = None
+    baseline_id: Optional[str] = None
 
 
 class Review(BaseModel):
@@ -93,6 +108,7 @@ class Finding(BaseModel):
     justification: str
     evidence: Evidence
     review: Review = Review()
+    modality: Modality = "rgb"  # older findings.json rows carry no modality and read back as rgb
     model: str = ""
     usd: float = 0.0
     seconds: float = 0.0
@@ -168,6 +184,7 @@ class ImageRecord(BaseModel):
     width: int
     height: int
     asset_class: AssetClass
+    modality: Modality = "rgb"  # thermal heatmap, rendered sonar frame or lidar view are graded as images too
     gsd_mm_per_px: Optional[float] = None
     irradiance_wm2: Optional[float] = None
     captured_on: Optional[str] = None  # YYYY-MM-DD
@@ -180,6 +197,30 @@ class ImageRecord(BaseModel):
     # video provenance (FR-4): source file and timestamp of the extracted frame; null for still images
     source_video: Optional[str] = None
     frame_time_s: Optional[float] = None
+
+
+class SignalRecord(BaseModel):
+    """One ingested time series (accelerometer, geophone, strain or tilt CSV), the signal analogue of ImageRecord.
+
+    `labels` carries what the CSV cannot declare: units, the detected time column, how the rate was found.
+    `baseline_id` names the healthy-state record the indicators are compared with; None means "no baseline",
+    which grades U, never S0 (rubrics/seismic_shm.json).
+    """
+
+    signal_id: str
+    path: str
+    sha256: str
+    sensor: Sensor
+    sample_rate_hz: float
+    channels: List[str]
+    n_samples: int
+    duration_s: float
+    captured_on: Optional[str] = None  # YYYY-MM-DD
+    asset_id: Optional[str] = None
+    client_id: Optional[str] = None
+    baseline_id: Optional[str] = None
+    asset_class: AssetClass = "bridge_element"
+    labels: dict = {}
 
 
 class GateRecord(BaseModel):

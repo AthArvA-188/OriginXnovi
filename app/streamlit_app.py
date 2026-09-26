@@ -46,6 +46,7 @@ from cascade.review import ReviewLog  # noqa: E402
 from cascade.schema import Finding, ImageRecord  # noqa: E402
 from cascade.surge import surge_counts, write_surge_report  # noqa: E402
 from cascade.video import VIDEO_EXTS, VideoError, ffmpeg_available, ingest_video, slug_of  # noqa: E402
+from cascade.videodetect import LEVEL_ORDER, NOT_GRADED, NOT_GRADED_COLOR, cue_text, video_timeline, write_video_detections  # noqa: E402
 
 RUNS = ROOT / "runs"
 DEV_MANIFEST = ROOT / "data" / "dev" / "manifest.jsonl"
@@ -261,7 +262,157 @@ def video_strip(ext: dict, records: List[ImageRecord], key: str) -> None:
 
 def stored_extractions(out: Path) -> List[dict]:
     """frames.json copies under runs/<run>/videos/, so the strip survives a restart."""
-    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted((out / "videos").glob("*.json"))] if (out / "videos").exists() else []
+    if not (out / "videos").exists():
+        return []
+    sidecars = [p for p in sorted((out / "videos").glob("*.json")) if not p.name.endswith("_timeline.json")]  # <slug>_timeline.json is videodetect output, not frames.json
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sidecars]
+
+
+def stored_timelines(out: Path, imgs: Dict[str, ImageRecord]) -> Dict[str, dict]:
+    """slug -> timeline entry. runs/<run>/videos/<slug>_timeline.json (written by write_video_detections) is used
+    only while it is at least as new as findings.json; after a review changed a level the timeline is recomputed
+    with video_timeline (cheap: reads manifest, gate and findings; no model calls), the stored file being the
+    fallback when the run folder cannot be read."""
+    vdir = out / "videos"
+    fj = out / "findings.json"
+    newest = fj.stat().st_mtime if fj.exists() else 0.0
+    found: Dict[str, dict] = {}
+    stale = False
+    for p in sorted(vdir.glob("*_timeline.json")) if vdir.exists() else []:
+        try:
+            found[p.name[: -len("_timeline.json")]] = entry = json.loads(p.read_text(encoding="utf-8"))
+            stale = stale or p.stat().st_mtime < newest or "mp4_offset_s" not in entry  # older entries lack mode/clip_end_s/boxes
+        except (OSError, json.JSONDecodeError):
+            continue
+    if found and not stale:
+        return found
+    try:
+        return video_timeline(out, run_records(out, imgs)) or found
+    except Exception as e:
+        st.warning(f"Video timeline not {'refreshed' if found else 'computed'}: {type(e).__name__}: {e}")
+        return found
+
+
+def refresh_video_detections(out: Path, imgs: Dict[str, ImageRecord]) -> None:
+    """After a review changed a level: rewrite <slug>_timeline.json, the .vtt, the contact sheet and the detections
+    mp4 so every artifact carries the reviewed level. No model calls; fails soft; a run without video frames returns
+    at once."""
+    recs = run_records(out, imgs)
+    if not any(r.source_video for r in recs.values()):
+        return
+    try:
+        with st.spinner("Re-rendering the video detections with the reviewed level..."):
+            vd = write_video_detections(out, recs)
+        for slug_v, item in vd.items():
+            if item.get("skipped"):
+                st.warning(f"{slug_v}: {item['skipped']}")
+    except Exception as e:
+        st.warning(f"Video detections not refreshed: {type(e).__name__}: {e}")
+
+
+def video_sampling_label(entry: dict) -> str:
+    """How the kept frames were chosen, from the timeline entry (mode from frames.json), the way video_strip words
+    it: interval mode "every 2.0 s", scene mode its threshold and max gap, no frames.json the measured gap."""
+    mode, src = entry.get("mode"), entry.get("every_s_source", "frames.json")
+    if mode == "scene":
+        gap = f", max gap {entry['scene_max_gap_s']:.1f} s" if entry.get("scene_max_gap_s") else ""
+        return f"scene mode (threshold {entry.get('scene_threshold')}{gap})"
+    if mode == "interval" or src == "frames.json":
+        return f"every {entry['every_s']:.1f} s ({src})"
+    return f"frame gap {entry['every_s']:.1f} s ({src})"
+
+
+def video_frame_caption(fr: dict) -> str:
+    """"t = 4.0 s - S2 - CS3"; U frames say "unassessable"; a frame the run never graded says "not graded", never a level."""
+    lvl = fr.get("level")
+    if lvl is None:
+        return f"t = {fr['t_s']:.1f} s - {NOT_GRADED}"
+    if lvl == "U":
+        return f"t = {fr['t_s']:.1f} s - U - unassessable"
+    return f"t = {fr['t_s']:.1f} s - {lvl} - {fr.get('native_value')}"
+
+
+def video_timeline_chart(entry: dict) -> alt.Chart:
+    """A tick per graded instant (each kept frame's t_s, coloured by its level, grey for not graded) over one
+    translucent rect per segment (x from start_s to end_s, y the level). The ticks are where grades exist; a bar
+    only shows how long that frame is held until the next kept sample."""
+    frames = entry["frames"]
+    rows = []
+    for seg in entry["segments"]:
+        ids = [f["image_id"] for f in frames if seg["start_s"] <= f["t_s"] < seg["end_s"]]
+        rows.append({
+            "start_s": seg["start_s"], "end_s": seg["end_s"], "level": seg["level"] or NOT_GRADED, "native": seg.get("native_value") or "",
+            "action": seg.get("action") or "", "frames": seg["n_frames"], "image_id": ", ".join(ids), "cue": cue_text(seg),
+        })
+    ticks = [{"t_s": f["t_s"], "level": f["level"] or NOT_GRADED, "native": f.get("native_value") or "", "image_id": f["image_id"]} for f in frames]
+    domain = LEVEL_ORDER + [NOT_GRADED]
+    colors = [LEVEL_COLOR[lvl] for lvl in LEVEL_ORDER] + [NOT_GRADED_COLOR]
+    x_min = min(min(r["start_s"] for r in rows), min(t["t_s"] for t in ticks)) if rows else 0.0
+    x_max = max(r["end_s"] for r in rows) if rows else 1.0
+    y = alt.Y("level:O", sort=domain, title=None, scale=alt.Scale(domain=domain))
+    color = alt.Color("level:N", scale=alt.Scale(domain=domain, range=colors), legend=None)
+    bars = (
+        alt.Chart(pd.DataFrame(rows))
+        .mark_rect(cornerRadius=3, opacity=0.4)
+        .encode(
+            x=alt.X("start_s:Q", title="t (s), source clip", scale=alt.Scale(domain=[x_min, x_max], nice=False)),
+            x2="end_s:Q", y=y, color=color,
+            tooltip=["start_s", "end_s", "level", "native", "action", "frames", "image_id"],
+        )
+    )
+    marks = alt.Chart(pd.DataFrame(ticks)).mark_tick(thickness=3, size=22).encode(x="t_s:Q", y=y, color=color, tooltip=["t_s", "level", "native", "image_id"])
+    return (bars + marks).properties(height=30 * len(domain) + 40)
+
+
+def video_detections_section(out: Path, imgs: Dict[str, ImageRecord], key: str) -> None:
+    """FR-4b per video of the run: header, the detections mp4 with WebVTT cues (contact sheet when the mp4 is missing),
+    the level timeline, the segments table, the frame gallery and download buttons. Level null is "not graded"; U is U."""
+    timelines = stored_timelines(out, imgs)
+    if not timelines:
+        return
+    st.subheader("Video detections")
+    st.caption("Frames sampled by ffmpeg were graded like stills. A detections mp4 is built from the N kept sample frames, each held until the next sample, with the level badge, the tile boxes and a subtitle cue per segment; the source frames between samples were not graded. A frame the gate cleared without a heavy grade is 'not graded', never S0; U is unassessable and counted on its own.")
+    vdir = out / "videos"
+    fj = out / "findings.json"
+    for slug, entry in timelines.items():
+        s = entry["summary"]
+        dur = f"{entry['duration_s']:.1f} s" if entry.get("duration_s") is not None else "duration not probed"
+        size = f" · {entry['width']}×{entry['height']} @ {entry['fps']:.1f} fps" if entry.get("width") and entry.get("fps") else ""
+        first = f"first detection at {s['first_detection_t_s']:.1f} s" if s.get("first_detection_t_s") is not None else "no S1..S4 detection"
+        worst = badge(s["worst_level"], "worst level") if s.get("worst_level") else f"<span class='badge' style='background:{NOT_GRADED_COLOR}'>{NOT_GRADED}</span>"
+        offset = float(entry.get("mp4_offset_s") or 0.0)
+        offset_note = f" · mp4 time 0 = source t = {offset:.1f} s" if offset > 0 else ""
+        st.markdown(
+            f"**{Path(entry['video']).name}** · {dur}{size} · {video_sampling_label(entry)} · "
+            f"{s['graded']} of {s['frames']} kept frames graded ({s['not_graded']} not graded, U {s['u_frames']}) · {worst} · {first}{offset_note}",
+            unsafe_allow_html=True,
+        )
+        mp4, vtt, tjson, sheet = (vdir / f"{slug}_detections.mp4", vdir / f"{slug}_detections.vtt", vdir / f"{slug}_timeline.json", vdir / f"{slug}_contact.png")
+        if fj.exists() and any(p.exists() and p.stat().st_mtime < fj.stat().st_mtime for p in (mp4, vtt, sheet)):
+            st.warning(f"{mp4.name}, {vtt.name} and {sheet.name} were rendered before the last change to findings.json (a review); the timeline, table and badges below are current. Regenerate them with `python -m cascade.videodetect --run runs/{out.name}`.")
+        v1, v2 = st.columns([3, 2])
+        with v1:
+            if mp4.exists():
+                st.video(str(mp4), subtitles=str(vtt) if vtt.exists() else None)
+                st.caption(f"{mp4.name} · {mp4.stat().st_size / 1e6:.2f} MB · {s['frames']} kept frames, each held until the next · subtitles {vtt.name if vtt.exists() else 'none'}")
+            elif sheet.exists():
+                st.image(str(sheet), caption=f"{sheet.name} (no detections mp4 for this run: {FF_MSG if not FF_OK else 'not written yet'})", width="stretch")
+            else:
+                st.info("No detections mp4 or contact sheet stored for this video yet." + ("" if FF_OK else f" {FF_MSG}"))
+        with v2:
+            st.altair_chart(video_timeline_chart(entry), width="stretch")
+            st.caption("Grades exist only at the ticks (one per kept frame); a bar shows the hold until the next sample, not that the frames in between were graded.")
+            st.table(pd.DataFrame([{"start_s": g["start_s"], "end_s": g["end_s"], "level": g["level"] or NOT_GRADED, "native": g.get("native_value") or "", "action": g.get("action") or "", "frames": g["n_frames"]} for g in entry["segments"]]))
+        frame_recs = [imgs[f["image_id"]] for f in entry["frames"] if f["image_id"] in imgs]
+        caps = {f["image_id"]: video_frame_caption(f) for f in entry["frames"]}
+        lvls = {f["image_id"]: f["level"] for f in entry["frames"] if f.get("level")}  # ungraded frames get no badge
+        gallery(frame_recs, captions=caps, levels=lvls, cols=6, max_n=24, key=f"{key}_{slug}_frames")
+        dl = st.columns(4)
+        for col, fp, label, mime in zip(dl, (mp4, vtt, tjson, sheet), ("detections.mp4", "detections.vtt", "timeline.json", "contact.png"), ("video/mp4", "text/vtt", "application/json", "image/png")):
+            if fp.exists():
+                col.download_button(f"Download {label}", fp.read_bytes(), file_name=f"{out.name}_{slug}_{label}", mime=mime, key=f"{key}_{slug}_dl_{label.replace('.', '_')}", width="stretch")
+            else:
+                col.caption(f"{label}: not written")
 
 
 def write_reports(out: Path, imgs: Dict[str, ImageRecord]) -> Path:
@@ -528,6 +679,18 @@ def run_with_progress(records: List[ImageRecord], out: Path, cfg: RunConfig, use
             if surge:
                 write_surge_report(surge_counts(load_run(out)["findings"]), summary, out)
             write_reports(out, {r.image_id: r for r in records})
+            if any(r.source_video for r in records):  # FR-4b: a detections mp4 per clip from its kept sample frames; fails soft, no model calls
+                try:
+                    vd = write_video_detections(out, {r.image_id: r for r in records})
+                    for slug_v, item in vd.items():
+                        if item.get("mp4") is not None:
+                            st.toast(f"{slug_v}_detections.mp4 written ({item['summary']['graded']} of {item['summary']['frames']} frames graded)", icon="\U0001F3AC")
+                        elif item.get("skipped"):
+                            st.warning(f"{slug_v}: {item['skipped']}")
+                except VideoError as e:
+                    st.warning(f"Video detections skipped: {e}")
+                except Exception as e:
+                    st.warning(f"Video detections skipped: {type(e).__name__}: {e}")
             bar.progress(1.0, text="done")
             st.toast(f"Run {out.name} finished: {summary['findings']} findings", icon="\u2705")
             st.success(f"Done: {summary['findings']} findings from {summary['images']} images, ${summary['usd_total']} total, routed {summary['routed_to_grader']} of {summary['gated']}. Report stored in runs/{out.name}/report.md.")
@@ -822,6 +985,7 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
             gate_by_id = {g["image_id"]: g for g in gate_rows}
             ordered = [imgs[g["image_id"]] for g in gate_rows if g["image_id"] in imgs]
             gallery(ordered, captions={i: gate_caption(g) for i, g in gate_by_id.items()}, levels=lvl_by_img, key="overview")
+            video_detections_section(out, imgs, key="over_vd")
 
             c1, c2 = st.columns(2)
             with c1:
@@ -894,6 +1058,7 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                         review_log.apply(active_run, f, action[0], reviewer, action[1])
                         save_findings(findings, out, recs)
                         write_reports(out, imgs)
+                        refresh_video_detections(out, imgs)
                         st.toast(f"{action[0]} by {reviewer}, prior {f.review.prior_level}", icon="\U0001F4DD")
                         st.rerun()
                 agg = review_log.agreement(active_run)
@@ -968,6 +1133,13 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                 fp = out / name
                 if fp.exists():
                     st.download_button(f"Download {name}", fp.read_bytes(), file_name=f"{active_run}_{name}", key=f"dl_{name}", disabled=bool(blocking) and name in ("queue.csv", "bridge_entry.csv"))
+            for tp in sorted((out / "videos").glob("*_timeline.json")) if (out / "videos").exists() else []:  # FR-4b bundle per video
+                vslug = tp.name[: -len("_timeline.json")]
+                st.markdown(f"Video `{vslug}`")
+                for vname in (f"{vslug}_detections.mp4", f"{vslug}_detections.vtt", f"{vslug}_timeline.json", f"{vslug}_contact.png"):
+                    vp = out / "videos" / vname
+                    if vp.exists():
+                        st.download_button(f"Download videos/{vname}", vp.read_bytes(), file_name=f"{active_run}_{vname}", key=f"dl_video_{vname}")
             if (out / "clients" / "index.json").exists():
                 st.caption("Per-client HTML reports are under the Client reports tab.")
             st.caption("queue.csv columns are documented in src/cascade/export.py (QUEUE_COLUMNS). bridge_entry.csv carries element, condition state and quantity columns for SNBI-style entry (FR-17). report.md is the stored run report shown under Reports.")
@@ -998,6 +1170,8 @@ with tab_arch:
 | 7 Export | run folder | queue CSV, findings JSON, bridge entry CSV, surge report, run report | `runs/<name>/` | `cascade.export`, `cascade.report` |
 
 Every model call is logged with model, tokens, dollars and seconds (`calls.jsonl`). The loop is resumable: rerun with the same name and finished images are skipped.
+
+A clip takes one extra step at each end (video: frames sampled by ffmpeg and graded like stills; a detections mp4 is then built from the kept sample frames, each held until the next sample, with subtitles; the source frames between samples were not graded): `cascade.video` writes `videos/<slug>.json`, `cascade.videodetect` writes `videos/<slug>_detections.mp4`, `.vtt`, `_timeline.json` and `_contact.png`.
 """
         )
     st.subheader("The startup around the engine")
@@ -1092,6 +1266,7 @@ with tab_drop:
                     st.markdown(badge(f.unified.level, f"**{f.native_scale.value}** on {f.native_scale.standard} · {f.defect_type} · action {f.action.code}" + (f" within {f.action.sla_days} d" if f.action.sla_days is not None else "")), unsafe_allow_html=True)
                     st.markdown(f"<small>{f.justification}</small>", unsafe_allow_html=True)
             st.divider()
+        video_detections_section(out, imgs, key=f"drop_vd_{drop_run}")
         st.caption("Open this run under Inspect run (sidebar: open a finished run) to review, re-rank and export.")
 
 # ---------- Batch ----------

@@ -4,8 +4,13 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 
 ## [Unreleased]
 
-### Docs
-- Pending: team confirmation of D-001, D-002 and D-008 at the Friday 2026-09-25 09:00 sync.
+### Docs (2026-09-25, afternoon)
+- Scope widened to multi-sensor structural health after the team whiteboard (2026-09-25 16:22): `docs/decisions.md` D-014 (Proposed) with the per-person map, options, consequences and revisit trigger; D-001 and D-002 marked "superseded in part by D-014" and kept.
+- `docs/problem_statement.md` v1.1: scope paragraph and hypotheses (H7 to H10) cover thermal heatmaps, sonar, seismic readings and lidar as inputs and SW+HW as the product; new numbers tagged [PUBLIC: url], [PUBLIC, secondary: url] or [Assumption] from R10; honesty box lists what stays imagery-only in the demo; every v1.0 sourced number kept.
+- `docs/PRD.md` v1.1: section 5A Modalities table; FR-22 (modality on every record, default rgb), FR-23 (crack width in mm from an in-image scale or GSD with basis recorded), FR-24 (seismic series to indicators, frequency shift vs baseline, U without baseline), FR-25 (sonar as an asset class with an underwater rubric), FR-26 (lidar, roadmap); v1.1 native mappings in section 7; finding contract v0.1 with `modality` and `measurements.basis`; FR-1 to FR-21 unchanged.
+- `README.md`: description, asset-class and modality table, `python -m cascade.measure` and `python -m cascade.signals` listed (being built).
+- Research note `docs/research/10_multisensor_scope.md` (R10) added by the research workstream: sonar, seismic/vibration, thermal beyond PV, crack metrology, lidar, SW+HW pricing.
+- Pending: team confirmation of D-001, D-002, D-008 and D-014 at the next sync.
 
 ### Product (2026-09-25, midday)
 - Added `src/cascade/video.py` (FR-4): ffmpeg/ffprobe frame extraction at a fixed interval or on scene changes, dHash near-duplicate suppression, `frames.json` sidecar, `ingest_video`, CLI; `.streamlit/config.toml` raises the upload cap to 1 GB.

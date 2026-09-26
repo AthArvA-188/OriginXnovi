@@ -33,6 +33,10 @@ ORDINAL_LABELS: Dict[str, List[str]] = {
     "pv_module": [k for k, _ in sorted(IR.get("ordinal", {}).items(), key=lambda kv: kv[1])] or ["CoA 1", "CoA 2", "CoA 3"],
     "building_disaster": [k for k, _ in sorted(RN.get("ordinal", {}).items(), key=lambda kv: kv[1])] or ["Intact", "Damaged", "Collapsed"],
     "bridge_element": ["CS1", "CS2", "CS3", "CS4"],
+    # multi-sensor classes (R10): element ladder of rubrics/underwater_nbis.json and ISO 20816-3 zones. No public
+    # dataset carries these labels, so truth_ordinal() returns None for them until the team grades a set.
+    "underwater_structure": ["Good", "Minor", "Moderate", "Advanced", "Severe"],
+    "interior_machinery": ["Zone A", "Zone B", "Zone C", "Zone D"],
 }
 
 TRUTH_SOURCE = {
@@ -40,6 +44,8 @@ TRUTH_SOURCE = {
     "pv_module": "12 InfraredSolarModules classes mapped to IEC TS 62446-3 CoA before any model output",
     "building_disaster": "RescueNet scene label Intact / Damaged / Collapsed; FEMA PDA values collapsed to three levels",
     "bridge_element": "team-graded MBEI condition state only (dacl10k has defect classes, not grades)",
+    "underwater_structure": "none yet: no public sonar or ROV set of piers/piles carries condition labels (R10 section 1.4); team-graded only",
+    "interior_machinery": "none yet: ISO 20816-3 zone needs measured RMS velocity plus machine group and support type as metadata (R10 section 2.1)",
 }
 
 
