@@ -13,3 +13,5 @@ runs/
 demo/*.mp4
 .DS_Store
 Thumbs.db
+# Pavilion Cerebro
+data/samples/cache/
