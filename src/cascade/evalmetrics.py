@@ -37,6 +37,10 @@ ORDINAL_LABELS: Dict[str, List[str]] = {
     # dataset carries these labels, so truth_ordinal() returns None for them until the team grades a set.
     "underwater_structure": ["Good", "Minor", "Moderate", "Advanced", "Severe"],
     "interior_machinery": ["Zone A", "Zone B", "Zone C", "Zone D"],
+    # smart-building classes (building_spec section 9): native ladders of the building rubrics; no labelled set yet
+    "facade_element": ["Safe", "SWARMP", "Unsafe"],
+    "interior_zone": ["S0", "S1", "S2", "S3"],
+    "electrical_equipment": ["Band 0", "Band 1", "Band 2", "Band 3"],
 }
 
 TRUTH_SOURCE = {
@@ -46,6 +50,9 @@ TRUTH_SOURCE = {
     "bridge_element": "team-graded MBEI condition state only (dacl10k has defect classes, not grades)",
     "underwater_structure": "none yet: no public sonar or ROV set of piers/piles carries condition labels (R10 section 1.4); team-graded only",
     "interior_machinery": "none yet: ISO 20816-3 zone needs measured RMS velocity plus machine group and support type as metadata (R10 section 2.1)",
+    "facade_element": "none yet: no public labelled set of FISP Safe / SWARMP / Unsafe photos; the synthetic tower drawings are never scored",
+    "interior_zone": "none yet: no public labelled set of interior water-damage photos graded on the EPA moisture rows",
+    "electrical_equipment": "none yet: no public labelled set of panel thermal images with reference temperatures and load",
 }
 
 

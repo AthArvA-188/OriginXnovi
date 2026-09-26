@@ -314,7 +314,7 @@ def _audit_one(f: Finding, rubric: dict) -> Tuple[List[Tuple[str, str]], List[Tu
     m = f.measurements
     if m.crack_width_mm is not None and f.evidence.gsd_mm_per_px is None:
         hard.append(("H6_impossible_measurement", "crack_width_mm without gsd_mm_per_px"))
-    if m.delta_t_k is not None and f.evidence.irradiance_wm2 is None:
+    if m.delta_t_k is not None and f.evidence.irradiance_wm2 is None and f.asset_class != "electrical_equipment":  # irradiance is a PV quantity
         hard.append(("H6_impossible_measurement", "delta_t_k without irradiance_wm2"))
     if m.section_loss_pct is not None and f.asset_class == "steel_coating":
         hard.append(("H6_impossible_measurement", "section_loss_pct on steel_coating (needs thickness data)"))

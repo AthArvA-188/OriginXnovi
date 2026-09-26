@@ -1,6 +1,8 @@
-"""FR-21 demo UI for the inspection grading cascade.
+"""Smart-building and skyscraper problem manager, on top of the FR-21 inspection grading cascade (D-015).
 
-Top-level tabs: Inspect run (dataset or upload, live counters, image grid, findings with evidence,
+Top-level tabs: Building (first: one tower with floor plans, inside and outside scans, the water path and the power
+tree, rain-response tracking with a live forecast, electrical load and IR, and a problem queue with a persisted
+lifecycle; the demo tower is SYNTHETIC and labelled so) · Inspect run (dataset or upload, live counters, image grid, findings with evidence,
 review with crack measurement from an in-image scale, queue, surge, export) · Drop & grade (drag-and-drop
 inference) · Sensors (seismic and vibration CSV: indicators, rubric grade, save as run) · Batch (several datasets in
 one go) · Reports (stored per-run reports, compared visually) · Eval matrix (gate 2x2 and grading
@@ -12,15 +14,18 @@ Run:  streamlit run app/streamlit_app.py
 
 from __future__ import annotations
 
+import gzip
+import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, get_args
+from typing import Any, Dict, List, Optional, Sequence, Tuple, get_args
 
 import altair as alt
 import numpy as np
@@ -36,6 +41,8 @@ sys.path.insert(0, str(ROOT / "src"))
 load_dotenv(ROOT / ".env")
 
 from cascade import drift, workforce  # noqa: E402
+from cascade.building import blueprint as bbp, electrical as belec, grading as bgrade, graph as bgraph, model as bmodel  # noqa: E402
+from cascade.building import problems as bprob, rules as brules, synthetic as bsyn, water as bwater  # noqa: E402
 from cascade.canary import cost_estimate  # noqa: E402
 from cascade.clientreport import ACTION_COLOR, ACTION_ORDER, LEVEL_COLOR, LEVEL_MEANING, _workload_lines, worst_levels, write_client_reports  # noqa: E402
 from cascade.evalmetrics import eval_matrix  # noqa: E402
@@ -111,7 +118,7 @@ button[kind="primary"]:hover { transform: translateY(-1px); filter: brightness(1
 div[data-testid="stMarkdownContainer"] table { animation: fadeUp .4s ease both; }
 </style>
 """
-st.set_page_config(page_title="Inspection grading cascade", layout="wide", page_icon="\U0001F50D")
+st.set_page_config(page_title="Building problem manager", layout="wide", page_icon="\U0001F3E2")
 st.markdown(CSS, unsafe_allow_html=True)
 
 
@@ -1292,9 +1299,970 @@ def sync_run_pickers(name: Optional[str]) -> None:
 
 sync_run_pickers(active_run)
 
-tab_run, tab_arch, tab_drop, tab_sensors, tab_batch, tab_reports, tab_clients, tab_eval, tab_health, tab_why = st.tabs(
-    ["Inspect run", "Architecture", "Drop & grade", "Sensors", "Batch", "Reports", "Client reports", "Eval matrix", "Model health", "Why this approach"]
+
+# ---------- Building: smart buildings and skyscrapers (building_spec, D-015) ----------
+
+BUILDING_DEMO = DEMO_DIR / "building"
+BUILDING_STORE = RUNS / "building"
+BUILDING_DEMO_LABEL = "Demo tower (data/demo/building)"
+SYN_BANNER = "SYNTHETIC tower: generated data, injected scenarios; no accuracy is claimed."
+# Analysis inputs. problems.json and analysis/ are outputs, so a lifecycle click never re-runs the analysis.
+BUILDING_INPUTS = tuple(bbp.FILES[k] for k in ("building", "weather", "sensors", "thermal", "schedule", "tickets", "images")) + ("grading/findings.json",)
+SIDE_ORDER = ["N", "E", "S", "W"]
+SECTORS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+CLOSED_STATUSES = ("resolved", "verified")
+TICKET_COLOR = bbp.TICKET_GREY
+CSV_CONTRACTS = {
+    "weather": ", ".join(bbp.COLUMNS["weather"]) + " (hourly, ts in UTC ISO 8601)",
+    "sensors": "ts, then one float column per sensor_id of building.json (hourly, ts in UTC ISO 8601; .csv or .csv.gz)",
+    "thermal": ", ".join(bbp.COLUMNS["thermal"]) + " (one row per IR reading)",
+    "schedule": ", ".join(bbp.COLUMNS["schedule"]) + " (one row per circuit)",
+    "tickets": ", ".join(bbp.COLUMNS["tickets"]) + " (category: water, facade, electrical or other)",
+}
+CSV_REQUIRED = {"weather": ["ts", "rain_mm", "wind_speed_ms", "wind_dir_deg"], "sensors": ["ts"], "thermal": ["ts", "element_id", "t_element_c", "t_reference_c"],
+                "schedule": ["panel_id", "circuit_id", "breaker_a"], "tickets": ["ts", "ticket_id", "zone_id", "text"]}
+
+
+def building_dirs(demo: Path, store: Path) -> Dict[str, Path]:
+    """label -> building folder (a folder holding building.json). The demo tower first, then runs/building/<id>."""
+    out: Dict[str, Path] = {}
+    if (demo / "building.json").exists():
+        out[BUILDING_DEMO_LABEL] = demo
+    if store.exists():
+        for p in sorted(store.iterdir()):
+            if p.is_dir() and (p / "building.json").exists():
+                out[f"{p.name} (runs/building)"] = p
+    return out
+
+
+def building_input_mtimes(root: Path, names: Sequence[str]) -> Tuple[Tuple[str, float], ...]:
+    """(name, mtime) of each analysis input; 0.0 when the file is missing. The cache key of the building analysis."""
+    return tuple((n, (root / n).stat().st_mtime if (root / n).exists() else 0.0) for n in names)
+
+
+def open_level_tiles(problems: Sequence[Any]) -> Dict[str, int]:
+    """Open problems (not resolved or verified, and detected again in the latest run) per level. U is its own tile
+    and is never added to S0."""
+    out = {lv: 0 for lv in ("S4", "S3", "S2", "S1", "S0", "U")}
+    for p in problems:
+        if p.status not in ("resolved", "verified") and getattr(p, "active", True):
+            out[p.level] = out.get(p.level, 0) + 1
+    return out
+
+
+def worst_level(levels: Sequence[Optional[str]]) -> Optional[str]:
+    """Worst graded level; "U" only when nothing is graded; None when every entry is ungraded (tickets, indicators)."""
+    rank = {"S0": 0, "S1": 1, "S2": 2, "S3": 3, "S4": 4}
+    graded = [lv for lv in levels if lv in rank]
+    if graded:
+        return max(graded, key=lambda lv: rank[lv])
+    return "U" if "U" in levels else None
+
+
+def wind_sector(deg: float) -> str:
+    """8-sector name of a wind-from direction in degrees (N = 0, clockwise)."""
+    return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][int(((float(deg) % 360.0) + 22.5) // 45.0) % 8]
+
+
+def factor_rows(factors: Sequence[Any]) -> pd.DataFrame:
+    """Factor table as text. A factor whose value is None reads "not measured" and contributes 0; never 0 as healthy."""
+    rows = []
+    for f in factors:
+        measured = f.value is not None
+        rows.append({"factor": f.name, "value": f"{f.value:.3g}" if measured else "not measured", "weight": f"{f.weight:g}",
+                     "contribution": f"{f.contribution:.3f}" if measured else "0 (not measured)", "explanation": f.explanation, "basis": f.basis})
+    return pd.DataFrame(rows, columns=["factor", "value", "weight", "contribution", "explanation", "basis"])
+
+
+def hours_text(hours: Optional[float], earliest: Optional[float], latest: Optional[float]) -> str:
+    """Hours to the threshold with its band, in words. A missing latest means the low band never crosses."""
+    if hours is None:
+        return "does not cross" if earliest is None else f"peak stays under; the high band crosses at {earliest:.1f} h"
+    if earliest is None:
+        return f"{hours:.1f} h"
+    if latest is None:
+        return f"{hours:.1f} h (band {earliest:.1f} h to never: the low band stays under)"
+    return f"{hours:.1f} h (band {earliest:.1f} to {latest:.1f} h)"
+
+
+def forecast_frame(fcs: Sequence[Any], fits: Dict[str, Any], duration_h: float) -> pd.DataFrame:
+    """One row per forecast zone: RH now, peak and band, crossing, hours to threshold with its band and the threshold label.
+    state: "reaches" (the point peak crosses), "may reach (high band)" (only the high band crosses) or "stays under"."""
+    cols = ["zone_id", "driver", "now_rh", "peak_rh", "lo_rh", "hi_rh", "crosses", "may_cross", "state", "hours", "earliest_h",
+            "latest_h", "when", "threshold"]
+    rows = []
+    for fc in fcs:
+        fit = fits.get(fc.zone_id)
+        early, late = bwater.forecast_hours_band(fc, fit, duration_h) if fit is not None else (None, None)
+        may = bool(fc.hi >= float(brules.t(fc.threshold_key)))
+        state = "reaches" if fc.crosses else ("may reach (high band)" if may else "stays under")
+        rows.append({"zone_id": fc.zone_id, "driver": fc.driver, "now_rh": fc.current, "peak_rh": fc.peak, "lo_rh": fc.lo, "hi_rh": fc.hi,
+                     "crosses": bool(fc.crosses), "may_cross": may, "state": state, "hours": fc.hours_to_threshold,
+                     "earliest_h": early, "latest_h": late,
+                     "when": hours_text(fc.hours_to_threshold, early, late), "threshold": bwater.threshold_label(fc.threshold_key)})
+    return pd.DataFrame(rows, columns=cols)
+
+
+def zone_pin_table(b: Any, observations: Sequence[Any], floor_id: str) -> pd.DataFrame:
+    """Zones of one floor with the observations pinned on them: zone_id, kind, n_obs, worst ("ticket" when only
+    ungraded tickets or indicators). Pinned zones first, worst level first."""
+    rank = {"S4": 5, "S3": 4, "S2": 3, "S1": 2, "S0": 1, "U": 1, "ticket": 0, "": -1}
+    groups: Dict[str, List[Any]] = {}
+    for o in observations:
+        pl = bbp.place(b, o)
+        if pl is None or pl[0] != floor_id:
+            continue
+        z = bgraph.zone_of(b, bprob.node_of(o)) or o.zone_id
+        if z:
+            groups.setdefault(z, []).append(o)
+    rows = []
+    for z in b.zones_on(floor_id):
+        obs = groups.get(z.zone_id, [])
+        lv = worst_level([o.level for o in obs])
+        rows.append({"zone_id": z.zone_id, "kind": z.kind, "n_obs": len(obs), "worst": lv if lv else ("ticket" if obs else "")})
+    rows.sort(key=lambda r: (-(r["n_obs"] > 0), -rank[r["worst"]], r["zone_id"]))
+    return pd.DataFrame(rows, columns=["zone_id", "kind", "n_obs", "worst"])
+
+
+def electrical_tree(b: Any, observations: Sequence[Any]) -> List[dict]:
+    """Depth-first rows over the feeds edges (switchboard, panels, circuits; loads folded into their circuit):
+    depth, node_id, kind, rating_a, own (worst level on the node) and worst (worst level in its subtree)."""
+    kids = bgraph.electrical_children(b)
+    parent = bgraph.electrical_parent(b)
+    own: Dict[str, List[Optional[str]]] = {}
+    for o in observations:
+        if o.element_id:
+            own.setdefault(o.element_id, []).append(o.level)
+    rows: List[dict] = []
+
+    def walk(n: str, depth: int) -> List[Optional[str]]:
+        e = b.element(n)
+        levels = list(own.get(n, []))
+        if e is None or e.kind == "load":
+            for c in kids.get(n, []):
+                levels += walk(c, depth)
+            return levels
+        at = len(rows)
+        rows.append({})
+        for c in sorted(kids.get(n, [])):
+            levels += walk(c, depth + 1)
+        rows[at] = {"depth": depth, "node_id": n, "kind": e.kind, "rating_a": e.rating_a, "own": worst_level(own.get(n, [])), "worst": worst_level(levels),
+                    "has_u": "U" in levels}  # a U below stays visible even when an S0 is the worst graded level
+        return levels
+
+    roots = sorted(e.element_id for e in b.elements if e.kind in ("switchboard", "electrical_panel") and e.element_id not in parent)
+    for r in roots:
+        walk(r, 0)
+    return rows
+
+
+def basis_labels(basis: str) -> List[str]:
+    """Printable labels (value, source URL or tag) for every registered threshold key named in a basis string."""
+    out: List[str] = []
+    for key in dict.fromkeys(re.findall(r"[A-Z][A-Z0-9_]{2,}", basis or "")):
+        th = brules.THRESHOLDS.get(key) or bwater.LOCAL.get(key) or belec.LOCAL_THRESHOLDS.get(key)
+        if th is not None:
+            out.append(f"{key}: {th.label()}")
+    return out
+
+
+def _naive_utc(idx: Any) -> Any:
+    idx = pd.DatetimeIndex(idx)
+    return idx.tz_convert("UTC").tz_localize(None) if idx.tz is not None else idx
+
+
+@st.cache_resource(show_spinner=False, max_entries=3)
+def building_analysis(root_str: str, mtimes: tuple) -> dict:
+    """problems.analyze (water, electrical, tickets, graded photos, problems merged into problems.json), cached per
+    change of the input files. Returns shared objects: treat them as read-only."""
+    root = Path(root_str)
+    t0 = time.time()
+    data, water, elec, _merged = bprob.analyze(root)
+    seconds = time.time() - t0
+    obs_path = root / bbp.FILES["observations"]
+    obs = [bmodel.Observation.model_validate_json(line) for line in obs_path.read_text(encoding="utf-8").splitlines() if line.strip()] if obs_path.exists() else []
+    grading_dir = root / bbp.FILES["grading"]
+    img_findings = list(load_run(grading_dir)["findings"]) if (grading_dir / "findings.json").exists() else []
+    truth = None
+    if data.building.synthetic and ((root / bbp.FILES["truth"]).exists() or (root / bbp.FILES["ground_truth"]).exists()):
+        truth = bsyn.load_truth(root)
+    return {"data": data, "water": water, "elec": elec, "obs": obs, "now": bprob.default_now(data), "img_findings": img_findings,
+            "truth": truth, "seconds": seconds}
+
+
+def synthetic_banner(b: Any) -> None:
+    if b.synthetic:
+        st.markdown(f"<div style='background:rgba(245,158,11,.14);border:1px solid {AMBER};border-radius:8px;padding:6px 12px;"
+                    f"font-weight:600;margin-bottom:8px'>⚠️ {SYN_BANNER}</div>", unsafe_allow_html=True)
+
+
+def syn_suffix(synthetic: bool) -> str:
+    return " · SYNTHETIC data" if synthetic else ""
+
+
+def show_table(df: pd.DataFrame, key: str, small: int = 12, height: int = 260) -> None:
+    """st.table for small frames (renders inside hidden tabs), a scrollable st.dataframe for large ones."""
+    if df.empty:
+        st.caption("No rows.")
+    elif len(df) <= small:
+        st.table(df.reset_index(drop=True))
+    else:
+        st.dataframe(df, width="stretch", hide_index=True, height=height, key=key)
+
+
+def level_text(lv: Optional[str]) -> str:
+    return badge(lv) if lv else f"<span class='badge' style='background:{TICKET_COLOR}'>ticket</span>"
+
+
+def level_legend() -> str:
+    return " ".join(badge(lv, "") for lv in ("S4", "S3", "S2", "S1", "U")) + f" <span style='color:{TICKET_COLOR}'>◯</span> ticket or ungraded indicator"
+
+
+def obs_rows(obs: Sequence[Any], limit: int = 200) -> pd.DataFrame:
+    rows = [{"ts": o.ts, "kind": o.kind, "level": o.level or "ungraded", "node": bprob.node_of(o), "source": o.source,
+             "value": "" if o.value is None else f"{o.value:g} {o.unit or ''}".strip(), "text": (o.text or "")[:140],
+             "synthetic": o.synthetic} for o in sorted(obs, key=lambda o: o.ts, reverse=True)[:limit]]
+    return pd.DataFrame(rows, columns=["ts", "kind", "level", "node", "source", "value", "text", "synthetic"])
+
+
+# ----- charts
+
+def risk_heatmap(grid: pd.DataFrame, synthetic: bool) -> alt.Chart:
+    g = grid.copy()
+    g["risk_text"] = g["risk"].map(lambda r: "not measured" if pd.isna(r) else f"{r:.3f}")
+    g["measured"] = g["measured"].astype(bool)
+    floors = g.sort_values("level", ascending=False)["floor"].drop_duplicates().tolist()
+    tip = [alt.Tooltip("zone_id:N", title="zone"), alt.Tooltip("risk_text:N", title="risk"), alt.Tooltip("top_factor:N", title="top factor"),
+           alt.Tooltip("top_basis:N", title="basis")]
+    base = alt.Chart(g).encode(x=alt.X("side:N", sort=SIDE_ORDER, title="facade side", axis=alt.Axis(labelAngle=0)),
+                               y=alt.Y("floor:N", sort=floors, title=None), tooltip=tip)
+    hi = float(g["risk"].max()) if g["risk"].notna().any() else 1.0
+    meas = base.transform_filter("datum.measured").mark_rect(stroke="white", strokeWidth=1).encode(
+        color=alt.Color("risk:Q", scale=alt.Scale(scheme="orangered", domain=[0, max(hi, 0.05)]), title="water risk"))
+    unm = base.transform_filter("!datum.measured").mark_rect(color="#d1d5db", stroke="#6b7280", strokeDash=[2, 2], strokeWidth=1)
+    return (meas + unm).properties(height=max(320, 15 * len(floors)),
+                                   title=f"Water-risk elevation: rooms by floor and facade side, grey = not measured{syn_suffix(synthetic)}")
+
+
+def storm_chart(storms: Sequence[Any], synthetic: bool) -> alt.Chart:
+    df = pd.DataFrame([{"start": s.start, "total_mm": s.total_mm, "peak_mm_h": s.peak_mm_h, "wind_from": wind_sector(s.wind_dir_deg),
+                        "wind_deg": s.wind_dir_deg, "wind_ms": s.wind_speed_ms, "storm": s.storm_id} for s in storms])
+    if df.empty:
+        return alt.Chart(pd.DataFrame({"x": []})).mark_point()
+    df["start"] = _naive_utc(pd.to_datetime(df["start"], utc=True))
+    return alt.Chart(df).mark_bar(size=4).encode(
+        x=alt.X("start:T", title="storm start (UTC)"), y=alt.Y("total_mm:Q", title="storm rain, mm"),
+        color=alt.Color("wind_from:N", sort=SECTORS, scale=alt.Scale(scheme="category10"), title="wind from"),
+        tooltip=["storm", "start:T", "total_mm", "peak_mm_h", "wind_from", "wind_deg", "wind_ms"],
+    ).properties(height=200, title=f"Storm timeline ({len(df)} storms, STORM_MIN_MM {brules.THRESHOLDS['STORM_MIN_MM'].label()}){syn_suffix(synthetic)}")
+
+
+def rh_chart(series: pd.Series, storms: Sequence[Any], sensor_id: str, thr: float, synthetic: bool) -> alt.Chart:
+    s = series.dropna().resample("3h").max().dropna()
+    df = pd.DataFrame({"ts": _naive_utc(s.index), "rh": s.to_numpy(float)})
+    spans = pd.DataFrame([{"start": s0.start, "end": s0.end, "storm": s0.storm_id, "mm": s0.total_mm} for s0 in storms])
+    layers = []
+    if not spans.empty:
+        spans["start"] = _naive_utc(pd.to_datetime(spans["start"], utc=True))
+        spans["end"] = _naive_utc(pd.to_datetime(spans["end"], utc=True))
+        layers.append(alt.Chart(spans).mark_rect(opacity=0.35, color="#60a5fa").encode(x="start:T", x2="end:T", tooltip=["storm", "mm"]))
+    layers.append(alt.Chart(df).mark_line(strokeWidth=1, color="#0f766e").encode(x=alt.X("ts:T", title=None), y=alt.Y("rh:Q", title="%RH (3 h max)")))
+    rule = pd.DataFrame({"y": [thr], "label": [f"EPA_RH_MAX {thr:g} %RH"]})
+    layers.append(alt.Chart(rule).mark_rule(color="#dc2626", strokeDash=[5, 3]).encode(y="y:Q"))
+    layers.append(alt.Chart(rule).mark_text(align="left", dx=4, dy=-6, color="#dc2626").encode(y="y:Q", text="label:N", x=alt.value(0)))
+    return alt.layer(*layers).properties(height=220, title=f"{sensor_id}: RH with storm spans (blue){syn_suffix(synthetic)}")
+
+
+def response_scatter(resp: pd.DataFrame, storms: Sequence[Any], driver: str, gain: Optional[float], onset: Optional[str], synthetic: bool) -> alt.Chart:
+    by_id = {s.storm_id: s for s in storms}
+    d = resp.copy()
+    d["x"] = [bwater.driver_value(by_id[i], driver) if i in by_id else np.nan for i in d["storm_id"]]
+    d = d[np.isfinite(d["x"].astype(float)) & d["rise"].notna()]
+    on = pd.to_datetime(onset, utc=True) if onset else None
+    d["phase"] = ["from onset" if on is None or pd.to_datetime(s, utc=True) >= on else "before onset" for s in d["start"]]
+    pts = alt.Chart(d).mark_circle(size=55, opacity=0.8).encode(
+        x=alt.X("x:Q", title=f"storm {driver} ({'mm' if driver == 'rain' else 'mm*m/s WDR proxy'})"), y=alt.Y("rise:Q", title="RH rise, %RH"),
+        color=alt.Color("phase:N", scale=alt.Scale(domain=["from onset", "before onset"], range=["#0f766e", "#9ca3af"]), title=None),
+        tooltip=["storm_id", "start", "x", "rise", "lag_h"])
+    layers = [pts]
+    if gain is not None and len(d):
+        xmax = float(d["x"].max())
+        layers.append(alt.Chart(pd.DataFrame({"x": [0.0, xmax], "y": [0.0, gain * xmax]})).mark_line(color="#dc2626").encode(x="x:Q", y="y:Q"))
+    return alt.layer(*layers).properties(height=240, title=f"Per-storm RH rise vs {driver}, fit through the origin{syn_suffix(synthetic)}")
+
+
+def forecast_chart(df: pd.DataFrame, thr: float, synthetic: bool) -> alt.Chart:
+    base = alt.Chart(df).encode(y=alt.Y("zone_id:N", sort=None, title=None))
+    bars = base.mark_bar(opacity=0.85).encode(x=alt.X("peak_rh:Q", title="forecast peak %RH", scale=alt.Scale(domain=[0, max(100.0, float(df["hi_rh"].max()))])),
+                                              color=alt.Color("state:N", title=None, scale=alt.Scale(
+                                                  domain=["reaches", "may reach (high band)", "stays under"], range=["#dc2626", AMBER, "#0f766e"])),
+                                              tooltip=["zone_id", "driver", "state", "now_rh", "peak_rh", "lo_rh", "hi_rh", "when"])
+    band = base.mark_rule(color="black", strokeWidth=2).encode(x="lo_rh:Q", x2="hi_rh:Q")
+    rule = alt.Chart(pd.DataFrame({"x": [thr]})).mark_rule(color="#dc2626", strokeDash=[5, 3]).encode(x="x:Q")
+    return (bars + band + rule).properties(height=max(90, 34 * len(df)), title=f"Forecast peak with band (black) vs EPA_RH_MAX {thr:g} %RH{syn_suffix(synthetic)}")
+
+
+def load_chart(table: pd.DataFrame, synthetic: bool, top: int = 25) -> alt.Chart:
+    d = table.dropna(subset=["max_cont_pct"]).sort_values("max_cont_pct", ascending=False).head(top)
+    cont = float(brules.t("LOAD_CONT_PCT"))
+    d = d.assign(state=np.where(d["max_cont_pct"] >= 100, "over 100 %", np.where(d["max_cont_pct"] >= cont, f"over {cont:g} %", "within")))
+    bars = alt.Chart(d).mark_bar().encode(
+        y=alt.Y("circuit_id:N", sort="-x", title=None), x=alt.X("max_cont_pct:Q", title="max continuous load, % of breaker rating", scale=alt.Scale(domain=[0, max(110.0, float(d["max_cont_pct"].max() or 0))])),
+        color=alt.Color("state:N", scale=alt.Scale(domain=["within", f"over {cont:g} %", "over 100 %"], range=["#0f766e", "#f59e0b", "#dc2626"]), title=None),
+        tooltip=["circuit_id", "panel_id", "rating_a", "peak_a", "max_cont_a", "max_cont_pct", "max_cont_ts", "hours_over_cont"])
+    rules = pd.DataFrame({"x": [cont, 100.0], "label": [f"{cont:g} % LOAD_CONT_PCT [Assumption]", "100 % breaker rating"]})
+    r = alt.Chart(rules).mark_rule(strokeDash=[5, 3], color="#374151").encode(x="x:Q")
+    t = alt.Chart(rules).mark_text(align="left", dx=3, dy=-4, angle=0, color="#374151").encode(x="x:Q", text="label:N", y=alt.value(0))
+    return (bars + r + t).properties(height=max(200, 16 * len(d)), title=f"Top {len(d)} circuits by max continuous load{syn_suffix(synthetic)}")
+
+
+def sensor_mini(data: Any, sensor_id: str, end_iso: str, days: int, synthetic: bool) -> Optional[alt.Chart]:
+    if data.sensors is None or sensor_id not in data.sensors.columns:
+        return None
+    end = pd.to_datetime(end_iso, utc=True)
+    s = data.sensors[sensor_id]
+    s = s[(s.index <= end) & (s.index > end - pd.Timedelta(days=days))].dropna()
+    if s.empty:
+        return None
+    sen = data.building.sensor(sensor_id)
+    df = pd.DataFrame({"ts": _naive_utc(s.index), "v": s.to_numpy(float)})
+    return alt.Chart(df).mark_line(strokeWidth=1).encode(x=alt.X("ts:T", title=None), y=alt.Y("v:Q", title=sen.unit if sen else "")).properties(
+        height=130, title=f"{sensor_id}, last {days} days before {end_iso[:10]}{syn_suffix(synthetic)}")
+
+
+def thermal_chart(thermal: pd.DataFrame, element_id: str, synthetic: bool) -> Optional[alt.Chart]:
+    d = thermal[thermal["element_id"].astype(str) == element_id].dropna(subset=["t_element_c", "t_reference_c"]).copy()
+    if d.empty:
+        return None
+    d["delta_t_k"] = d["t_element_c"] - d["t_reference_c"]
+    d["ts"] = _naive_utc(pd.to_datetime(d["ts"], utc=True))
+    edges = pd.DataFrame({"y": [float(e) for e in brules.t("DT_BANDS_K")]})
+    line = alt.Chart(d).mark_line(point=True).encode(x=alt.X("ts:T", title=None), y=alt.Y("delta_t_k:Q", title="delta-T, K"), tooltip=["ts:T", "delta_t_k", "load_pct"])
+    rules = alt.Chart(edges).mark_rule(strokeDash=[4, 3], color="#f97316").encode(y="y:Q")
+    return (line + rules).properties(height=200, title=f"{element_id}: delta-T per IR reading, band edges DT_BANDS_K (dashed){syn_suffix(synthetic)}")
+
+
+# ----- sub-tabs
+
+def building_overview(A: dict, problems: List[Any], root: Path) -> None:
+    data, w = A["data"], A["water"]
+    b = data.building
+    tiles = open_level_tiles(problems)
+    n_fire = sum(1 for p in problems if "fire_shock_pathway" in p.flags and p.status not in CLOSED_STATUSES and p.active)
+    c = st.columns(7)
+    for i, lv in enumerate(("S4", "S3", "S2", "S1")):
+        c[i].metric(f"Open {lv}", tiles[lv], help=LEVEL_MEANING.get(lv, ""))
+    c[4].metric("Open U", tiles["U"], help="not assessable; listed, never scored, and never counted as S0")
+    c[5].metric("fire_shock_pathway", n_fire, help="water within " + brules.THRESHOLDS["WATER_NEAR_PANEL_HOPS"].label() + " of electrical equipment")
+    c[6].metric("Storms tracked", len(w.storms), help="STORM_MIN_MM " + brules.THRESHOLDS["STORM_MIN_MM"].label())
+    facade_vals = [f.native_scale.value for f in A["img_findings"] if f.asset_class == "facade_element"]
+    fisp = bgrade.fisp_building_status(facade_vals)
+    sig = [f for f in w.fits.values() if f.significant]
+    st.markdown(
+        f"**Facade FISP roll-up:** {fisp} ({len(facade_vals)} graded facade photos; U never counts as Safe) · "
+        f"**Rain-linked zones:** {len(sig)} of {len(w.fits)} humidity-sensored zones have a significant rain response · "
+        f"**Analysis clock:** {bprob.iso(A['now'])} (last sensor timestamp) · analysed in {A['seconds']:.1f} s"
+    )
+    if not facade_vals and data.images:
+        st.caption(f"{len(data.images)} facade photos are on file but not graded yet. Grading calls the sidebar grader: use Inputs > Photos on a copy of this building.")
+    left, right = st.columns([2, 3])
+    with left:
+        grid = bwater.risk_grid(b, w.risks)
+        if grid.empty:
+            st.info("No rooms with a facade side, so no water-risk elevation.")
+        else:
+            st.altair_chart(risk_heatmap(grid, b.synthetic), width="stretch")
+            st.caption("Risk = sum of named factors, RISK_WEIGHTS " + brules.THRESHOLDS["RISK_WEIGHTS"].label() + ". Grey cells: not measured, never shown as 0.")
+    with right:
+        st.subheader("Top 5 problems")
+        top = [p for p in problems if p.active][:5]
+        if not top:
+            st.info("No problems detected.")
+        for p in top:
+            esc = p.escalation
+            band = "" if esc is None or esc.hours is None else (
+                f" (band {esc.lo_hours:.0f} to {esc.hi_hours:.0f} h)" if esc.lo_hours is not None and esc.hi_hours is not None else " (no band)")
+            when = "" if esc is None else (f" · escalates in about {esc.hours:.0f} h{band}: {esc.what}" if esc.hours is not None else f" · {esc.what}")
+            prio = "unscored (U)" if p.priority is None else f"priority {p.priority:g}"
+            fl = "".join(f" <span class='chip'>{x}</span>" for x in p.flags)
+            st.markdown(f"{badge(p.level)} **{p.title}**{fl}<br><small>{prio} · {p.status} · root `{p.root_cause.node_id}`{when}</small>", unsafe_allow_html=True)
+        st.divider()
+        st.markdown(
+            "**How the AI and the rules split the work.** Photos (outside facade drops and inside rooms) are graded by a vision model "
+            "against rubric rows quoted verbatim (NYC FISP Safe, SWARMP, Unsafe; EPA moisture rows; IR delta-T bands) and return U when "
+            "the photo cannot show the answer. Sensor, weather, IR and load data are graded by plain code against the same rubric files. "
+            "The blueprint graph (water path: drains, slabs, adjacency; power tree: switchboard, panels, circuits) links every "
+            "observation to a likely root cause, and each storm response is fitted so the next storm can be forecast before damage shows."
+        )
+
+
+def building_plans(A: dict, problems: List[Any], root: Path) -> None:
+    data, w = A["data"], A["water"]
+    b = data.building
+    obs = A["obs"]
+    placed: Dict[str, List[Any]] = {}
+    for o in obs:
+        pl = bbp.place(b, o)
+        if pl is not None:
+            placed.setdefault(pl[0], []).append(o)
+    floors = [f.floor_id for f in b.floor_list]
+    default = floors[0]
+    if problems:
+        fl = b.floor_of(problems[0].root_cause.node_id)
+        default = fl.floor_id if fl is not None else default
+    c1, c2, c3 = st.columns([2, 1, 1])
+    floor_id = c1.selectbox("Floor", floors, index=floors.index(default), key="bld_plan_floor",
+                            format_func=lambda f: f"{f} · {len(placed.get(f, []))} observations")
+    tint = c2.toggle("Water-risk tint", value=True, key="bld_plan_tint")
+    truth_ok = bool(b.synthetic and A["truth"])
+    show_truth = c3.toggle("Truth overlay (synthetic only)", value=False, key="bld_plan_truth", disabled=not truth_ok)
+    pins = zone_pin_table(b, placed.get(floor_id, []), floor_id)
+    zone_ids = pins["zone_id"].tolist()
+    info = {r.zone_id: r for r in pins.itertuples(index=False)}
+    left, right = st.columns([3, 2])
+    with right:
+        sel = st.selectbox("Pin detail: zone", zone_ids, key=f"bld_plan_zone_{floor_id}",
+                           format_func=lambda z: f"{z} · {info[z].worst or 'no pins'} · {info[z].n_obs} obs")
+    hl: List[str] = [sel] if sel else []
+    truth_nodes: List[str] = []
+    if show_truth and truth_ok:
+        for sc in A["truth"].get("scenarios", []):
+            for n in list(sc.get("root_nodes", [])) + list(sc.get("affected_nodes", [])):
+                fl = b.floor_of(n)
+                if fl is not None and fl.floor_id == floor_id:
+                    truth_nodes.append(n)
+        hl += truth_nodes
+    risk = {z.zone_id: bwater.risk_score(w.risks[z.zone_id]) for z in b.zones_on(floor_id) if z.zone_id in w.risks} if tint else None
+    risk = {k: v for k, v in (risk or {}).items() if v is not None} if tint else None
+    with left:
+        img = bbp.render_plan(b, root, floor_id, placed.get(floor_id, []), risk_by_zone=risk, highlight=hl)
+        st.image(img, width="stretch", caption=f"{b.name} {floor_id}{syn_suffix(b.synthetic)}. North is up. Red outline: selected zone" + (" and truth nodes" if truth_nodes else "") + ".")
+        st.markdown(level_legend() + " · orange tint = water risk (untinted = not measured)", unsafe_allow_html=True)
+        if show_truth:
+            st.caption("Truth overlay: " + (", ".join(truth_nodes) if truth_nodes else "no injected scenario on this floor") + ". Synthetic ground truth for the demo only; it is never shown to the analysis.")
+    with right:
+        if not sel:
+            st.info("No zones on this floor.")
+            return
+        z = b.zone(sel)
+        st.markdown(f"**{sel}** · {z.kind}" + (f" · faces {z.orientation}" if z.orientation else "") + (f" · {z.name}" if z.name else ""))
+        zobs = [o for o in placed.get(floor_id, []) if (bgraph.zone_of(b, bprob.node_of(o)) or o.zone_id) == sel]
+        st.markdown(f"Worst: {level_text(worst_level([o.level for o in zobs])) if zobs else 'no observations'} · {len(zobs)} observations", unsafe_allow_html=True)
+        if zobs:
+            show_table(obs_rows(zobs), key=f"bld_plan_obs_{sel}", small=8, height=220)
+        if sel in w.risks:
+            st.markdown("**Water-risk factors**")
+            show_table(factor_rows(w.risks[sel]), key=f"bld_plan_fac_{sel}")
+        els = b.elements_in(sel)
+        sens = b.sensors_in(sel)
+        if els:
+            st.markdown("**Elements**")
+            show_table(pd.DataFrame([{"element": e.element_id, "kind": e.kind, "rating_a": "" if e.rating_a is None else f"{e.rating_a:g}", "name": e.name} for e in els]), key=f"bld_plan_el_{sel}")
+        if sens:
+            st.markdown("**Sensors:** " + ", ".join(f"`{s.sensor_id}` ({s.type}, {s.unit})" for s in sens))
+        if not els and not sens:
+            st.caption("No elements or sensors in this zone: unmeasured, not healthy.")
+
+
+def building_water(A: dict, root: Path) -> None:
+    data, w = A["data"], A["water"]
+    b = data.building
+    thr = float(brules.t("EPA_RH_MAX"))
+    st.altair_chart(storm_chart(w.storms, b.synthetic), width="stretch")
+    fits = w.fits
+    if not fits:
+        st.info("No humidity sensors, so no rain-response fits and no forecast. Upload sensors.csv.gz in Inputs.")
+        return
+    order = sorted(fits, key=lambda k: (not fits[k].significant, -(fits[k].r or -1.0), k))
+    st.subheader("Rain response per zone")
+    zsel = st.selectbox("Zone (humidity-sensored; significant fits first)", order, key="bld_water_zone",
+                        format_func=lambda k: f"{k} · {fits[k].driver} · r {fits[k].r:.2f}" + (" · significant" if fits[k].significant else "") if fits[k].r is not None else f"{k} · {fits[k].driver} · r n/a")
+    fit = fits[zsel]
+    c = st.columns(6)
+    c[0].metric("driver", fit.driver)
+    c[1].metric("r", "n/a" if fit.r is None else f"{fit.r:.2f}", help="RESPONSE_MIN_R " + brules.THRESHOLDS["RESPONSE_MIN_R"].label())
+    c[2].metric("gain", "n/a" if fit.gain is None else f"{fit.gain:.3g}", help="%RH per unit of the driver")
+    c[3].metric("lag", "n/a" if fit.lag_h is None else f"{fit.lag_h:.1f} h", help="storm midpoint to the RH maximum")
+    c[4].metric("events", fit.n_events, help="RESPONSE_MIN_RISE " + brules.THRESHOLDS["RESPONSE_MIN_RISE"].label())
+    sig_color = "#dc2626" if fit.significant else "#6b7280"
+    c[5].markdown(f"<br><span class='badge' style='background:{sig_color}'>{'significant' if fit.significant else 'not significant'}</span>"
+                  + (f"<br><small>onset {fit.onset_ts[:10]}</small>" if fit.onset_ts else ""), unsafe_allow_html=True)
+    series = data.sensors[fit.sensor_id] if fit.sensor_id in data.sensors.columns else pd.Series(dtype=float)
+    if series.dropna().empty:
+        st.warning(f"{fit.sensor_id}: no readings. Not measured, not dry.")
+    else:
+        st.altair_chart(rh_chart(series, w.storms, fit.sensor_id, thr, b.synthetic), width="stretch")
+        drivers = bwater.drivers_for(b)
+        dsel = st.selectbox("Driver for the scatter", drivers, index=drivers.index(fit.driver) if fit.driver in drivers else 0, key=f"bld_water_driver_{zsel}")
+        resp = bwater.storm_responses(series, w.storms)
+        stats = bwater.driver_stats(resp, w.storms, drivers)
+        row = stats[stats["driver"] == dsel]
+        gain = None if row.empty or pd.isna(row["gain"].iloc[0]) else float(row["gain"].iloc[0])
+        s1, s2 = st.columns([3, 2])
+        s1.altair_chart(response_scatter(resp, w.storms, dsel, gain, fit.onset_ts, b.synthetic), width="stretch")
+        with s2:
+            st.caption("r per driver over all storms (the fit itself uses storms from onset on, so a drain that blocks mid-record is not diluted).")
+            show_table(stats.assign(r=stats["r"].map(lambda v: "n/a" if v is None or pd.isna(v) else f"{v:.2f}"),
+                                    gain=stats["gain"].map(lambda v: "n/a" if v is None or pd.isna(v) else f"{v:.3g}"),
+                                    resid_sd=stats["resid_sd"].map(lambda v: "n/a" if v is None or pd.isna(v) else f"{v:.2f}")), key=f"bld_water_stats_{zsel}")
+
+    st.subheader("Forecast: what the next storm does before damage shows")
+    st.caption("Move the sliders: every significant rain-linked zone is re-forecast live from its fitted gain, lag and residual band.")
+    f1, f2, f3, f4 = st.columns(4)
+    rain_mm = f1.slider("Rain, mm", 0, 150, 30, 1, key="bld_fc_rain")
+    duration_h = f2.slider("Duration, h", 1, 72, 6, 1, key="bld_fc_dur")
+    wind_deg = f3.slider("Wind from, degrees (0 = N, 90 = E)", 0, 355, 90, 5, key="bld_fc_dir")
+    wind_ms = f4.slider("Wind speed, m/s", 0, 40, 10, 1, key="bld_fc_speed")
+    f3.caption(f"Sector: **{wind_sector(wind_deg)}**")
+    fcs = bwater.forecast(b, data, fits, rain_mm=float(rain_mm), duration_h=float(duration_h), wind_dir_deg=float(wind_deg), wind_speed_ms=float(wind_ms))
+    if not fcs:
+        st.info("No zone has a significant rain response, so nothing is forecast. Unsensored or non-significant zones are not forecast; that is not zero risk.")
+        return
+    df = forecast_frame(fcs, fits, float(duration_h))
+    n_cross = int(df["crosses"].sum())
+    n_band = int((df["may_cross"] & ~df["crosses"]).sum())
+    msg = (f"{n_cross} of {len(df)} rain-linked zones reach {bwater.threshold_label('EPA_RH_MAX')} with this storm; "
+           f"{n_band} more may reach it (high band).")
+    (st.error if n_cross else st.warning if n_band else st.success)(msg)
+    st.altair_chart(forecast_chart(df, thr, b.synthetic), width="stretch")
+    show_table(df[["zone_id", "driver", "now_rh", "peak_rh", "lo_rh", "hi_rh", "when"]].rename(columns={"when": "hours to threshold (band)"}), key="bld_fc_table")
+    st.caption(f"Band = +/- FORECAST_Z x residual sd, FORECAST_Z {brules.THRESHOLDS['FORECAST_Z'].label()}. Driver proxy WDR_PROXY {brules.THRESHOLDS['WDR_PROXY'].label()}. "
+               f"Threshold: {bwater.threshold_label('EPA_RH_MAX')}. Hours count from the storm start.")
+
+
+def building_electrical(A: dict, root: Path) -> None:
+    data, e = A["data"], A["elec"]
+    b = data.building
+    obs = A["obs"]
+    rows = electrical_tree(b, obs)
+    issues = belec.check_tree(b, data.schedule)
+    if data.schedule is None or data.schedule.empty:
+        st.info("No panel schedule on file: the tree comes from building.json only.")
+    elif issues:
+        st.warning(f"Panel schedule vs building model: {len(issues)} mismatches")
+        show_table(pd.DataFrame({"mismatch": issues}), key="bld_el_issues")
+    else:
+        st.success("Panel schedule matches the building's feeds edges.")
+    left, right = st.columns([2, 3])
+    with left:
+        st.subheader("Power tree")
+        only_bad = st.toggle("Only panels with a finding above S0 or U", value=True, key="bld_el_onlybad")
+        ld = e.load_table.set_index("circuit_id") if len(e.load_table) else pd.DataFrame()
+        panel_rows: List[Tuple[dict, List[dict]]] = []
+        for r in rows:
+            if r["kind"] in ("switchboard",) or r["depth"] == 0:
+                st.markdown(f"**{r['node_id']}** ({r['kind']}) · worst below: {level_text(r['worst']) if r['worst'] else 'none'}", unsafe_allow_html=True)
+            elif r["kind"] == "electrical_panel":
+                panel_rows.append((r, []))
+            elif panel_rows:
+                panel_rows[-1][1].append(r)
+        shown = 0
+        for pr, circuits in panel_rows:
+            if only_bad and pr["worst"] in (None, "S0") and not pr.get("has_u"):
+                continue  # a U below is never hidden behind an S0
+            shown += 1
+            worst_txt = (pr["worst"] or "none") + (" + U" if pr.get("has_u") and pr["worst"] not in (None, "U") else "")
+            with st.expander(f"{pr['node_id']} · worst {worst_txt} · {len(circuits)} circuits"):
+                lines = []
+                for cr in circuits:
+                    extra = ""
+                    if cr["node_id"] in ld.index:
+                        pct, rating = ld.loc[cr["node_id"], "max_cont_pct"], ld.loc[cr["node_id"], "rating_a"]
+                        extra = (" · max continuous " + ("not measured" if pd.isna(pct) else f"{float(pct):.0f} %")
+                                 + ("" if pd.isna(rating) else f" of {float(rating):g} A"))
+                    lines.append(("&nbsp;" * 4 * max(0, cr["depth"] - pr["depth"])) + (level_text(cr["own"]) if cr["own"] else "<span class='badge' style='background:#d1d5db;color:#374151'>none</span>") + f" `{cr['node_id']}`{extra}")
+                st.markdown("<br>".join(lines) if lines else "no circuits", unsafe_allow_html=True)
+        st.caption(f"{shown} of {len(panel_rows)} panels shown. Worst = worst graded level in the subtree; 'none' means no finding above S0 there.")
+    with right:
+        if len(e.load_table):
+            st.altair_chart(load_chart(e.load_table, b.synthetic), width="stretch")
+        else:
+            st.info("No circuit current data: load vs rating is not measured.")
+    kinds = {"thermal": [], "load": [], "ir": []}
+    for f in e.findings:
+        parts = f.finding_id.split(":")
+        if len(parts) >= 3 and parts[1] in kinds:
+            kinds[parts[1]].append(f)
+    st.subheader("IR thermal findings with trend")
+    th_rows = []
+    for f in kinds["thermal"]:
+        if f.unified.level == "S0":
+            continue
+        el = f.finding_id.split(":")[2]
+        tr = belec.thermal_trend(data.thermal, el) if data.thermal is not None and len(data.thermal) else None
+        dnow = f.measurements.delta_t_k
+        nxt = belec.days_to_next_band(dnow, tr[0]) if (tr is not None and dnow is not None) else None
+        th_rows.append({"element": el, "level": f.unified.level, "value": f.native_scale.value, "delta_t_k": "not measured" if dnow is None else f"{dnow:.1f}",
+                        "trend K/day": "n/a (under 3 readings)" if tr is None else f"{tr[0]:+.3f} +/- {tr[1]:.2f} sd",
+                        "days to next band": "top band or flat" if nxt is None else f"{nxt:.0f}"})
+    n_s0 = sum(1 for f in kinds["thermal"] if f.unified.level == "S0")
+    show_table(pd.DataFrame(th_rows, columns=["element", "level", "value", "delta_t_k", "trend K/day", "days to next band"]), key="bld_el_thermal")
+    st.caption(f"{n_s0} elements at S0 not listed. Bands DT_BANDS_K {brules.THRESHOLDS['DT_BANDS_K'].label()}. A reading below IR_MIN_LOAD_PCT {brules.THRESHOLDS['IR_MIN_LOAD_PCT'].label()} is U.")
+    if th_rows:
+        pick = st.selectbox("Delta-T history", [r["element"] for r in th_rows], key="bld_el_th_pick")
+        ch = thermal_chart(data.thermal, pick, b.synthetic)
+        if ch is not None:
+            st.altair_chart(ch, width="stretch")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Load findings above S0")
+        ld_rows = [{"circuit": f.finding_id.split(":")[2], "level": f.unified.level, "value": f.native_scale.value, "action": f.action.code} for f in kinds["load"] if f.unified.level != "S0"]
+        show_table(pd.DataFrame(ld_rows, columns=["circuit", "level", "value", "action"]), key="bld_el_load")
+        runs = belec.anomaly_runs(e.anomalies)
+        long_runs = runs[runs["hours"] >= float(brules.t("CONTINUOUS_H"))] if len(runs) else runs
+        st.caption(f"Current anomalies: {len(e.anomalies)} flagged hours; {len(long_runs)} runs of at least CONTINUOUS_H {brules.THRESHOLDS['CONTINUOUS_H'].label()} become indicator observations.")
+        if len(long_runs):
+            show_table(long_runs.sort_values("max_score", ascending=False).head(50), key="bld_el_runs", small=8)
+    with c2:
+        st.subheader("IR scan overdue")
+        ir_rows = [{"panel": f.finding_id.split(":")[2], "level": f.unified.level, "value": f.native_scale.value, "justification": f.justification[:160]} for f in kinds["ir"]]
+        show_table(pd.DataFrame(ir_rows, columns=["panel", "level", "value", "justification"]), key="bld_el_ir")
+        st.caption(f"IR_INTERVAL_DAYS {brules.THRESHOLDS['IR_INTERVAL_DAYS'].label()}. Never scanned gives U.")
+
+
+def _bld_transition(store_path: str, problem_id: str, to: str, now: Optional[str]) -> None:
+    """Lifecycle button callback: ProblemStore.transition, persisted to problems.json; a refusal is shown as its error text."""
+    actor = (st.session_state.get("bld_actor") or "reviewer").strip() or "reviewer"
+    note = st.session_state.get("bld_note", "")
+    try:
+        bprob.ProblemStore(Path(store_path)).transition(problem_id, to, actor, note, now=now)
+        st.session_state["bld_msg"] = ("success", f"{problem_id}: moved to {to} by {actor}.")
+    except (ValueError, KeyError) as e:
+        st.session_state["bld_msg"] = ("error", str(e))
+
+
+def problem_card(p: Any, A: dict, store_path: Path, now: Optional[str], expanded: bool) -> None:
+    data = A["data"]
+    b = data.building
+    obs_by_id = {o.obs_id: o for o in A["obs"]}
+    prio = "unscored (U)" if p.priority is None else f"priority {p.priority:g}"
+    gone = "" if p.active else " · not re-detected in the latest run (history)"
+    with st.expander(f"{p.level} · {prio} · {p.title} · {p.status}{gone}", expanded=expanded):
+        fl = "".join(f" <span class='chip'>{x}</span>" for x in p.flags)
+        st.markdown(f"{badge(p.level)} status **{p.status}** · domain {p.domain} · created {p.created_ts} · updated {p.updated_ts}{fl}"
+                    + (" · <b>SYNTHETIC</b>" if p.synthetic else ""), unsafe_allow_html=True)
+        nxt = sorted(bprob.ALLOWED.get(p.status, set()))
+        if nxt:
+            cols = st.columns(len(nxt) + 2)
+            for i, to in enumerate(nxt):
+                cols[i].button(f"→ {to}", key=f"bld_tr_{p.problem_id}_{to}", on_click=_bld_transition, args=(str(store_path), p.problem_id, to, now),
+                               type="primary" if i == 0 else "secondary")
+        else:
+            st.caption("verified: final state.")
+        rc = p.root_cause
+        st.markdown(f"**Root cause:** `{rc.node_id}` · {rc.label} · score {rc.score:.3f}<br><small>{rc.explanation}</small>", unsafe_allow_html=True)
+        show_table(factor_rows(rc.factors), key=f"bld_pf_{p.problem_id}")
+        if p.alternatives:
+            st.markdown("**Alternatives:** " + "; ".join(f"`{a.node_id}` {a.label} ({a.score:.3f})" for a in p.alternatives[:4]))
+        esc = p.escalation
+        if esc is not None:
+            hrs = "unknown" if esc.hours is None else f"{esc.hours:.0f} h"
+            band = "" if esc.lo_hours is None or esc.hi_hours is None else f" (band {esc.lo_hours:.0f} to {esc.hi_hours:.0f} h)"
+            st.markdown(f"**Escalation:** {esc.what} · in {hrs}{band}<br><small>basis: {esc.basis}</small>", unsafe_allow_html=True)
+            for lab in basis_labels(esc.basis):
+                st.caption(lab)
+        else:
+            st.caption("No escalation clock: nothing measured says when this gets worse.")
+        pobs = [obs_by_id[i] for i in p.observation_ids if i in obs_by_id]
+        imgs_by_id = {r.image_id: r for r in data.images}
+        img_recs, img_levels = [], {}
+        for o in pobs:
+            if o.kind == "image_finding" and o.finding is not None:
+                for iid in o.finding.evidence.image_ids[:1]:
+                    if iid in imgs_by_id and iid not in img_levels:
+                        img_recs.append(imgs_by_id[iid])
+                        img_levels[iid] = o.level or "U"
+        if img_recs:
+            st.markdown("**Photos**")
+            gallery(img_recs, levels=img_levels, cols=4, max_n=8, key=f"bld_pg_{p.problem_id}")
+        tickets = [o for o in pobs if o.kind == "ticket"]
+        if tickets:
+            st.markdown("**Tenant tickets:** " + " · ".join(f"{o.ts[:10]} `{o.zone_id}`: {o.text}" for o in tickets[:6]) + (f" (+{len(tickets) - 6} more)" if len(tickets) > 6 else ""))
+        sensor_ids = list(dict.fromkeys(o.source.split(":", 1)[1] for o in pobs if o.source.startswith("sensor:")))[:2]
+        if sensor_ids:
+            mc = st.columns(len(sensor_ids))
+            for col, sid in zip(mc, sensor_ids):
+                ch = sensor_mini(data, sid, p.updated_ts, 21, b.synthetic)
+                if ch is not None:
+                    col.altair_chart(ch, width="stretch")
+        st.markdown(f"**Observations ({len(pobs)} of {len(p.observation_ids)} on file)**")
+        show_table(obs_rows(pobs, limit=100), key=f"bld_po_{p.problem_id}", small=6, height=200)
+        if p.history:
+            st.markdown("**History**")
+            show_table(pd.DataFrame([h.model_dump() for h in p.history]), key=f"bld_ph_{p.problem_id}", small=8)
+        st.download_button("Work order CSV", bprob.work_orders_csv([p]), file_name=f"{p.problem_id}_work_order.csv", key=f"bld_wo_{p.problem_id}")
+
+
+def building_problems(A: dict, problems: List[Any], root: Path, now: Optional[str]) -> None:
+    b = A["data"].building
+    msg = st.session_state.pop("bld_msg", None)
+    if msg:
+        (st.success if msg[0] == "success" else st.error)(msg[1])
+    store_path = root / bbp.FILES["problems"]
+    c1, c2, c3, c4 = st.columns([2, 1, 2, 2])
+    statuses = c1.multiselect("Status", list(bprob.ALLOWED), default=["detected", "triaged", "work_order", "resolved"], key="bld_q_status")
+    show_s1 = c2.toggle("Show S1", value=False, key="bld_q_s1")
+    c3.text_input("Actor (logged in the history)", value=reviewer, key="bld_actor")
+    c4.text_input("Note for the next transition", value="", key="bld_note")
+    shown = [p for p in problems if p.status in statuses and (show_s1 or p.level != "S1") and p.active]
+    n_s1 = sum(1 for p in problems if p.level == "S1" and p.status in statuses and p.active)
+    n_gone = sum(1 for p in problems if not p.active)
+    st.caption(f"{len(shown)} of {len(problems)} problems shown, sorted S4 first, then priority; U last and unscored. "
+               + (f"{n_gone} rows not re-detected in the latest run are kept as history and hidden. " if n_gone else "")
+               + ("" if show_s1 else f"{n_s1} S1 (monitor) problems hidden: most are single storm-response events at an indicator level (EVENT_LEVEL {bwater.LOCAL['EVENT_LEVEL'].label()}), not confirmed defects. ")
+               + ("Synthetic tower: lifecycle times use the data clock (last sensor timestamp), so a resolution is compared with the data, not the wall clock." if now else ""))
+    st.download_button("Work orders CSV (problems shown)", bprob.work_orders_csv(shown), file_name=f"{b.building_id}_work_orders.csv", key="bld_wo_all", disabled=not shown)
+    for i, p in enumerate(shown):
+        problem_card(p, A, store_path, now, expanded=(i == 0))
+
+
+def _save_upload_bytes(raw: bytes, name: str, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.suffix == ".gz" and not name.lower().endswith(".gz"):
+        raw = gzip.compress(raw)
+    dest.write_bytes(raw)
+
+
+def grade_building_ui(root: Path, cfg: RunConfig) -> None:
+    """grading.grade_building_photos (guarded grade_fn, run_cascade into <root>/grading) with the cascade's live counters."""
+    data = bbp.load_building_dir(root)
+    if not data.images:
+        st.info("No photos in images/manifest.jsonl.")
+        return
+    counters = st.empty()
+    bar = st.progress(0.0, text="starting")
+    n = max(1, len(data.images))
+
+    def on_progress(p: Progress) -> None:
+        render_counters(counters, p, cfg)
+        done = min(n, p.gated if p.stage == "gate" else max(p.gated, p.graded))
+        bar.progress(min(0.99, done / n), text=f"{p.stage} - {p.current_image} - {done}/{n} photos - ${p.usd:.3f}")
+
+    try:
+        with st.spinner("Grading building photos against the facade, interior-water and electrical rubrics"):
+            summary, findings, obs = bgrade.grade_building_photos(data, cfg=cfg, progress=on_progress)
+    except Exception as e:  # partial outputs stay in grading/; the run is resumable
+        st.error(f"Grading stopped: {type(e).__name__}: {e}")
+        return
+    bar.progress(1.0, text="done")
+    st.success(f"{len(findings)} findings from {summary.get('images', n)} photos; {len(obs)} placed on the building as observations. The analysis re-runs because grading/findings.json changed.")
+
+
+def building_inputs(A: Optional[dict], root: Path, cfg: RunConfig) -> None:
+    editable = root.resolve() != BUILDING_DEMO.resolve()
+    st.subheader("Generate a synthetic tower")
+    if not (BUILDING_DEMO / "building.json").exists():
+        if st.button("Generate the demo tower into data/demo/building (32 floors, 365 days, about 20 s)", key="bld_gen_demo_inputs"):
+            with st.spinner("Generating the SYNTHETIC demo tower"):
+                bsyn.generate_tower(BUILDING_DEMO, bsyn.TowerConfig())
+            st.session_state["bld_pick_pending"] = BUILDING_DEMO_LABEL
+            st.rerun()
+    with st.form("bld_gen_form"):
+        g1, g2, g3 = st.columns(3)
+        floors_n = g1.slider("Floors", 30, 40, 32, key="bld_gen_floors")
+        seed = g2.number_input("Seed", 0, 99999, 7, key="bld_gen_seed")
+        days = g3.select_slider("Days of hourly data", [120, 180, 365], value=365, key="bld_gen_days")
+        go = st.form_submit_button("Generate synthetic tower", type="primary")
+    st.caption("Every generated file is labelled synthetic; the scenarios (facade crack, blocked roof drain, riser leak, hot connection, overloaded circuit) are injected and listed in truth.json.")
+    if go:
+        out = BUILDING_STORE / f"SYN-TOWER-f{int(floors_n)}-s{int(seed)}-d{int(days)}"
+        with st.spinner(f"Generating {out.name}"):
+            bsyn.generate_tower(out, bsyn.TowerConfig(floors=int(floors_n), seed=int(seed), days=int(days)))
+        st.session_state["bld_pick_pending"] = f"{out.name} (runs/building)"
+        st.rerun()
+
+    st.subheader("Your building: blueprints, data and photos")
+    st.markdown(f"IFC 4.3 and COBie import are roadmap (ifcopenshell is not installed; `ifc_supported()` is {bbp.ifc_supported()}). "
+                "Describe the building in building.json (floors, zones with plan polygons, elements, sensors, water and power edges) or add zones from a zones CSV.")
+    up_json = st.file_uploader("building.json: creates or replaces runs/building/<building_id>", type=["json"], key="bld_up_json")
+    if up_json is not None and st.button("Save building.json", key="bld_up_json_save"):
+        try:
+            nb = bmodel.Building.model_validate_json(up_json.getvalue())
+        except Exception as e:
+            st.error(f"building.json rejected: {e}")
+        else:
+            bbp.save_building(nb, BUILDING_STORE / nb.building_id)
+            st.session_state["bld_pick_pending"] = f"{nb.building_id} (runs/building)"
+            st.rerun()
+    if not editable:
+        st.info("The demo tower is kept read-only (tests read it). Copy it to add plans, CSVs or photos.")
+        target = BUILDING_STORE / "SYN-TOWER-01"
+        if st.button(f"Copy the demo tower to runs/building/{target.name}", key="bld_copy_demo", disabled=target.exists()):
+            shutil.copytree(BUILDING_DEMO, target, ignore=shutil.ignore_patterns("problems.json", "analysis", "grading"))
+            st.session_state["bld_pick_pending"] = f"{target.name} (runs/building)"
+            st.rerun()
+        if target.exists():
+            st.caption(f"runs/building/{target.name} exists already: pick it above.")
+        return
+    if A is None:
+        st.warning("This building could not be analysed; fix its files below.")
+    b = bbp.load_building(root)
+    t1, t2 = st.columns(2)
+    with t1:
+        st.markdown("**Tables**")
+        kind = st.selectbox("Table", list(CSV_CONTRACTS), key="bld_csv_kind")
+        st.caption("Columns: " + CSV_CONTRACTS[kind])
+        f = st.file_uploader(f"{bbp.FILES[kind]}", type=["csv", "gz"], key=f"bld_csv_{kind}")
+        if f is not None and st.button(f"Save {bbp.FILES[kind]}", key=f"bld_csv_save_{kind}"):
+            raw = f.getvalue()
+            try:
+                head = pd.read_csv(io.BytesIO(raw), nrows=5, compression="gzip" if f.name.lower().endswith(".gz") else None)
+            except Exception as e:
+                st.error(f"Not a readable CSV: {e}")
+            else:
+                missing = [c for c in CSV_REQUIRED[kind] if c not in head.columns]
+                if missing:
+                    st.error(f"Missing columns: {missing}")
+                else:
+                    _save_upload_bytes(raw, f.name, root / bbp.FILES[kind])
+                    if kind == "sensors":
+                        unknown = [c for c in head.columns if c != "ts" and b.sensor(c) is None]
+                        if unknown:
+                            st.warning(f"{len(unknown)} columns are not sensors in building.json and are ignored: {unknown[:8]}")
+                    st.success(f"Saved {bbp.FILES[kind]}. The analysis re-runs on the next render.")
+        st.markdown("**Floor plans**")
+        plans = st.file_uploader("Plan PNGs named by floor_id (F01.png, RF.png)", type=["png"], accept_multiple_files=True, key="bld_up_plans")
+        if plans and st.button("Save plans", key="bld_up_plans_save"):
+            floors = list(b.floor_list)
+            saved, bad = [], []
+            for pf in plans:
+                fid = Path(pf.name).stem
+                idx = next((i for i, fl in enumerate(floors) if fl.floor_id == fid), None)
+                if idx is None:
+                    bad.append(pf.name)
+                    continue
+                img = Image.open(io.BytesIO(pf.getvalue())).convert("RGB")
+                rel = f"{bbp.FILES['plans']}/{fid}.png"
+                (root / bbp.FILES["plans"]).mkdir(parents=True, exist_ok=True)
+                img.save(root / rel)
+                floors[idx] = floors[idx].model_copy(update={"plan_image": rel, "plan_size_px": img.size})
+                saved.append(fid)
+            if saved:
+                bbp.save_building(bmodel.Building.model_validate({**b.model_dump(), "floor_list": [fl.model_dump() for fl in floors]}), root)
+                st.success(f"Saved plans for {', '.join(saved)}.")
+            if bad:
+                st.error(f"No floor named like: {bad}")
+        st.markdown("**Zones CSV**")
+        st.caption("floor_id, zone_id, name, kind, orientation, polygon (\"x y;x y;...\" in plan pixels)")
+        zf = st.file_uploader("zones.csv", type=["csv"], key="bld_up_zones")
+        if zf is not None:
+            tmp = root / "zones_upload.csv"
+            tmp.write_bytes(zf.getvalue())
+            try:
+                zones = bbp.load_zones_csv(tmp, [fl.floor_id for fl in b.floor_list])
+            except Exception as e:
+                st.error(f"zones CSV rejected: {e}")
+                zones = []
+            new = [z for z in zones if b.zone(z.zone_id) is None]
+            if zones:
+                st.caption(f"{len(zones)} zones read, {len(new)} new.")
+            if new and st.button(f"Add {len(new)} zones to building.json", key="bld_up_zones_save"):
+                try:
+                    nb = bmodel.Building.model_validate({**b.model_dump(), "zones": [z.model_dump() for z in b.zones] + [z.model_dump() for z in new]})
+                except Exception as e:
+                    st.error(f"Rejected: {e}")
+                else:
+                    bbp.save_building(nb, root)
+                    st.success(f"Added {len(new)} zones.")
+    with t2:
+        st.markdown("**Photos: inside rooms, outside facade, electrical equipment**")
+        nodes = sorted(z.zone_id for z in b.zones if z.kind != "core") + sorted(e.element_id for e in b.elements if e.kind not in ("load", "sensor"))
+        photos = st.file_uploader("Photos (JPEG / PNG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key="bld_up_photos")
+        node = st.selectbox("Where: zone or element (asset_id)", nodes, key="bld_photo_node")
+        classes = list(bgrade.allowed_classes(b, node)) if node else []
+        ac = st.selectbox("Asset class", classes, key=f"bld_photo_class_{node}") if classes else None
+        captured = st.date_input("Captured on", value=date.today(), key="bld_photo_date")
+        readings: Dict[str, Optional[float]] = {}
+        if ac == "electrical_equipment":
+            r1, r2, r3 = st.columns(3)
+            readings["t_element_c"] = r1.number_input("Element temp, degC", value=None, key="bld_photo_te")
+            readings["t_reference_c"] = r2.number_input("Reference temp, degC", value=None, key="bld_photo_tr")
+            readings["load_pct"] = r3.number_input("Load at scan, %", value=None, key="bld_photo_load")
+            st.caption("Without element, reference and load readings an electrical photo is U by design: a thermal image alone gives no delta-T.")
+        st.caption(f"Grading uses the sidebar backends: gate={cfg.gate}, grader={cfg.grader}. A facade Safe on a photo under FISP_MIN_PHOTO_PX {brules.THRESHOLDS['FISP_MIN_PHOTO_PX'].label()} becomes U.")
+        b1, b2 = st.columns(2)
+        add = b1.button("Add photos and grade all", type="primary", key="bld_photo_add", disabled=not (photos and ac))
+        regrade = b2.button(f"Grade photos on file ({len(A['data'].images) if A else 0})", key="bld_photo_regrade", disabled=not A or not A["data"].images)
+        if add and photos and ac:
+            stamp = time.strftime("%Y%m%d_%H%M%S")
+            recs, _exts, line = ingest_uploads(photos, root / "uploads" / stamp, ac, b.client_id, f"bld{stamp}", {"dedup_max_distance": 0})
+            labels = {k: float(v) for k, v in readings.items() if v is not None}
+            recs = [r.model_copy(update={"asset_id": node, "asset_class": ac, "captured_on": captured.isoformat(), "labels": {**r.labels, **labels, "synthetic": False}}) for r in recs]
+            manifest = root / bbp.FILES["images"]
+            write_manifest((read_manifest(manifest) if manifest.exists() else []) + recs, manifest)
+            st.caption(line)
+            grade_building_ui(root, cfg)
+        elif regrade:
+            grade_building_ui(root, cfg)
+
+
+def render_building_tab(cfg: RunConfig) -> None:
+    dirs = building_dirs(BUILDING_DEMO, BUILDING_STORE)
+    if not dirs:
+        st.title("Smart-building problem manager")
+        st.info("No building yet. Generate the SYNTHETIC demo tower: 32 floors, 365 days of hourly weather, humidity, leak and circuit data, IR readings, tickets and facade drawings (about 20 s).")
+        if st.button("Generate the demo tower", type="primary", key="bld_gen_demo"):
+            with st.spinner("Generating the SYNTHETIC demo tower into data/demo/building"):
+                bsyn.generate_tower(BUILDING_DEMO, bsyn.TowerConfig())
+            st.rerun()
+        return
+    pending = st.session_state.pop("bld_pick_pending", None)
+    if pending in dirs:
+        st.session_state["bld_pick"] = pending
+    if st.session_state.get("bld_pick") not in dirs:
+        st.session_state.pop("bld_pick", None)
+    h1, h2 = st.columns([3, 2])
+    label = h2.selectbox("Building", list(dirs), key="bld_pick")
+    root = dirs[label]
+    A: Optional[dict] = None
+    try:
+        with st.spinner("Analysing: storms, rain responses, moisture, loads, IR, tickets, photos, problems (cached until an input file changes)"):
+            A = building_analysis(str(root), building_input_mtimes(root, BUILDING_INPUTS))
+    except Exception as e:
+        st.error(f"Could not analyse {root}: {type(e).__name__}: {e}")
+    if A is None:
+        building_inputs(None, root, cfg)
+        return
+    b = A["data"].building
+    with h1:
+        st.title(b.name)
+        st.caption(f"{b.building_id} · {b.floors} floors · {len(b.zones)} zones · {len(b.elements)} elements · {len(b.sensors)} sensors · {len(b.edges)} water and power edges"
+                   + (" · SYNTHETIC" if b.synthetic else ""))
+    problems = bprob.sort_problems(bprob.ProblemStore(root / bbp.FILES["problems"]).load())
+    now = bprob.iso(A["now"]) if b.synthetic else None
+    s_over, s_plans, s_water, s_elec, s_probs, s_inputs = st.tabs(["Overview", "Plans", "Water", "Electrical", "Problems", "Inputs"])
+    with s_over:
+        synthetic_banner(b)
+        building_overview(A, problems, root)
+    with s_plans:
+        synthetic_banner(b)
+        building_plans(A, problems, root)
+    with s_water:
+        synthetic_banner(b)
+        building_water(A, root)
+    with s_elec:
+        synthetic_banner(b)
+        building_electrical(A, root)
+    with s_probs:
+        synthetic_banner(b)
+        building_problems(A, problems, root, now)
+    with s_inputs:
+        synthetic_banner(b)
+        building_inputs(A, root, cfg)
+
+
+tab_building, tab_run, tab_arch, tab_drop, tab_sensors, tab_batch, tab_reports, tab_clients, tab_eval, tab_health, tab_why = st.tabs(
+    ["Building", "Inspect run", "Architecture", "Drop & grade", "Sensors", "Batch", "Reports", "Client reports", "Eval matrix", "Model health", "Why this approach"]
 )
+
+# ---------- Building ----------
+
+with tab_building:
+    try:
+        render_building_tab(cfg)
+    except Exception as e:  # keep every other tab working; the traceback stays visible
+        st.error(f"Building tab stopped: {type(e).__name__}: {e}")
+        st.exception(e)
 
 # ---------- Inspect run ----------
 
@@ -1304,10 +2272,18 @@ with tab_run:
         sync_run_pickers(active_run)  # the run folder exists now; the pickers below are instantiated later in this script
 
     if not active_run:
-        st.title("Inspection grading cascade")
+        st.title("Smart-building problem manager")
         st.markdown(
             """
-Pick a dataset or upload images on the left, choose the gate and grader backends, and press **Run cascade**.
+**Start in the Building tab.** One tower, every input in one place: floor plans (blueprints) with the water path and the
+power tree, inside and outside photo scans, humidity and leak sensors, weather, circuit currents, IR readings and tenant
+tickets. The app tracks rain and water damage per zone, fits how each room responds to each storm, and forecasts which rooms
+cross the EPA 60 %RH line before damage shows. Every observation lands on the plan, is linked to a likely root cause (a
+facade drop, a roof drain, a riser, a hot connection) and becomes a problem with a priority, an escalation clock and a
+lifecycle (detected, triaged, work order, resolved, verified). The demo tower is **SYNTHETIC** and labelled so; no accuracy is claimed on it.
+
+**This tab grades photo batches** with the same rubric engine the building uses. Pick a dataset or upload images on the left,
+choose the gate and grader backends, and press **Run cascade**.
 Or drop images straight into **Drop & grade**, run several datasets under **Batch**, and compare stored runs under **Reports**.
 
 **What happens per image**

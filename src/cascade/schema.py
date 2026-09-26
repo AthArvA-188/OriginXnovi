@@ -14,11 +14,14 @@ from pydantic import BaseModel, Field
 # Multi-sensor scope (docs/research/10_multisensor_scope.md section 0): the engine stays, inputs widen.
 # underwater_structure = piers, piles, abutments seen by ROV camera or imaging sonar; interior_machinery = plant
 # and rotating equipment (whiteboard 2026-09-25). Seismic readings are a modality on an existing asset class.
-AssetClass = Literal["bridge_element", "steel_coating", "pv_module", "building_disaster", "underwater_structure", "interior_machinery"]
-Modality = Literal["rgb", "thermal", "sonar", "seismic", "lidar"]
+# Smart-building scope (D-015, building_spec section 1): facade elements (NYC FISP), interior zones (EPA moisture)
+# and electrical equipment (thermal and load). "sensor" = a building sensor series (RH, leak, current) graded by rubric rows.
+AssetClass = Literal["bridge_element", "steel_coating", "pv_module", "building_disaster", "underwater_structure", "interior_machinery",
+                     "facade_element", "interior_zone", "electrical_equipment"]
+Modality = Literal["rgb", "thermal", "sonar", "seismic", "lidar", "sensor"]
 Sensor = Literal["accelerometer", "geophone", "strain", "tilt", "other"]
 Level = Literal["S0", "S1", "S2", "S3", "S4", "U"]
-Standard = Literal["NBI-0-9", "MBEI-CS", "ISO-4628-3", "IEC-62446-3-CoA", "FEMA-PDA", "CorrosionCS", "NBIS-UW", "SHM-Seismic", "ISO-20816-3"]
+Standard = Literal["NBI-0-9", "MBEI-CS", "ISO-4628-3", "IEC-62446-3-CoA", "FEMA-PDA", "CorrosionCS", "NBIS-UW", "SHM-Seismic", "ISO-20816-3", "NYC-FISP", "EPA-Moisture", "ELEC-TP"]
 ActionCode = Literal["record", "monitor", "schedule", "prioritize", "escalate"]
 Flag = Literal["fire_shock_pathway", "load_posting_review", "section_loss", "not_measurable"]
 # how a crack dimension was obtained (R10 section 4.3 scale-source priority); None when no dimension was measured

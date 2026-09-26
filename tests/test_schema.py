@@ -58,7 +58,7 @@ def test_multisensor_defaults_keep_old_rows_valid():
     from cascade.schema import AssetClass, ImageRecord, Measurements, Modality, SignalRecord, Standard
 
     assert {"underwater_structure", "interior_machinery"} <= set(get_args(AssetClass))
-    assert set(get_args(Modality)) == {"rgb", "thermal", "sonar", "seismic", "lidar"}
+    assert set(get_args(Modality)) == {"rgb", "thermal", "sonar", "seismic", "lidar", "sensor"}  # "sensor" added by the building scope (D-015)
     assert {"NBIS-UW", "SHM-Seismic", "ISO-20816-3"} <= set(get_args(Standard))
     rec = ImageRecord(image_id="i", path="i.jpg", sha256="0" * 64, width=1, height=1, asset_class="underwater_structure")
     assert rec.modality == "rgb"

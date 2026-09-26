@@ -34,6 +34,10 @@ RUBRIC_FOR_CLASS = {
     # interior machinery graded on ISO 20816-3 zones from RMS-velocity metadata (an image alone grades U)
     "underwater_structure": "underwater_nbis.json",
     "interior_machinery": "machinery_iso.json",
+    # smart-building scope (building_spec section 1): graded images reuse this grader unchanged
+    "facade_element": "facade_ll11.json",
+    "interior_zone": "interior_water.json",
+    "electrical_equipment": "electrical_thermal.json",
 }
 # seismic/vibration series are graded by cascade.signals, not by the image grader; kept here so the drift
 # fingerprint and client reports can find the file by name
