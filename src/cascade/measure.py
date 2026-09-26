@@ -22,11 +22,16 @@ Honest limits (read before trusting a number)
   tar bleed and graffiti strokes all pass. Blobby shadows and stains are rejected by the
   elongation filter, thin ones are not.
 - Widths are read perpendicular to the skeleton through the distance transform, which quantises
-  to whole pixels; every width carries a +/- 1 px band (WIDTH_UNCERTAINTY_PX). Oblique views make
-  widths read high (research note section 4.3); no view-angle correction is applied.
-- Published fiducial-marker methods report 0.16-0.22 mm error (research note section 4.2), the
-  same order as the 0.30 mm RC CS1/CS2 boundary, so the MBEI hint is a hint for the reviewer,
-  never a grade. The grader and the reviewer decide the condition state.
+  to whole pixels; every width carries a +/- 1 px band (WIDTH_UNCERTAINTY_PX) combined with the
+  scale's own relative error (Scale.rel_err). Oblique views make widths read high (research note
+  section 4.3); no view-angle correction is applied.
+- A width at or below MIN_RESOLVED_WIDTH_PX is an upper bound: a crack narrower than a pixel still
+  shows as a 1-3 px blurred line, so the MBEI band then runs down to 0 and always lists CS1.
+- Published scale-referenced methods report 0.22 mm precision (planar markers, 1 m range, [43]
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC10007411/) and 0.16 mm MAE (laser calibration, [44]
+  https://www.mdpi.com/2673-8244/4/1/5); this heuristic mask has no measured error. Those figures are
+  the same order as the 0.30 mm RC CS1/CS2 boundary, so the MBEI band is widened to at least
+  METHOD_FLOOR_MM and the hint is a hint for the reviewer, never a grade.
 - No ruler / marker detection by vision is implemented here. `scale_from_reference` takes
   endpoints that a Claude call in the grader (or a detector) supplies later; tests use given points.
 
@@ -37,6 +42,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -72,6 +78,16 @@ MANUAL_SCALE_PENALTY = 0.75  # applied in to_measurements when the basis is manu
 
 # Width band: 2 x distance transform quantises to whole pixels (arithmetic consequence of the method)
 WIDTH_UNCERTAINTY_PX = 1.0
+# Widths at or below this many pixels are reported as upper bounds [Assumption, team-proposed; matches the
+# "3 px minimum" resolution budget in research note 10 section 4.3, an inference, not a measured limit]
+MIN_RESOLVED_WIDTH_PX = 3.0
+# Relative error of a GSD read from metadata (altitude and obliquity error) [Assumption, team-proposed, not
+# measured]. Scale objects and clicked points use sqrt(2) / d from a +/- 1 px error on each endpoint.
+GSD_REL_ERR = 0.05
+# Lower bound on the MBEI band half-width: the smaller of the published end-to-end errors, 0.16 mm MAE with
+# laser calibration ([44] https://www.mdpi.com/2673-8244/4/1/5, secondary via research note 10 section 4.2).
+# Using it as a floor for this heuristic at any GSD is itself an [Assumption].
+METHOD_FLOOR_MM = 0.16
 
 # MBEI crack-width boundaries in inches, copied from src/cascade/rubrics/bridge_mbei.json rows:
 #   reinforced:  CS1 "Width less than 0.012 in", CS2 "0.012 to 0.05 in", CS3 "greater than 0.05 in"
@@ -92,12 +108,30 @@ class Scale:
     basis: where it came from; gsd_metadata is the pipeline's normal source (ImageRecord.gsd_mm_per_px).
     detail: human-readable provenance (field name, marker label, the two points).
     confidence: team-assumption prior per basis (SCALE_CONFIDENCE), not a measured accuracy.
+    rel_err: relative error of mm_per_px. Defaults to GSD_REL_ERR for gsd_metadata and 0.0 otherwise;
+    scale_from_points / scale_from_reference set sqrt(2) / d_px.
+    A mm_per_px that is not a finite positive number raises ValueError (a 0 or negative scale would
+    otherwise produce a made-up width).
     """
 
     mm_per_px: float
     basis: ScaleBasis
     detail: str
     confidence: float
+    rel_err: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        try:
+            k = float(self.mm_per_px)
+        except (TypeError, ValueError):
+            raise ValueError(f"mm_per_px must be a number, got {self.mm_per_px!r}") from None
+        if not math.isfinite(k) or k <= 0:
+            raise ValueError(f"mm_per_px must be finite and > 0, got {self.mm_per_px!r}")
+        self.mm_per_px = k
+        if self.rel_err is None:
+            self.rel_err = GSD_REL_ERR if self.basis == "gsd_metadata" else 0.0
+        if not math.isfinite(self.rel_err) or self.rel_err < 0:
+            raise ValueError(f"rel_err must be finite and >= 0, got {self.rel_err!r}")
 
 
 def scale_from_gsd(record: Optional[ImageRecord]) -> Optional[Scale]:
@@ -129,6 +163,7 @@ def scale_from_points(p0: Tuple[int, int], p1: Tuple[int, int], known_mm: float)
         basis="manual_two_points",
         detail=f"{known_mm} mm between {tuple(int(v) for v in p0)} and {tuple(int(v) for v in p1)} = {d:.1f} px",
         confidence=SCALE_CONFIDENCE["manual_two_points"],
+        rel_err=math.sqrt(2.0) / d,
     )
 
 
@@ -156,6 +191,7 @@ def scale_from_reference(img: ImageLike, endpoints_px: List[Tuple[int, int]], kn
         basis="scale_object",
         detail=f"{label}: {known_mm} mm over {d:.1f} px between {tuple(endpoints_px[0])} and {tuple(endpoints_px[1])}",
         confidence=SCALE_CONFIDENCE["scale_object"],
+        rel_err=math.sqrt(2.0) / d,
     )
 
 
@@ -192,8 +228,9 @@ def _clip_bbox(bbox: Optional[Sequence[int]], w: int, h: int) -> Tuple[int, int,
     if not bbox:
         return 0, 0, w, h
     x0, y0, x1, y1 = (int(v) for v in bbox)
-    x0, x1 = sorted((max(0, x0), min(w, x1)))
-    y0, y1 = sorted((max(0, y0), min(h, y1)))
+    # sort first, then clamp both ends, so a box wholly outside the image collapses to zero width
+    x0, x1 = (min(max(0, v), w) for v in sorted((x0, x1)))
+    y0, y1 = (min(max(0, v), h) for v in sorted((y0, y1)))
     if x1 - x0 < 2 or y1 - y0 < 2:
         raise ValueError(f"bbox {tuple(bbox)} is empty after clipping to {w}x{h}")
     return x0, y0, x1, y1
@@ -449,6 +486,7 @@ def crack_metrics(mask: np.ndarray, scale: Optional[Scale] = None) -> dict:
         "crack_width_mm_median": None,
         "area_cm2": None,
         "width_uncertainty_mm": None,
+        "width_upper_bound": False,
         "mm_per_px": scale.mm_per_px if scale else None,
         "scale_basis": scale.basis if scale else None,
         "measurable": False,
@@ -478,7 +516,10 @@ def crack_metrics(mask: np.ndarray, scale: Optional[Scale] = None) -> dict:
         width_px_median=float(np.median(widths)),
         junctions=int(n_junctions),
         endpoints=int((nc == 1).sum()),
+        width_upper_bound=bool(float(np.percentile(widths, 95)) <= MIN_RESOLVED_WIDTH_PX),
     )
+    if out["width_upper_bound"]:
+        reasons.append(f"p95 width {out['width_px_p95']:.1f} px is at or below {MIN_RESOLVED_WIDTH_PX:g} px: an upper bound, the crack may be narrower than one pixel")
     if scale is None:
         reasons.append("scale missing: widths in px only")
         out["measurable"] = False
@@ -490,7 +531,8 @@ def crack_metrics(mask: np.ndarray, scale: Optional[Scale] = None) -> dict:
         crack_width_mm_p95=out["width_px_p95"] * k,
         crack_width_mm_median=out["width_px_median"] * k,
         area_cm2=out["area_px"] * k * k / 100.0,
-        width_uncertainty_mm=WIDTH_UNCERTAINTY_PX * k,
+        # pixel quantisation and scale error combined in quadrature
+        width_uncertainty_mm=math.hypot(WIDTH_UNCERTAINTY_PX * k, out["width_px_p95"] * k * float(scale.rel_err or 0.0)),
         measurable=True,
     )
     return out
@@ -514,17 +556,40 @@ def _state_for_width_in(width_in: float, bounds: Tuple[float, float]) -> str:
     return "CS2"
 
 
-def mbei_hint(width_mm: float, uncertainty_mm: float, element_type: ElementType = "reinforced") -> dict:
+MBEI_STATES = ("CS1", "CS2", "CS3")
+
+
+def mbei_hint(
+    width_mm: float,
+    uncertainty_mm: float,
+    element_type: ElementType = "reinforced",
+    *,
+    upper_bound: bool = False,
+    method_floor_mm: float = METHOD_FLOOR_MM,
+) -> dict:
     """Which MBEI crack-width row the p95 width falls in, with the row text quoted verbatim from
     bridge_mbei.json, the boundary used (inches, as the rubric states it) and every state the
-    width +/- uncertainty band touches. A hint for the reviewer; the grade is not decided here."""
+    width +/- band touches. The band half-width is max(uncertainty_mm, method_floor_mm) (the cited
+    published error, METHOD_FLOOR_MM); with upper_bound=True (width at or below the pixel floor) the band's
+    lower edge is 0, so CS1 is always a candidate. band_states is the inclusive run of states between the
+    band's edges. A hint for the reviewer; the grade is not decided here."""
     bounds = MBEI_WIDTH_BOUNDS_IN[element_type]
+    half = max(float(uncertainty_mm), float(method_floor_mm))
+    lo_mm = 0.0 if upper_bound else max(0.0, width_mm - half)
+    hi_mm = width_mm + half
     width_in = width_mm / MM_PER_IN
-    u_in = uncertainty_mm / MM_PER_IN
     state = _state_for_width_in(width_in, bounds)
-    band = sorted({_state_for_width_in(width_in - u_in, bounds), state, _state_for_width_in(width_in + u_in, bounds)})
+    i_lo = MBEI_STATES.index(_state_for_width_in(lo_mm / MM_PER_IN, bounds))
+    i_hi = MBEI_STATES.index(_state_for_width_in(hi_mm / MM_PER_IN, bounds))
+    band = list(MBEI_STATES[i_lo : i_hi + 1])
     rows = _rubric_rows(element_type)
     row = rows.get(state)
+    if len(band) > 1:
+        note = f"width band {lo_mm:.2f}-{hi_mm:.2f} mm straddles a boundary ({', '.join(band)}); every listed state is a candidate"
+    else:
+        note = f"width band {lo_mm:.2f}-{hi_mm:.2f} mm (widened to the {method_floor_mm:g} mm published method error) lies inside one state"
+    if upper_bound:
+        note += "; the width is an upper bound (at or below the pixel floor)"
     return {
         "element_type": element_type,
         "value": state,
@@ -532,10 +597,13 @@ def mbei_hint(width_mm: float, uncertainty_mm: float, element_type: ElementType 
         "unified": row["unified"] if row else None,
         "width_in": round(width_in, 4),
         "width_mm": round(width_mm, 3),
+        "band_mm": [round(lo_mm, 3), round(hi_mm, 3)],
         "band_states": band,
+        "method_floor_mm": method_floor_mm,
+        "width_upper_bound": bool(upper_bound),
         "thresholds_in": {"CS1_below": bounds[0], "CS3_above": bounds[1]},
         "source": f"{RUBRIC_PATH.name} rows for '{MBEI_DEFECT_NAME[element_type]}'",
-        "note": ("width band straddles a boundary; both states are candidates" if len(band) > 1 else "width band lies inside one state") + "; hint only, the grader and reviewer decide",
+        "note": note + "; hint only, the grader and reviewer decide",
     }
 
 
@@ -567,6 +635,7 @@ class CrackMeasurement:
     mbei_condition_state_hint: Optional[dict]
     bbox: Optional[List[int]]
     notes: List[str] = field(default_factory=list)
+    width_upper_bound: bool = False  # p95 width at or below MIN_RESOLVED_WIDTH_PX: report as "<= value"
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -602,15 +671,22 @@ def measure_crack(
     m = crack_metrics(mask, used_scale)
     notes.extend(m["reasons"])
     if used_scale is not None:
-        notes.append(f"scale: {used_scale.basis} ({used_scale.detail})")
-        notes.append(f"width band is +/- {WIDTH_UNCERTAINTY_PX:g} px = +/- {WIDTH_UNCERTAINTY_PX * used_scale.mm_per_px:.3f} mm (pixel quantisation only; published marker methods report 0.16-0.22 mm error, research note 10 section 4.2)")
+        notes.append(f"scale: {used_scale.basis} ({used_scale.detail}), relative scale error {used_scale.rel_err:.3f}")
+        if m["width_uncertainty_mm"] is not None:
+            notes.append(
+                f"width band is +/- {m['width_uncertainty_mm']:.3f} mm (+/- {WIDTH_UNCERTAINTY_PX:g} px quantisation and the scale error in quadrature); "
+                f"published scale-referenced methods report 0.22 mm precision (planar markers, 1 m range, [43]) and 0.16 mm MAE (laser calibration, [44]); "
+                f"this heuristic mask has no measured error, so the MBEI band is widened to at least {METHOD_FLOOR_MM:g} mm"
+            )
     else:
         notes.append("no scale: crack_width_mm stays None and the grader keeps not_measurable (bridge_mbei.json unified_note)")
     notes.append("mask is a dark-thin-structure heuristic: shadows, joints, rebar lines and wires can be counted as crack; reviewer must confirm")
     hint = None
     if m["measurable"]:
-        hint = mbei_hint(m["crack_width_mm_p95"], m["width_uncertainty_mm"], element_type)
+        hint = mbei_hint(m["crack_width_mm_p95"], m["width_uncertainty_mm"], element_type, upper_bound=m["width_upper_bound"])
         notes.append(f"MBEI hint uses the p95 width {m['crack_width_mm_p95']:.3f} mm = {hint['width_in']:.4f} in against {hint['thresholds_in']} ({hint['source']})")
+        if m["width_upper_bound"]:
+            notes.append(f"crack_width_mm <= {m['crack_width_mm_p95']:.3f} mm (upper bound: at or below {MIN_RESOLVED_WIDTH_PX:g} px)")
     has_px = m["width_px_max"] is not None
     confidence = 0.0
     if has_px:
@@ -638,6 +714,7 @@ def measure_crack(
         mbei_condition_state_hint=hint,
         bbox=[x0, y0, x1, y1],
         notes=notes,
+        width_upper_bound=bool(m["width_upper_bound"]),
     )
 
 
@@ -647,13 +724,19 @@ def to_measurements(cm: CrackMeasurement) -> dict:
     crack_width_mm is the p95 width, never the max: the max sits on the widest single skeleton pixel,
     which the distance transform pins to corner fills, spalled edges and joints; p95 tracks the crack
     body while still reporting the wide end. Confidence is lowered by MANUAL_SCALE_PENALTY when the
-    scale came from two clicked points. Without a scale every millimetre field is None."""
+    scale came from two clicked points. Without a scale every millimetre field is None and confidence is
+    0.0 (the field is confidence in a grade; a px-only result supports none). measurement_basis,
+    crack_length_mm and crack_width_uncertainty_mm travel with the width, so it never leaves as a bare mm value."""
     notes = list(cm.notes)
     notes.append("crack_width_mm = p95 skeleton width, not max (max is one pixel and lands on corner fills and joints)")
-    confidence = cm.confidence
-    if cm.scale_basis == "manual_two_points":
+    confidence = cm.confidence if cm.measurable else 0.0
+    if not cm.measurable:
+        notes.append("confidence 0.0: nothing measurable in mm (the px segmentation prior stays on the CrackMeasurement)")
+    elif cm.scale_basis == "manual_two_points":
         confidence = round(confidence * MANUAL_SCALE_PENALTY, 3)
         notes.append(f"confidence x {MANUAL_SCALE_PENALTY}: scale is a manual two-point calibration (team assumption)")
+    if cm.measurable and cm.width_upper_bound:
+        notes.append("crack_width_mm is an upper bound (<= value): the p95 width is at or below the pixel floor")
     return {
         "area_cm2": cm.area_cm2 if cm.measurable else None,
         "crack_width_mm": cm.crack_width_mm_p95 if cm.measurable else None,
@@ -661,6 +744,9 @@ def to_measurements(cm: CrackMeasurement) -> dict:
         "percent_area_rusted": None,
         "section_loss_pct": None,
         "confidence": float(min(1.0, max(0.0, confidence))),
+        "measurement_basis": cm.scale_basis if cm.measurable else None,
+        "crack_length_mm": cm.crack_length_mm if cm.measurable else None,
+        "crack_width_uncertainty_mm": cm.width_uncertainty_mm if cm.measurable else None,
         "notes": notes,
     }
 
@@ -692,7 +778,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     scale: Optional[Scale] = None
+    if args.gsd is not None and args.points is not None:
+        raise SystemExit("give either --gsd or --points/--mm, not both")
+    if args.mm is not None and args.points is None:
+        raise SystemExit("--mm needs --points")
     if args.gsd is not None:
+        if not math.isfinite(args.gsd) or args.gsd <= 0:
+            raise SystemExit("--gsd must be a finite number > 0 (mm per pixel)")
         scale = Scale(mm_per_px=float(args.gsd), basis="gsd_metadata", detail=f"--gsd {args.gsd}", confidence=SCALE_CONFIDENCE["gsd_metadata"])
     elif args.points is not None:
         if args.mm is None:

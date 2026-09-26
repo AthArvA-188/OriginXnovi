@@ -10,6 +10,7 @@ same JSON schema. Refusals and parse failures become U findings, never S0.
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,7 +21,7 @@ from PIL import Image
 
 from .costlog import CallLog, Timer
 from .crop import fit_for_model, to_base64_jpeg, upscale_small
-from .schema import AssetClass, Evidence, Finding, GraderOutput, Standard, unassessable_finding
+from .schema import AssetClass, Evidence, Finding, GraderOutput, Modality, Standard, unassessable_finding
 
 RUBRIC_DIR = Path(__file__).parent / "rubrics"
 
@@ -60,7 +61,7 @@ Rules:
 - Emit the native scale first: set native_scale.standard to "{standard}" and native_scale.value to one of the allowed values. Put the verbatim rubric criterion text you matched into native_scale.criteria_matched (copy it, do not paraphrase).
 - Then set unified.level using the mapping in the rubric. uncertainty is always "+/-1".
 - If a criterion needs a measurement (width, area, temperature, percent area, section loss) that you cannot make from the image and the metadata provided, do NOT guess a value: set that measurement to null, add the flag "not_measurable", and grade only from criteria that need no measurement. If no criterion can be applied without a measurement, set unified.level to "U".
-- Never describe damage that is not visible. If the crop shows no defect, use the lowest native value and unified.level "S0".
+- Never describe damage that is not visible. If the crop shows no defect and the rubric's no-defect row needs no measurement, use that row and unified.level "S0". If the rubric has a "U" value and its criterion applies (a reading missing from the metadata, or a frame that cannot show the element surface), use "U" with the flag "not_measurable", never S0.
 - action.code follows the rubric's action mapping; action.basis must name the rubric row or standard clause used.
 - measurements.confidence is your confidence in the native grade, 0 to 1.
 - justification: two or three sentences describing exactly what is visible and why it meets the criterion.
@@ -155,6 +156,30 @@ def grade_ollama(img: Image.Image, asset_class: AssetClass, rubric: dict, metada
         return None, usage, f"parse_error: {e}", meta
 
 
+MACHINE_SUPPORT_TYPES = ("rigid", "flexible")
+
+
+def _finite_number(v) -> bool:
+    try:
+        return v is not None and not isinstance(v, bool) and math.isfinite(float(v))
+    except (TypeError, ValueError):
+        return False
+
+
+def machinery_reading_missing(metadata: dict) -> Optional[str]:
+    """Why an interior_machinery image cannot be zoned (machinery_iso.json U row), or None when the metadata
+    holds a numeric rms_velocity_mm_s, a machine class (machine_group 1/2 or numeric rated_kw) and a support type."""
+    missing = []
+    if not _finite_number(metadata.get("rms_velocity_mm_s")):
+        missing.append("rms_velocity_mm_s")
+    group = metadata.get("machine_group")
+    if not (str(group) in ("1", "2") or _finite_number(metadata.get("rated_kw"))):
+        missing.append("machine_group or rated_kw")
+    if str(metadata.get("support_type", "")).strip().lower() not in MACHINE_SUPPORT_TYPES:
+        missing.append("support_type (rigid or flexible)")
+    return ", ".join(missing) if missing else None
+
+
 def grade_image(
     img: Image.Image,
     *,
@@ -167,11 +192,22 @@ def grade_image(
     exemplars: Optional[List[Exemplar]] = None,
     evidence: Optional[Evidence] = None,
     log: Optional[CallLog] = None,
+    modality: Optional[Modality] = None,
 ) -> Finding:
+    """Grade one crop. Two deterministic U guards enforce 'U is never S0' whatever a model says:
+    interior_machinery without an RMS-velocity reading, machine class and support type is U without a model
+    call (machinery_iso.json U row), and an S0 on a sonar frame (underwater_nbis.json U row) becomes U."""
     rubric = rubric or load_rubric(asset_class)
     metadata = metadata or {}
     evidence = evidence or Evidence(image_ids=[image_id])
     standard: Standard = rubric["standard"]
+    modality = modality or metadata.get("modality") or "rgb"
+    if asset_class == "interior_machinery":
+        missing = machinery_reading_missing(metadata)
+        if missing is not None:
+            f = unassessable_finding(finding_id=finding_id, asset_class=asset_class, standard=standard, evidence=evidence, reason=f"no vibration reading in metadata (missing {missing}); a photograph alone cannot place an ISO 20816-3 zone", model="guard:machinery_no_reading")
+            f.modality = modality
+            return f
     with Timer() as t:
         if backend == "claude":
             model = os.getenv("GRADER_MODEL", "claude-opus-5")
@@ -186,5 +222,12 @@ def grade_image(
         row = log.record(stage="grade", model=model, image_id=image_id, input_tokens=usage["input_tokens"], output_tokens=usage["output_tokens"], seconds=t.seconds, note=str(stop), **meta)
         usd = row["usd"]
     if out is None:
-        return unassessable_finding(finding_id=finding_id, asset_class=asset_class, standard=standard, evidence=evidence, reason=f"grader returned no contract ({stop})", model=model)
-    return Finding.from_grader(out, finding_id=finding_id, asset_class=asset_class, evidence=evidence, model=model, usd=usd, seconds=t.seconds)
+        f = unassessable_finding(finding_id=finding_id, asset_class=asset_class, standard=standard, evidence=evidence, reason=f"grader returned no contract ({stop})", model=model)
+        f.modality = modality
+        return f
+    if modality == "sonar" and out.unified.level == "S0":
+        # imaging sonar cannot resolve the crack classes or show a cleaned surface (underwater_nbis.json U row)
+        f = unassessable_finding(finding_id=finding_id, asset_class=asset_class, standard=standard, evidence=evidence, reason=f"sonar frame graded S0 ('{out.native_scale.value}'): imaging sonar cannot show the element surface at crack resolution, so no-defect is not assessable", model=model)
+        f.modality, f.usd, f.seconds = modality, usd, t.seconds
+        return f
+    return Finding.from_grader(out, finding_id=finding_id, asset_class=asset_class, evidence=evidence, model=model, usd=usd, seconds=t.seconds, modality=modality)

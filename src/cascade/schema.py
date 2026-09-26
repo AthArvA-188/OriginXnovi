@@ -48,15 +48,24 @@ class Unified(BaseModel):
     flags: List[Flag]
 
 
-class Measurements(BaseModel):
+class GraderMeasurements(BaseModel):
+    """The six measurement fields a model may return. The metrology fields below live only on the
+    Finding-side Measurements, so the JSON schema sent to the grader never offers them."""
+
     area_cm2: Optional[float]
     crack_width_mm: Optional[float]
     delta_t_k: Optional[float]
     percent_area_rusted: Optional[float]
     section_loss_pct: Optional[float]
     confidence: float = Field(ge=0.0, le=1.0)
+
+
+GRADER_MEASUREMENT_FIELDS = frozenset(GraderMeasurements.model_fields)
+
+
+class Measurements(GraderMeasurements):
     # crack metrology (R10 section 4): filled by the scale-aware crack module, never guessed by the grader.
-    # These carry defaults so the six required fields above stay the model contract (tests/test_schema.py).
+    # Not part of GraderOutput; Finding.from_grader resets them to None whatever the model sent.
     measurement_basis: Optional[MeasurementBasis] = None
     crack_length_mm: Optional[float] = None
     crack_width_uncertainty_mm: Optional[float] = None  # UI shows width +/- uncertainty, never a bare mm value
@@ -74,7 +83,7 @@ class GraderOutput(BaseModel):
     defect_type: str
     native_scale: NativeScale
     unified: Unified
-    measurements: Measurements
+    measurements: GraderMeasurements
     action: Action
     justification: str
 
@@ -126,17 +135,22 @@ class Finding(BaseModel):
         model: str,
         usd: float,
         seconds: float,
+        modality: Modality = "rgb",
     ) -> "Finding":
+        # only the six model-facing fields are copied: measurement_basis, crack_length_mm and
+        # crack_width_uncertainty_mm come from the crack module, never from a model reply
+        meas = Measurements(**out.measurements.model_dump(include=set(GRADER_MEASUREMENT_FIELDS)))
         return cls(
             finding_id=finding_id,
             asset_class=asset_class,
             defect_type=out.defect_type,
             native_scale=out.native_scale,
             unified=out.unified,
-            measurements=out.measurements,
+            measurements=meas,
             action=out.action,
             justification=out.justification,
             evidence=evidence,
+            modality=modality,
             model=model,
             usd=usd,
             seconds=seconds,

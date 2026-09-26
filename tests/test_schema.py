@@ -6,8 +6,28 @@ from cascade.schema import Evidence, Finding, GateOutput, GraderOutput, unassess
 def test_grader_output_schema_has_all_fields_required():
     schema = GraderOutput.model_json_schema()
     assert set(schema["required"]) == {"defect_type", "native_scale", "unified", "measurements", "action", "justification"}
-    meas = schema["$defs"]["Measurements"]
+    meas = schema["$defs"]["GraderMeasurements"]
     assert set(meas["required"]) == {"area_cm2", "crack_width_mm", "delta_t_k", "percent_area_rusted", "section_loss_pct", "confidence"}
+    # the metrology fields are filled by the crack module only, so the model is never offered them
+    assert set(meas["properties"]) == set(meas["required"])
+    assert "Measurements" not in schema["$defs"]
+
+
+def test_from_grader_drops_metrology_fields_a_model_might_send():
+    raw = {
+        "defect_type": "crack",
+        "native_scale": {"standard": "MBEI-CS", "value": "CS2", "criteria_matched": ["row"]},
+        "unified": {"level": "S1", "uncertainty": "+/-1", "flags": []},
+        "measurements": {"area_cm2": None, "crack_width_mm": 0.4, "delta_t_k": None, "percent_area_rusted": None, "section_loss_pct": None, "confidence": 0.7,
+                         "measurement_basis": "scale_object", "crack_length_mm": 120.0, "crack_width_uncertainty_mm": 0.1},
+        "action": {"code": "monitor", "sla_days": None, "basis": "row"},
+        "justification": "x",
+    }
+    out = GraderOutput.model_validate(raw)
+    f = Finding.from_grader(out, finding_id="i/full", asset_class="bridge_element", evidence=Evidence(image_ids=["i"]), model="t", usd=0.0, seconds=0.0)
+    assert f.measurements.crack_width_mm == 0.4
+    assert f.measurements.measurement_basis is None and f.measurements.crack_length_mm is None and f.measurements.crack_width_uncertainty_mm is None
+    assert f.modality == "rgb"
 
 
 def test_round_trip_contract():

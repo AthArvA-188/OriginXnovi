@@ -1,7 +1,8 @@
 """FR-21 demo UI for the inspection grading cascade.
 
 Top-level tabs: Inspect run (dataset or upload, live counters, image grid, findings with evidence,
-review, queue, surge, export) · Drop & grade (drag-and-drop inference) · Batch (several datasets in
+review with crack measurement from an in-image scale, queue, surge, export) · Drop & grade (drag-and-drop
+inference) · Sensors (seismic and vibration CSV: indicators, rubric grade, save as run) · Batch (several datasets in
 one go) · Reports (stored per-run reports, compared visually) · Eval matrix (gate 2x2 and grading
 confusion matrices against dataset labels) · Why this approach (sourced comparison with the
 incumbents plus the numbers measured on the active run).
@@ -19,14 +20,16 @@ import sys
 import time
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, get_args
 
 import altair as alt
+import numpy as np
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw
+from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -43,7 +46,9 @@ from cascade.pipeline import LEVELS, Progress, RunConfig, load_run, run_cascade,
 from cascade.prioritize import SEVERITY_WEIGHT, consequence_for, urgency_for  # noqa: E402
 from cascade.report import REPORT_FIELDS, run_metrics, write_run_report  # noqa: E402
 from cascade.review import ReviewLog  # noqa: E402
-from cascade.schema import Finding, ImageRecord  # noqa: E402
+from cascade.measure import METHOD_FLOOR_MM, SCALE_CONFIDENCE, WIDTH_UNCERTAINTY_PX, Scale, crack_mask, measure_crack, scale_from_points, skeletonize, to_measurements  # noqa: E402
+from cascade.schema import AssetClass, Finding, ImageRecord, Measurements, Sensor, SignalRecord  # noqa: E402
+from cascade.signals import MOUNTS, append_signal_row, grade_signal, indicators, ingest_signal_csv, load_samples, load_seismic_rubric, write_signal_findings  # noqa: E402
 from cascade.surge import surge_counts, write_surge_report  # noqa: E402
 from cascade.video import VIDEO_EXTS, VideoError, ffmpeg_available, ingest_video, slug_of  # noqa: E402
 from cascade.videodetect import LEVEL_ORDER, NOT_GRADED, NOT_GRADED_COLOR, cue_text, video_timeline, write_video_detections  # noqa: E402
@@ -74,6 +79,21 @@ DATASET_LABELS = {
 ASSET_CLASSES = ["bridge_element", "steel_coating", "pv_module", "building_disaster"]
 ASSET_LABEL = {"bridge_element": "Bridge element (concrete)", "steel_coating": "Steel coating (corrosion)", "pv_module": "PV module (thermal)", "building_disaster": "Building (post-disaster)"}
 ASSET_ICON = {"bridge_element": "\U0001F309", "steel_coating": "\U0001F529", "pv_module": "\u2600\ufe0f", "building_disaster": "\U0001F3DA\ufe0f"}
+AMBER = "#f59e0b"
+# Sensors tab (FR-24 UI). Uploads and the synthetic pair live under runs/_* so list_runs never shows them as runs.
+SIG_DEMO_DIR = RUNS / "_signals_demo"
+SIG_UPLOAD_DIR = RUNS / "_signals_uploads"
+SIG_UNITS = ["(unknown)", "m/s2", "g", "mg", "gal", "cm/s2", "m/s", "cm/s", "mm/s"]
+# Synthetic demo pair: a free decay plus a small steady tone plus gaussian noise. Every value is a demo design choice
+# [Assumption], not a measurement: 3.2 Hz baseline, 2.9 Hz current (a -9.4 % shift), 200 Hz, 60 s, design damping 0.02.
+SYNTH = {"baseline_hz": 3.2, "current_hz": 2.9, "rate_hz": 200.0, "duration_s": 60.0, "zeta": 0.02, "decay_amp": 0.2, "tone_amp": 0.005, "noise_sd": 0.002}
+SYNTH_LABEL = "SYNTHETIC demo signal"
+# PRD section 5A modalities, for the Architecture inputs lane. Status is what this repo has run, not the PRD target:
+# no sonar, lidar or real seismic data has been run (sonar and machinery have rubric files only).
+MODALITY_PILLS = [
+    ("RGB drone and camera", "measured run"), ("Thermal heatmaps", "PV demo"), ("Sonar", "rubric only, not run"),
+    ("Seismic and vibration", "synthetic only"), ("Lidar (roadmap)", "no code"), ("Interior machinery images", "rubric only, not run"),
+]
 CSS = """
 <style>
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -154,6 +174,26 @@ def badge(level: str, text: str = "") -> str:
     return f"<span class='badge badge-{level}' style='background:{color}'>{level}</span> {text}"
 
 
+def modality_chip(modality: Optional[str]) -> str:
+    """A small chip naming a non-RGB modality (thermal, sonar, seismic, lidar); RGB, the default, shows nothing."""
+    if not modality or modality == "rgb":
+        return ""
+    return f"<span class='chip'>{modality}</span> "
+
+
+def amber(text: str) -> str:
+    return f"<span style='color:{AMBER};font-weight:600'>{text}</span>"
+
+
+def crack_width_text(m: Measurements) -> str:
+    """Crack width as the UI must show it: "w +/- u mm (scale: basis)", never a bare millimetre value."""
+    if m.crack_width_mm is None:
+        return "crack width: none (not_measurable without a scale)"
+    if m.crack_width_uncertainty_mm is not None and m.measurement_basis:
+        return f"crack {m.crack_width_mm:.2f} ± {m.crack_width_uncertainty_mm:.2f} mm (scale: {m.measurement_basis})"
+    return f"crack {m.crack_width_mm} mm (model estimate, no measured scale basis, no uncertainty)"
+
+
 def gallery(records: List[ImageRecord], captions: Optional[Dict[str, str]] = None, levels: Optional[Dict[str, str]] = None, cols: int = 5, max_n: int = 30, key: str = "g"):
     """Thumbnail grid. `captions` and `levels` are keyed by image_id; a level renders as a colored badge."""
     if not records:
@@ -172,7 +212,7 @@ def gallery(records: List[ImageRecord], captions: Optional[Dict[str, str]] = Non
                 st.image(th, width="stretch")
                 lvl = (levels or {}).get(rec.image_id)
                 cap = (captions or {}).get(rec.image_id, "")
-                st.markdown((badge(lvl, "") if lvl else "") + f"<small>`{rec.image_id}`<br>{cap}</small>", unsafe_allow_html=True)
+                st.markdown((badge(lvl, "") if lvl else "") + modality_chip(getattr(rec, "modality", "rgb")) + f"<small>`{rec.image_id}`<br>{cap}</small>", unsafe_allow_html=True)
     if len(records) > max_n:
         st.caption(f"Showing {max_n} of {len(records)} images.")
 
@@ -726,14 +766,23 @@ def architecture_svg(stats: Optional[dict] = None) -> str:
            ".side{stroke:#64748b;stroke-width:1.8;fill:none;stroke-dasharray:4 5;animation:dash 2s linear infinite;marker-end:url(#ah)}"
            "@keyframes dash{to{stroke-dashoffset:-28}} .box{rx:12;fill:#111827;stroke-width:2.5} .t{fill:#e5e7eb;font-size:15px;font-weight:700}"
            ".s{fill:#9ca3af;font-size:11.5px} .live{fill:#fbbf24;font-size:12.5px;font-weight:600} .lane{fill:#0b1220;stroke:#1f2937;stroke-dasharray:6 4;rx:14}"
-           ".lt{fill:#94a3b8;font-size:12px;font-weight:700;letter-spacing:.6px} .pill{rx:9;fill:#1f2937;stroke:#374151} .pt{fill:#cbd5e1;font-size:11.5px}</style></defs>"]
-    out.append(f"<rect class='lane' x='20' y='20' width='{W-40}' height='120'/><text class='lt' x='34' y='42'>INPUTS AND KNOWLEDGE (data, not code)</text>")
+           ".lt{fill:#94a3b8;font-size:12px;font-weight:700;letter-spacing:.6px} .pill{rx:9;fill:#1f2937;stroke:#374151} .pt{fill:#cbd5e1;font-size:11.5px}"
+           ".pillm{rx:9;fill:#0f2a44;stroke:#3b82f6} .pillr{rx:9;fill:#111827;stroke:#6b7280;stroke-dasharray:4 3} .ps{fill:#fbbf24;font-size:10px}</style></defs>"]
+    out.append(f"<rect class='lane' x='20' y='20' width='{W-40}' height='120'/><text class='lt' x='34' y='38'>INPUTS AND KNOWLEDGE (data, not code): six modalities (PRD 5A, D-014), then metadata, rubrics, exemplars</text>")
     out.append(f"<rect class='lane' x='20' y='{y0-30}' width='{W-40}' height='{bh+60}'/><text class='lt' x='34' y='{y0-12}'>ENGINE: one resumable loop, every call logged with tokens, dollars, seconds</text>")
     out.append(f"<rect class='lane' x='20' y='{y0+bh+60}' width='{W-40}' height='{H-(y0+bh+60)-20}'/><text class='lt' x='34' y='{y0+bh+82}'>FEEDBACK AND PROOF</text>")
-    pills = [("Drone / phone / thermal capture", 40), ("Customer asset metadata: id, class, GSD, date", 330), ("Rubric files: MBEI CS, NBI, IEC 62446-3, FEMA PDA (verbatim rows)", 690), ("Dev-set exemplars (FR-13)", 1140)]
+    # row 1: the six modalities of PRD 5A (lidar dashed: roadmap, no code); status is what this repo has run
+    mx = 40
+    for text, status in MODALITY_PILLS:
+        w = max(8 * len(text), 7 * len(status)) + 22
+        cls = "pillr" if "roadmap" in text.lower() else "pillm"
+        out.append(f"<rect class='{cls}' x='{mx}' y='46' width='{w}' height='38'/><text class='pt' x='{mx+10}' y='62'>{text}</text><text class='ps' x='{mx+10}' y='77'>{status}</text>")
+        mx += w + 14
+    # row 2: knowledge the engine reads (the side arrows below start at x = 120, 980 and 1250)
+    pills = [("Customer asset metadata: id, class, GSD, date", 40), ("Rubric files: MBEI, NBI, IEC 62446-3, FEMA PDA, seismic, underwater (verbatim rows)", 520), ("Dev-set exemplars (FR-13)", 1180)]
     for text, x in pills:
-        w = 9 * len(text) + 20
-        out.append(f"<rect class='pill' x='{x}' y='62' width='{w}' height='30'/><text class='pt' x='{x+10}' y='82'>{text}</text>")
+        w = min(7 * len(text) + 20, W - 40 - x)
+        out.append(f"<rect class='pill' x='{x}' y='94' width='{w}' height='26'/><text class='pt' x='{x+10}' y='111'>{text}</text>")
     xs = []
     for i, (key, title, sub, live, color) in enumerate(stages):
         x = x0 + i * (bw + gap)
@@ -745,9 +794,9 @@ def architecture_svg(stats: Optional[dict] = None) -> str:
         out.append(f"<text class='live' x='{x+12}' y='{y0+bh-12}'>{live}</text>")
         if i:
             out.append(f"<path class='flow' d='M{x-gap+2},{y0+bh//2} L{x-6},{y0+bh//2}'/>")
-    out.append(f"<path class='side' d='M120,92 L120,{y0-32} L{xs[0]+bw//2},{y0-32} L{xs[0]+bw//2},{y0-4}'/>")
-    out.append(f"<path class='side' d='M980,92 L980,{y0-40} L{xs[3]+bw//2},{y0-40} L{xs[3]+bw//2},{y0-4}'/>")
-    out.append(f"<path class='side' d='M1250,92 L1250,{y0-48} L{xs[3]+bw//2+30},{y0-48} L{xs[3]+bw//2+30},{y0-4}'/>")
+    out.append(f"<path class='side' d='M120,120 L120,{y0-32} L{xs[0]+bw//2},{y0-32} L{xs[0]+bw//2},{y0-4}'/>")
+    out.append(f"<path class='side' d='M980,120 L980,{y0-40} L{xs[3]+bw//2},{y0-40} L{xs[3]+bw//2},{y0-4}'/>")
+    out.append(f"<path class='side' d='M1250,120 L1250,{y0-48} L{xs[3]+bw//2+30},{y0-48} L{xs[3]+bw//2+30},{y0-4}'/>")
     out.append(f"<path class='side' d='M{xs[1]+bw//2},{y0+bh+4} L{xs[1]+bw//2},{y0+bh+34} L{xs[6]+bw//2},{y0+bh+34} L{xs[6]+bw//2},{y0+bh+4}'/>")
     out.append(f"<text class='s' x='{xs[3]}' y='{y0+bh+30}'>clean and confident: skip the heavy stage (recall-first threshold tuned on dev only)</text>")
     by = y0 + bh + 100
@@ -803,6 +852,362 @@ def gate_caption(g: dict) -> str:
     routing = "routed" if g["routed"] else "not routed"
     forced = " (forced)" if "[forced:" in g.get("reason", "") else ""
     return f"gate: {verdict} {g['confidence']:.2f} · {routing}{forced}"
+
+
+# ---------- crack measurement (FR-23 UI) ----------
+
+
+def scale_from_args(args: Optional[tuple]) -> Optional[Scale]:
+    """("gsd", mm_per_px, detail) or ("points", x0, y0, x1, y1, known_mm) -> Scale; None -> no scale.
+    Raises ValueError for coincident points or a non-positive distance (scale_from_points)."""
+    if not args:
+        return None
+    if args[0] == "gsd":
+        return Scale(mm_per_px=float(args[1]), basis="gsd_metadata", detail=str(args[2]), confidence=SCALE_CONFIDENCE["gsd_metadata"])
+    _, x0, y0, x1, y1, known_mm = args
+    return scale_from_points((int(x0), int(y0)), (int(x1), int(y1)), float(known_mm))
+
+
+def crack_overlay(img: Image.Image, bbox: List[int], mask: np.ndarray, skel: np.ndarray) -> Image.Image:
+    """The bbox crop with the crack mask blended red and the skeleton drawn yellow (thickened on large crops)."""
+    x0, y0, x1, y1 = bbox
+    arr = np.asarray(img.crop((x0, y0, x1, y1)).convert("RGB")).astype(np.float32)
+    red = np.array([220, 38, 38], dtype=np.float32)
+    arr[mask] = 0.45 * arr[mask] + 0.55 * red
+    grow = max(0, max(arr.shape[:2]) // 600)
+    sk = ndimage.binary_dilation(skel, iterations=grow) if grow else skel
+    arr[sk] = [250, 204, 21]
+    out = Image.fromarray(arr.clip(0, 255).astype(np.uint8))
+    if max(out.size) < 320:
+        s = 320 / max(out.size)
+        out = out.resize((int(out.width * s), int(out.height * s)), Image.NEAREST)
+    return out
+
+
+@st.cache_data(show_spinner=False, max_entries=24)
+def crack_measure_cached(path: str, mtime: float, bbox: Tuple[int, int, int, int], scale_args: Optional[tuple], element: str) -> Tuple[dict, dict, Image.Image]:
+    """measure_crack on one image and bbox, plus the overlay. Cached on the file, bbox, scale and element type."""
+    img = Image.open(path).convert("RGB")
+    cm = measure_crack(img, None, list(bbox), scale_from_args(scale_args), element_type=element)
+    mask = crack_mask(img, cm.bbox)
+    return cm.as_dict(), to_measurements(cm), crack_overlay(img, cm.bbox, mask, skeletonize(mask))
+
+
+def merged_measurements(old: Measurements, tm: dict) -> Measurements:
+    """Write the crack fields of to_measurements() into a finding's measurements. The width always travels with its
+    basis and uncertainty. The grader's other fields and its confidence stay as they are; area_cm2 is filled only when
+    the grader left it empty (a spall area is not overwritten by a crack-mask area)."""
+    d = old.model_dump()
+    for k in ("crack_width_mm", "crack_length_mm", "crack_width_uncertainty_mm", "measurement_basis"):
+        d[k] = tm.get(k)
+    if tm.get("area_cm2") is not None and d.get("area_cm2") is None:
+        d["area_cm2"] = tm["area_cm2"]
+    return Measurements.model_validate(d)
+
+
+def crack_measure_panel(f: Finding, rec: Optional[ImageRecord], findings: List[Finding], out: Path, recs: List[ImageRecord]) -> None:
+    """Body of the "Measure crack" expander under the selected finding. Never changes the finding's level."""
+    if rec is None or not Path(rec.path).exists():
+        st.info("No source image on disk for this finding, so nothing to measure.")
+        return
+    if rec.split == "eval_v1":
+        st.info("This image belongs to the frozen eval set (data/eval_v1): crack measurement is never run on it (FR-23).")
+        return
+    if f.modality != "rgb":
+        st.info(f"Crack measurement reads RGB imagery; this finding's modality is {f.modality}.")
+        return
+    fid = f.finding_id
+    gsd = rec.gsd_mm_per_px or f.evidence.gsd_mm_per_px
+    opt_gsd, opt_pts, opt_none = "GSD from image metadata", "Two points on a scale in the image", "No scale (pixels only)"
+    options = ([opt_gsd] if gsd else []) + [opt_pts, opt_none]
+    m1, m2 = st.columns([3, 1])
+    src = m1.radio("Scale source", options, index=options.index(opt_gsd if gsd else opt_none), horizontal=True, key=f"meas_src_{fid}")
+    element = m2.radio("MBEI rows", ["reinforced", "prestressed"], horizontal=True, key=f"meas_el_{fid}", help="reinforced: CS1 below 0.012 in, CS3 above 0.05 in; prestressed: CS1 below 0.004 in, CS3 above 0.009 in (bridge_mbei.json)")
+    if not gsd:
+        st.caption("No GSD for this image (ImageRecord.gsd_mm_per_px and Evidence.gsd_mm_per_px are empty), so the metadata option is off.")
+    scale_args: Optional[tuple] = None
+    scale_err = None
+    if src == opt_gsd:
+        scale_args = ("gsd", float(gsd), f"gsd_mm_per_px={gsd} ({rec.image_id})")
+    elif src == opt_pts:
+        st.caption("Two graduations of a ruler, tape, comparator card or marker of known spacing, in full-image pixels (read them off the image in any viewer). "
+                   f"Scale = known mm / pixel distance, with ±1 px on each endpoint. The image is {rec.width}×{rec.height} px; the finding's bbox is {f.evidence.bbox}.")
+        p = st.columns(5)
+        x0 = p[0].number_input("x0 (px)", 0, max(0, rec.width - 1), 0, 1, key=f"meas_x0_{fid}")
+        y0 = p[1].number_input("y0 (px)", 0, max(0, rec.height - 1), 0, 1, key=f"meas_y0_{fid}")
+        x1 = p[2].number_input("x1 (px)", 0, max(0, rec.width - 1), 0, 1, key=f"meas_x1_{fid}")
+        y1 = p[3].number_input("y1 (px)", 0, max(0, rec.height - 1), 0, 1, key=f"meas_y1_{fid}")
+        known = p[4].number_input("Known distance (mm)", 0.0, 10000.0, 0.0, 1.0, key=f"meas_mm_{fid}")
+        scale_args = ("points", int(x0), int(y0), int(x1), int(y1), float(known))
+        try:
+            scale_from_args(scale_args)
+        except ValueError as e:
+            scale_err = str(e)
+            st.caption(f"Scale not set yet: {scale_err}.")
+        if not scale_err:
+            prev = Image.open(rec.path).convert("RGB")
+            d = ImageDraw.Draw(prev)
+            lw = max(3, prev.width // 300)
+            if f.evidence.bbox:
+                d.rectangle(list(f.evidence.bbox), outline=NEUTRAL_BOX, width=lw)
+            d.line([(x0, y0), (x1, y1)], fill="#22d3ee", width=lw)
+            for cx, cy in ((x0, y0), (x1, y1)):
+                d.ellipse([cx - 2 * lw, cy - 2 * lw, cx + 2 * lw, cy + 2 * lw], outline="#22d3ee", width=lw)
+            prev.thumbnail((720, 720))
+            st.image(prev, caption=f"scale segment (cyan) {known:g} mm over {np.hypot(x1 - x0, y1 - y0):.1f} px; bbox in grey", width="content")
+    bbox = tuple(int(v) for v in f.evidence.bbox) if len(f.evidence.bbox) == 4 else (0, 0, rec.width, rec.height)
+    req = {"fid": fid, "scale": scale_args, "element": element, "bbox": bbox}
+    if st.button("Measure crack", key="meas_go", type="primary", disabled=bool(scale_err)):
+        st.session_state["crack_meas"] = req
+    if st.session_state.get("crack_meas") != req:
+        st.caption("Press Measure crack. The mask is a dark-thin-structure heuristic: shadows, joints, formwork lines and wires can pass as crack, so the reviewer confirms.")
+        return
+    try:
+        with st.spinner("Segmenting, thinning and measuring"):
+            cmd, tm, overlay = crack_measure_cached(rec.path, Path(rec.path).stat().st_mtime, bbox, scale_args, element)
+    except Exception as e:
+        st.error(f"Measurement failed: {type(e).__name__}: {e}")
+        return
+    scale = scale_from_args(scale_args)
+    o1, o2 = st.columns([1.2, 1])
+    o1.image(overlay, width="stretch", caption=f"crop {cmd['bbox']} · red: crack mask (heuristic) · yellow: skeleton · {cmd['mask_pixels']} mask px, {cmd['junctions']} junctions, {cmd['endpoints']} endpoints")
+    with o2:
+        if cmd["measurable"]:
+            k, rel = scale.mm_per_px, float(scale.rel_err or 0.0)
+            unc_max = float(np.hypot(WIDTH_UNCERTAINTY_PX * k, cmd["width_px_max"] * k * rel))
+            le = "≤ " if cmd["width_upper_bound"] else ""
+            a1, a2 = st.columns(2)
+            a1.metric("Crack width (p95)", f"{le}{cmd['crack_width_mm_p95']:.2f} ± {cmd['width_uncertainty_mm']:.2f} mm", help="95th percentile of 2 x distance transform on the skeleton; ± is 1 px quantisation and the scale error in quadrature. This is the value saved as crack_width_mm.")
+            a2.metric("Max width", f"{cmd['crack_width_mm_max']:.2f} ± {unc_max:.2f} mm", help="widest single skeleton pixel; lands on corner fills and joints, so it is shown, not saved")
+            a3, a4 = st.columns(2)
+            a3.metric("Length", f"{cmd['crack_length_mm']:.0f} mm", help="along the skeleton links")
+            a4.metric("Area", f"{cmd['area_cm2']:.2f} cm²", help="mask pixels x scale squared")
+        else:
+            a1, a2 = st.columns(2)
+            a1.metric("Width (p95)", f"{cmd['width_px_p95']:.1f} px" if cmd["width_px_p95"] is not None else "n/a")
+            a2.metric("Max width", f"{cmd['width_px_max']:.1f} px" if cmd["width_px_max"] is not None else "n/a")
+            a3, a4 = st.columns(2)
+            a3.metric("Length", f"{cmd['length_px']:.0f} px" if cmd["length_px"] is not None else "n/a")
+            a4.metric("Area", f"{cmd['area_px']} px")
+            st.warning("Pixels only: " + "; ".join(r for r in tm["notes"][:3] if r) + ". crack_width_mm stays empty, the finding keeps not_measurable, and U is never counted as S0.")
+        st.caption(f"Scale basis: **{scale.basis}** · {scale.mm_per_px:.4f} mm/px · {scale.detail} · relative scale error {float(scale.rel_err or 0):.3f}" if scale else "Scale basis: **none** (pixels only)")
+        st.caption(f"measurement confidence {tm['confidence']:.2f} (team-assumption priors: segmentation x scale{', x 0.75 for a manual two-point scale' if scale and scale.basis == 'manual_two_points' else ''})")
+    hint = cmd.get("mbei_condition_state_hint")
+    if hint:
+        states = hint["band_states"]
+        lo, hi = hint["band_mm"]
+        if len(states) > 1:
+            st.markdown(amber(f"Candidate condition states: {', '.join(states)}") + f" · width band {lo:.2f} to {hi:.2f} mm straddles an MBEI boundary, so no single CS is implied.", unsafe_allow_html=True)
+        else:
+            st.markdown(f"MBEI hint: **{states[0]}** · width band {lo:.2f} to {hi:.2f} mm (widened to at least the {METHOD_FLOOR_MM:g} mm published method error) lies inside one state.")
+        st.markdown(f"> {hint['criterion']}")
+        st.caption(f"Row {hint['value']} (unified {hint['unified']}) quoted from {hint['source']}; p95 width {hint['width_in']:.4f} in against CS1 below {hint['thresholds_in']['CS1_below']} in and CS3 above {hint['thresholds_in']['CS3_above']} in. A hint for the reviewer: the finding's level is not changed.")
+    st.markdown("**Measurement notes**  \n" + "  \n".join(f"- {n}" for n in cmd["notes"]))
+    save = st.button("Save to finding", key="meas_save", disabled=not cmd["measurable"], help="writes crack_width_mm (p95), its uncertainty, length and measurement_basis into this finding's measurements; the level is not changed" if cmd["measurable"] else "nothing in mm to save without a scale")
+    if save:
+        f.measurements = merged_measurements(f.measurements, tm)
+        save_findings(findings, out, recs)
+        st.toast(f"Saved {crack_width_text(f.measurements)} to {fid}", icon="\U0001F4CF")
+        st.rerun()
+
+
+# ---------- seismic and vibration signals (FR-24 UI) ----------
+
+
+def synthetic_series(f_hz: float, seed: int) -> pd.DataFrame:
+    """Two-channel accelerometer-like series in m/s2: a free decay at f_hz (design damping SYNTH['zeta']) plus a small
+    steady tone and gaussian noise. Synthetic by construction; every chart built from it says so."""
+    fs, dur = SYNTH["rate_hz"], SYNTH["duration_s"]
+    t = np.arange(int(fs * dur)) / fs
+    rng = np.random.default_rng(seed)
+    w, z = 2 * np.pi * f_hz, SYNTH["zeta"]
+    decay = SYNTH["decay_amp"] * np.exp(-z * w * t) * np.sin(w * np.sqrt(1 - z * z) * t)
+    tone = SYNTH["tone_amp"] * np.sin(w * t + 0.3)
+    return pd.DataFrame({"time": t, "x": 0.6 * (decay + tone) + rng.normal(0, SYNTH["noise_sd"], t.size), "z": decay + tone + rng.normal(0, SYNTH["noise_sd"], t.size)})
+
+
+def write_synthetic_pair(d: Path) -> Tuple[Path, Path]:
+    d.mkdir(parents=True, exist_ok=True)
+    base, cur = d / "baseline_synthetic.csv", d / "current_synthetic.csv"
+    synthetic_series(SYNTH["baseline_hz"], 1).to_csv(base, index=False)
+    synthetic_series(SYNTH["current_hz"], 2).to_csv(cur, index=False)
+    return cur, base
+
+
+def _sig_params_key(p: dict) -> tuple:
+    return tuple(sorted((k, str(v)) for k, v in p.items()))
+
+
+@st.cache_data(show_spinner=False, max_entries=16)
+def analyse_signal_cached(params_key: tuple, mtimes: tuple) -> dict:
+    return analyse_signal(dict(params_key))
+
+
+def analyse_signal(p: dict) -> dict:
+    """Ingest the CSV (and optional baseline), compute indicators, grade on rubrics/seismic_shm.json. Params arrive as
+    strings from the cache key; 'None' means not given."""
+    val = lambda k: None if p.get(k) in (None, "None", "") else p[k]  # noqa: E731
+    rate = float(val("rate")) if val("rate") else None
+    kw = dict(units=val("units"), asset_class=p["asset_class"], mount=val("mount"))
+    base = ingest_signal_csv(Path(val("baseline")), p["sensor"], rate, val("asset_id"), val("client_id"), **kw) if val("baseline") else None
+    rec = ingest_signal_csv(Path(p["csv"]), p["sensor"], rate, val("asset_id"), val("client_id"), baseline_id=base.signal_id if base else None, **kw)
+    if p.get("synthetic") == "True":
+        rec.labels["synthetic"] = True
+    if base is not None:
+        rec.labels["baseline_record"] = base.model_dump()
+    ind = indicators(rec, base)
+    return {"record": rec, "baseline": base, "ind": ind, "finding": grade_signal(rec, ind, load_seismic_rubric())}
+
+
+def _hann_spectrum(x: np.ndarray, fs: float) -> Tuple[np.ndarray, np.ndarray]:
+    x = x - x.mean()
+    mag = np.abs(np.fft.rfft(x * np.hanning(x.size)))
+    return np.fft.rfftfreq(x.size, 1.0 / fs), mag / (mag.max() or 1.0)
+
+
+def signal_charts(rec: SignalRecord, base: Optional[SignalRecord], ind: dict, ch: str, synthetic: bool) -> Tuple[alt.Chart, alt.Chart]:
+    """Time series (downsampled to about 2,000 points per series) and the Hann spectrum with both dominant peaks marked."""
+    tag = f" · {SYNTH_LABEL}" if synthetic else ""
+    series = [("current", rec)] + ([("baseline", base)] if base is not None else [])
+    ts_rows, sp_rows = [], []
+    fmax = 10.0
+    peaks = []
+    for name, r in series:
+        chans = {c.lower(): i for i, c in enumerate(r.channels)}
+        if ch.lower() not in chans:
+            continue
+        x = load_samples(r)[:, chans[ch.lower()]]
+        fs = r.sample_rate_hz
+        step = max(1, int(np.ceil(x.size / 2000)))
+        t = np.arange(x.size) / fs
+        ts_rows += [{"t_s": float(a), "value": float(b), "series": name} for a, b in zip(t[::step], x[::step])]
+        fr, mag = _hann_spectrum(x, fs)
+        sp_rows.append((name, fr, mag))
+        f_pk = (ind.get("tracked_frequency_hz") or {}).get(ch) if name == "current" else None
+        if name == "current" and f_pk is None:
+            f_pk = (ind.get("dominant_frequency_hz") or {}).get(ch)
+        if name == "baseline":
+            f_pk = (ind.get("baseline_dominant_frequency_hz") or {}).get(ch)
+        if f_pk:
+            peaks.append({"f_hz": float(f_pk), "series": name, "label": f"{name} {f_pk:.3f} Hz"})
+            fmax = max(fmax, 3 * f_pk)
+    fmax = min(fmax, rec.sample_rate_hz / 2)
+    sp = []
+    for name, fr, mag in sp_rows:
+        keep = fr <= fmax
+        step = max(1, int(np.ceil(keep.sum() / 1500)))
+        sp += [{"f_hz": float(a), "relative amplitude": float(b), "series": name} for a, b in zip(fr[keep][::step], mag[keep][::step])]
+    color = alt.Color("series:N", scale=alt.Scale(domain=["current", "baseline"], range=["#3b82f6", "#9ca3af"]), title=None)
+    ts = alt.Chart(pd.DataFrame(ts_rows)).mark_line(strokeWidth=1).encode(
+        x=alt.X("t_s:Q", title="t (s)"), y=alt.Y("value:Q", title=f"{ch} ({rec.labels.get('units') or 'units unknown'})"), color=color, tooltip=["series", "t_s", "value"]
+    ).properties(height=220, title=f"Time series, channel {ch} (downsampled for display){tag}")
+    spec = alt.Chart(pd.DataFrame(sp)).mark_line().encode(
+        x=alt.X("f_hz:Q", title="frequency (Hz)", scale=alt.Scale(domain=[0, fmax])), y=alt.Y("relative amplitude:Q", title="|FFT| (Hann), normalised"), color=color, tooltip=["series", "f_hz", "relative amplitude"]
+    )
+    if peaks:
+        pdf = pd.DataFrame(peaks)
+        rules = alt.Chart(pdf).mark_rule(strokeDash=[5, 4], strokeWidth=2).encode(x="f_hz:Q", color=color, tooltip=["label"])
+        text = alt.Chart(pdf).mark_text(align="left", dx=4, dy=-6, fontWeight="bold").encode(x="f_hz:Q", y=alt.value(12), text="label:N", color=color)
+        spec = spec + rules + text
+    return ts, spec.properties(height=220, title=f"Spectrum, channel {ch}, dominant peaks marked{tag}")
+
+
+def signal_view(rec: SignalRecord, base: Optional[SignalRecord], ind: dict, key: str) -> None:
+    """Metadata strip, indicator metrics per channel, time series and spectrum."""
+    synthetic = bool((rec.labels or {}).get("synthetic"))
+    if synthetic:
+        st.markdown(amber(f"{SYNTH_LABEL}: generated with numpy, not a measurement") + f" · baseline {SYNTH['baseline_hz']} Hz, current {SYNTH['current_hz']} Hz, {SYNTH['rate_hz']:g} Hz, {SYNTH['duration_s']:g} s, design damping {SYNTH['zeta']}, gaussian noise sd {SYNTH['noise_sd']} m/s2 [Assumption: demo design values]", unsafe_allow_html=True)
+    lab = rec.labels or {}
+    st.caption(f"`{rec.signal_id}` · {rec.sensor} · units {lab.get('units') or 'unknown'} · mount {lab.get('mount') or 'not given'} · {rec.sample_rate_hz:g} Hz ({lab.get('rate_source')}) · {rec.n_samples} samples, {rec.duration_s:.1f} s · channels {', '.join(rec.channels)} · "
+               f"baseline {base.signal_id if base is not None else (rec.baseline_id or 'none')} · asset {rec.asset_id or 'n/a'} · client {rec.client_id or 'n/a'}")
+    ch = st.radio("Channel", rec.channels, horizontal=True, key=f"{key}_ch") if len(rec.channels) > 1 else rec.channels[0]
+    units = ind.get("units") or "units unknown"
+    pga, rms, fdom = (ind.get("pga") or {}).get(ch), (ind.get("rms") or {}).get(ch), (ind.get("dominant_frequency_hz") or {}).get(ch)
+    pct_g = (ind.get("pga_pct_g") or {}).get(ch)
+    pgv = (ind.get("pgv_cm_s") or {}).get(ch)
+    zeta, zd = (ind.get("damping_ratio") or {}).get(ch), (ind.get("damping_detail") or {}).get(ch)
+    shift = (ind.get("frequency_shift_pct") or {}).get(ch) if ind.get("frequency_shift_pct") is not None else None
+    unc = (ind.get("frequency_shift_uncertainty_pct") or {}).get(ch)
+    res = ind.get("fft_resolution_hz")
+    k = st.columns(5)
+    extra = f" ({pct_g:.2f} %g)" if pct_g is not None else (f" ({pgv:.2f} cm/s PGV)" if pgv is not None else "")
+    k[0].metric("PGA / peak", f"{pga:.3g} {units}{extra}" if pga is not None else "n/a", help="max |x| after mean removal; %g only for an accelerometer with known units")
+    k[1].metric("RMS", f"{rms:.3g} {units}" if rms is not None else "n/a")
+    k[2].metric("Dominant frequency", f"{fdom:.3f} ± {res:.3f} Hz" if fdom is not None else "n/a", help=f"Hann-window FFT peak with parabolic refinement; ± is one FFT bin (resolution {res:.4f} Hz = rate / samples used)")
+    k[3].metric("Damping ratio", f"{zeta:.3f}" if zeta is not None else "n/a", help=(f"log decrement over {zd['n_peaks']} decaying peaks, R² {zd['r2']:.2f}; indicator only, no threshold row" if zd else "no clean free-decay window found; indicator only"))
+    if ind.get("frequency_shift_pct") is None:
+        k[4].metric("Frequency shift vs baseline", "n/a", help="no baseline: not computed, the finding is U (never S0)")
+    else:
+        k[4].metric("Frequency shift vs baseline", f"{shift:+.1f} ± {unc:.1f} %" if shift is not None else "not computed", help="tracked peak within ±20 % of the baseline dominant frequency; ± is one FFT bin over the baseline frequency")
+    if synthetic and zeta is not None:
+        st.caption(f"The synthetic series was built with damping {SYNTH['zeta']}; the log-decrement estimator reads {zeta:.3f} on it (the steady tone and noise floor flatten the envelope). Shown to make the estimator's bias visible, not as a validation.")
+    ts, spec = signal_charts(rec, base, ind, ch, synthetic)
+    c1, c2 = st.columns(2)
+    c1.altair_chart(ts, width="stretch")
+    c2.altair_chart(spec, width="stretch")
+
+
+def signal_grade_view(finding: Finding) -> None:
+    """The graded finding: badge, rubric rows quoted with their source tag (team-proposed rows in amber), U reason."""
+    rows = {r["criterion"]: r for r in load_seismic_rubric()["rows"]}
+    st.markdown(badge(finding.unified.level, f"**{finding.native_scale.value}** on {finding.native_scale.standard} · action **{finding.action.code}** · confidence {finding.measurements.confidence:.2f} · flags {', '.join(finding.unified.flags) or 'none'}"), unsafe_allow_html=True)
+    if finding.unified.level == "U":
+        st.warning(f"U, not assessable: {finding.action.basis} U is listed on its own and never counted as S0.")
+    st.markdown("**Rubric rows matched (verbatim from rubrics/seismic_shm.json)**")
+    for crit in finding.native_scale.criteria_matched or ["(none quoted)"]:
+        st.markdown(f"> {crit}")
+        src = (rows.get(crit) or {}).get("source")
+        if src:
+            tag = amber("team-proposed, validate") + " · " if "team-proposed" in src else ""
+            st.markdown(f"<small>{tag}source: {src}</small>", unsafe_allow_html=True)
+    st.markdown(f"**Justification:** {finding.justification}")
+
+
+def stored_signal(out: Path, finding_id: str) -> Optional[Tuple[SignalRecord, Optional[SignalRecord], dict]]:
+    """(record, baseline record, indicators) for a signal finding from runs/<run>/signals.jsonl (last row wins)."""
+    sp = out / "signals.jsonl"
+    if not sp.exists():
+        return None
+    hit = None
+    for line in sp.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            row = json.loads(line)
+            if row.get("finding_id") == finding_id:
+                hit = row
+    if not hit:
+        return None
+    rec = SignalRecord.model_validate(hit["record"])
+    b = (rec.labels or {}).get("baseline_record")
+    return rec, SignalRecord.model_validate(b) if b else None, hit["indicators"]
+
+
+def save_signal_run(p: dict) -> Tuple[Path, Finding]:
+    """runs/sig_<ts>/: the CSVs copied under signals/, findings via write_signal_findings, signals.jsonl, an empty
+    gate.jsonl (list_runs lists folders with one, so Reports, Client reports and Model health can open the run) and a
+    summary.json with zero images. No model call."""
+    out = RUNS / f"sig_{time.strftime('%m%d_%H%M%S')}"
+    sdir = out / "signals"
+    sdir.mkdir(parents=True, exist_ok=True)
+    q = dict(p)
+    for k in ("csv", "baseline"):
+        if q.get(k) not in (None, "None", ""):
+            dst = sdir / Path(q[k]).name
+            shutil.copyfile(q[k], dst)
+            q[k] = str(dst)
+    res = analyse_signal({k: str(v) for k, v in q.items()})
+    rec, ind, finding = res["record"], res["ind"], res["finding"]
+    ranked = write_signal_findings(out, [finding])
+    append_signal_row(out, rec, ind, finding)
+    (out / "gate.jsonl").touch()
+    summary = {
+        "images": 0, "gated": 0, "routed_to_grader": 0, "routing_fraction": None, "unusable": 0, "findings": len(ranked),
+        "levels": {lvl: sum(1 for f in ranked if f.unified.level == lvl) for lvl in LEVELS}, "signal_findings": sum(1 for f in ranked if f.modality == "seismic"),
+        "native_values": {f.native_scale.value: 1 for f in ranked}, "asset_classes": {}, "usd_total": 0.0, "usd_per_image": None, "seconds_total": 0.0,
+        "source": "Sensors tab (cascade.signals, deterministic, no model calls)", "synthetic": bool(rec.labels.get("synthetic")),
+    }
+    (out / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
+    write_reports(out, {})
+    return out, next(f for f in ranked if f.finding_id == finding.finding_id)
 
 
 # ---------- sidebar ----------
@@ -887,8 +1292,8 @@ def sync_run_pickers(name: Optional[str]) -> None:
 
 sync_run_pickers(active_run)
 
-tab_run, tab_arch, tab_drop, tab_batch, tab_reports, tab_clients, tab_eval, tab_health, tab_why = st.tabs(
-    ["Inspect run", "Architecture", "Drop & grade", "Batch", "Reports", "Client reports", "Eval matrix", "Model health", "Why this approach"]
+tab_run, tab_arch, tab_drop, tab_sensors, tab_batch, tab_reports, tab_clients, tab_eval, tab_health, tab_why = st.tabs(
+    ["Inspect run", "Architecture", "Drop & grade", "Sensors", "Batch", "Reports", "Client reports", "Eval matrix", "Model health", "Why this approach"]
 )
 
 # ---------- Inspect run ----------
@@ -914,7 +1319,14 @@ Or drop images straight into **Drop & grade**, run several datasets under **Batc
 5. **Review**: accept, override or mark U; every action is logged with the prior model value.
 6. **Export**: queue CSV, findings JSON, bridge entry CSV, and a stored report.
 
-Numbers shown here are measured from each run's call log. Accuracy claims live only in `eval/reports/` and the **Eval matrix** tab.
+**Multi-sensor inputs (D-014, PRD section 5A).** The same queue takes six modalities: RGB drone and camera imagery (the measured path),
+thermal heatmaps (PV demo), sonar frames and interior-machinery images (rubric files only, no data run yet), seismic and vibration
+time series (**Sensors** tab: indicators and rubric rows in plain code, run on a labelled synthetic pair only) and lidar (roadmap, no code).
+A crack's width, length and area in mm come from **Findings & review > Measure crack** when the image carries a scale (GSD metadata or
+two points on a ruler); without one the width stays in pixels and the finding stays `not_measurable`.
+
+Numbers shown here are measured from each run's call log. Accuracy claims live only in `eval/reports/` and the **Eval matrix** tab;
+there are none for seismic, sonar or lidar.
 """
         )
         with st.expander("60-second demo script"):
@@ -985,6 +1397,9 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
             gate_by_id = {g["image_id"]: g for g in gate_rows}
             ordered = [imgs[g["image_id"]] for g in gate_rows if g["image_id"] in imgs]
             gallery(ordered, captions={i: gate_caption(g) for i, g in gate_by_id.items()}, levels=lvl_by_img, key="overview")
+            n_sig = sum(1 for f in findings if f.modality == "seismic")
+            if n_sig:
+                st.caption(f"This run also holds {n_sig} seismic / vibration finding{'s' if n_sig != 1 else ''} from the Sensors tab (no image; open it under Findings & review for the indicators, charts and quoted rubric rows).")
             video_detections_section(out, imgs, key="over_vd")
 
             c1, c2 = st.columns(2)
@@ -1020,8 +1435,13 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                 f = next(x for x in findings if x.finding_id == fid)
                 rec = imgs.get(f.evidence.image_ids[0]) if f.evidence.image_ids else None
                 c1, c2 = st.columns([1.1, 1])
+                sig = stored_signal(out, f.finding_id) if f.modality == "seismic" else None
                 with c1:
-                    if rec and Path(rec.path).exists():
+                    if sig:
+                        signal_view(sig[0], sig[1], sig[2], key="find_sig")
+                    elif f.modality == "seismic":
+                        st.info("Seismic finding: its series is not stored in this run's signals.jsonl, so no chart can be drawn.")
+                    elif rec and Path(rec.path).exists():
                         st.image(draw_evidence(f, rec), caption=f"{rec.image_id} · {rec.width}x{rec.height} · tile {f.evidence.tile} · bbox {f.evidence.bbox}", width="stretch")
                         truth = rec.labels.get("grade_native") or rec.labels.get("source_class")
                         if truth:
@@ -1029,7 +1449,7 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                     else:
                         st.warning("Source image not on disk for this run.")
                 with c2:
-                    st.markdown(f"### {f.native_scale.value} on {f.native_scale.standard} · " + badge(f.unified.level, f.unified.uncertainty), unsafe_allow_html=True)
+                    st.markdown(f"### {f.native_scale.value} on {f.native_scale.standard} · " + badge(f.unified.level, f.unified.uncertainty) + " " + modality_chip(f.modality), unsafe_allow_html=True)
                     st.caption(LEVEL_MEANING[f.unified.level])
                     sla = f", within {f.action.sla_days} days" if f.action.sla_days is not None else ""
                     st.markdown(f"**Defect:** {f.defect_type}  \n**Action:** {f.action.code}{sla}  \n**Basis:** {f.action.basis}")
@@ -1038,8 +1458,9 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                         st.markdown(f"> {c}")
                     st.markdown(f"**Justification:** {f.justification}")
                     m = f.measurements
+                    length = f", length {m.crack_length_mm:.0f} mm" if m.crack_length_mm is not None else ""
                     st.markdown(
-                        f"**Measurements:** area {m.area_cm2} cm², crack {m.crack_width_mm} mm, ΔT {m.delta_t_k} K, rust {m.percent_area_rusted} %, section loss {m.section_loss_pct} % · confidence **{m.confidence:.2f}** · flags: {', '.join(f.unified.flags) or 'none'}"
+                        f"**Measurements:** area {m.area_cm2} cm², {crack_width_text(m)}{length}, ΔT {m.delta_t_k} K, rust {m.percent_area_rusted} %, section loss {m.section_loss_pct} % · confidence **{m.confidence:.2f}** · flags: {', '.join(f.unified.flags) or 'none'}"
                     )
                     reviewed = f" by {f.review.reviewer} at {f.review.reviewed_at} (prior {f.review.prior_level})" if f.review.reviewer else ""
                     st.caption(f"model {f.model} · ${f.usd:.4f} · {f.seconds:.1f} s · review: {f.review.status}{reviewed}")
@@ -1061,6 +1482,9 @@ Numbers shown here are measured from each run's call log. Accuracy claims live o
                         refresh_video_detections(out, imgs)
                         st.toast(f"{action[0]} by {reviewer}, prior {f.review.prior_level}", icon="\U0001F4DD")
                         st.rerun()
+                if f.modality != "seismic":
+                    with st.expander("Measure crack (width, length and area in mm from a scale in the image)", expanded=False):
+                        crack_measure_panel(f, rec, findings, out, recs)
                 agg = review_log.agreement(active_run)
                 rate = f", agreement {agg['agreement_rate']:.0%}" if agg["agreement_rate"] is not None else ""
                 st.caption(f"Review log: {agg['total']} decisions, accepted {agg['accepted']}, overridden {agg['overridden']}, marked U {agg['marked_u']}{rate} · persisted in reviews.sqlite")
@@ -1156,6 +1580,10 @@ with tab_arch:
             arch_stats = None
     st.caption(("Yellow numbers are live from run `" + active_run + "`.") if arch_stats else "Open or run a cascade to overlay live counts on each stage.")
     st.markdown(architecture_svg(arch_stats), unsafe_allow_html=True)
+    st.caption("Inputs lane: the six modalities of PRD section 5A under D-014 (scope widened to multi-sensor structural health, software plus a sensor kit). "
+               "Whiteboard owners, 2026-09-25: Leena aerial RGB (buildings and bridges, drone); Atharva underwater, seismic, thermal and lidar; Jie interior machinery; Runze software; Drew thermal. "
+               "The yellow line under each pill is what this repo has actually run: images through the full cascade (measured), seismic series through cascade.signals on synthetic data only (Sensors tab), "
+               "sonar and machinery as rubric files with no data run, lidar no code. Seismic series skip the gate and grader: indicators and rubric rows are computed in plain code, then join the same queue and exports.")
     with st.expander("Stage by stage, in words", expanded=False):
         st.markdown(
             """
@@ -1172,6 +1600,8 @@ with tab_arch:
 Every model call is logged with model, tokens, dollars and seconds (`calls.jsonl`). The loop is resumable: rerun with the same name and finished images are skipped.
 
 A clip takes one extra step at each end (video: frames sampled by ffmpeg and graded like stills; a detections mp4 is then built from the kept sample frames, each held until the next sample, with subtitles; the source frames between samples were not graded): `cascade.video` writes `videos/<slug>.json`, `cascade.videodetect` writes `videos/<slug>_detections.mp4`, `.vtt`, `_timeline.json` and `_contact.png`.
+
+Two side paths added under D-014, both without a model call. **Crack metrology** (`cascade.measure`, Findings & review > Measure crack): a dark-thin-structure mask inside the finding's bbox, a skeleton, widths from the distance transform, converted to mm only when a scale exists (GSD metadata or two points on a ruler of known spacing); the width always carries its ± uncertainty and scale basis, and the MBEI row it falls in is a hint, never an automatic grade. **Seismic and vibration series** (`cascade.signals`, Sensors tab): CSV in, PGA, RMS, dominant frequency, damping and the frequency shift against a baseline out, graded on `rubrics/seismic_shm.json`; no baseline gives U.
 """
         )
     st.subheader("The startup around the engine")
@@ -1268,6 +1698,86 @@ with tab_drop:
             st.divider()
         video_detections_section(out, imgs, key=f"drop_vd_{drop_run}")
         st.caption("Open this run under Inspect run (sidebar: open a finished run) to review, re-rank and export.")
+
+# ---------- Sensors ----------
+
+with tab_sensors:
+    st.subheader("Sensors: seismic and vibration time series")
+    st.caption("A CSV time series (a time column plus one column per channel) is ingested, its indicators computed with numpy (PGA, RMS, dominant frequency, damping, frequency shift against a baseline) and graded on rubrics/seismic_shm.json in plain code, no model call. "
+               "The frequency-shift and RMS thresholds are team-proposed and unvalidated; no real seismic series has been run through this yet, so no accuracy is claimed. Without a baseline the finding is U, never S0. "
+               "Sonar and thermal frames go through the image cascade; lidar is roadmap (PRD section 5A).")
+    sc1, sc2 = st.columns([2, 1])
+    sig_csv = sc1.file_uploader("Time series CSV", type=["csv"], key="sig_csv")
+    sig_base = sc1.file_uploader("Baseline CSV (optional; the same asset and channels in a healthy state)", type=["csv"], key="sig_base")
+    sensors = list(get_args(Sensor))
+    sig_sensor = sc2.selectbox("Sensor type", sensors, index=sensors.index("accelerometer"), key="sig_sensor")
+    sig_units = sc2.selectbox("Units", SIG_UNITS, key="sig_units", help="stored, never inferred: without units no PGA / PGV band is applied")
+    sig_mount = sc2.selectbox("Mount", ["(not given)"] + list(MOUNTS), key="sig_mount", help="the ShakeMap PGA / PGV rows apply to free_field or ground_floor records only")
+    sig_rate = sc2.number_input("Sample rate, Hz (0 = read from the time column)", 0.0, 100000.0, 0.0, 1.0, key="sig_rate")
+    classes_all = list(get_args(AssetClass))
+    sig_class = sc2.selectbox("Asset class", classes_all, index=classes_all.index("bridge_element"), key="sig_class")
+    sig_asset = sc2.text_input("Asset id", value="", key="sig_asset")
+    sig_client = sc2.text_input("Client id", value="", key="sig_client")
+    bb1, bb2, bb3 = sc1.columns(3)
+    sig_go = bb1.button("Analyse uploaded CSV", type="primary", disabled=sig_csv is None, key="sig_go", width="stretch")
+    sig_demo = bb2.button("Use synthetic demo signal", key="sig_demo", width="stretch", help=f"writes a labelled synthetic pair into runs/_signals_demo/: {SYNTH['baseline_hz']} Hz baseline, {SYNTH['current_hz']} Hz current, {SYNTH['rate_hz']:g} Hz, {SYNTH['duration_s']:g} s, with noise")
+    sig_nobase = bb3.checkbox("Ignore the baseline (shows the U path)", value=False, key="sig_nobase")
+    if sig_go and sig_csv is not None:
+        up = SIG_UPLOAD_DIR / time.strftime("%Y%m%d_%H%M%S")
+        up.mkdir(parents=True, exist_ok=True)
+        cpath = up / Path(sig_csv.name).name
+        cpath.write_bytes(sig_csv.getbuffer())
+        bpath = None
+        if sig_base is not None:
+            bpath = up / f"baseline_{Path(sig_base.name).name}"
+            bpath.write_bytes(sig_base.getbuffer())
+        st.session_state["sig_params"] = {
+            "csv": str(cpath), "baseline": str(bpath) if bpath else None, "sensor": sig_sensor, "rate": sig_rate or None,
+            "units": None if sig_units == "(unknown)" else sig_units, "mount": None if sig_mount == "(not given)" else sig_mount,
+            "asset_class": sig_class, "asset_id": sig_asset or None, "client_id": sig_client or None, "synthetic": False,
+        }
+    if sig_demo:
+        cur, base = write_synthetic_pair(SIG_DEMO_DIR)
+        st.session_state["sig_params"] = {
+            "csv": str(cur), "baseline": str(base), "sensor": "accelerometer", "rate": SYNTH["rate_hz"], "units": "m/s2", "mount": "structure",
+            "asset_class": "bridge_element", "asset_id": sig_asset or "synthetic-demo-bridge", "client_id": sig_client or "synthetic-demo", "synthetic": True,
+        }
+        st.toast("Synthetic demo pair written to runs/_signals_demo/", icon="\U0001F4C8")
+    sp = st.session_state.get("sig_params")
+    if not sp:
+        st.info("Upload a CSV and press Analyse, or press Use synthetic demo signal.")
+    else:
+        params = dict(sp)
+        if sig_nobase:
+            params["baseline"] = None
+        files_now = [p_ for p_ in (params["csv"], params.get("baseline")) if p_]
+        if not all(Path(p_).exists() for p_ in files_now):
+            st.warning("The CSV files of the last analysis are gone from disk; upload again or press the synthetic demo button.")
+        else:
+            try:
+                res = analyse_signal_cached(_sig_params_key(params), tuple(Path(p_).stat().st_mtime for p_ in files_now))
+            except Exception as e:
+                res = None
+                st.error(f"Could not analyse the series: {type(e).__name__}: {e}")
+            if res:
+                st.divider()
+                signal_view(res["record"], res["baseline"], res["ind"], key="sig_view")
+                st.markdown("#### Graded finding")
+                signal_grade_view(res["finding"])
+                if res["ind"]["notes"]:
+                    st.markdown("**Indicator notes**  \n" + "  \n".join(f"- {n}" for n in res["ind"]["notes"]))
+                sv1, sv2 = st.columns([1, 3])
+                if sv1.button("Save as run", key="sig_save", type="primary", width="stretch"):
+                    try:
+                        sout, sf = save_signal_run(params)
+                        st.session_state["sig_saved"] = sout.name
+                        st.toast(f"Saved {sf.unified.level} finding to runs/{sout.name}", icon="\U0001F4BE")
+                    except Exception as e:
+                        st.error(f"Save failed: {type(e).__name__}: {e}")
+                    else:
+                        st.rerun()  # the sidebar run list and the run pickers above were drawn before the folder existed
+                sv2.caption("Writes runs/sig_<time>/ with findings.json, queue.csv, signals.jsonl, a copy of the CSVs, an empty gate.jsonl (no images) and report.md; open it from the sidebar, Reports, Client reports or Model health."
+                            + (f" Last saved: `{st.session_state['sig_saved']}`." if st.session_state.get("sig_saved") else ""))
 
 # ---------- Batch ----------
 
@@ -1806,6 +2316,12 @@ with tab_why:
         ("Disaster surge", "Insurers deliver building-level classes in 24 to 48 h (ICEYE, Nearmap, Vexcel); nobody grades engineered infrastructure post-event (R03)",
          "Surge posture on the same engine: whole-frame FEMA PDA counts and a report; infrastructure surge is roadmap, not demo",
          measured(lambda: "surge run" if live["mode"] == "surge" else "inspect run")),
+        ("Sensor modalities (D-014)", "Structural-monitoring platforms (Move Solutions, Worldsensing, Resensys, Bentley iTwin IoT) are quote-only and single-sensor, none publishes a price or a grading rule; imaging-sonar vendors publish specs, not prices (R10 sections 1.3 and 6)",
+         "One queue for six modalities (PRD 5A): RGB and thermal images through the cascade; seismic and vibration CSVs graded on rubric rows in plain code, U without a baseline; sonar and machinery rubric files only, not run; lidar roadmap. No accuracy is claimed for seismic, sonar or lidar",
+         measured(lambda: ", ".join(f"{k} {v}" for k, v in pd.Series([f.modality for f in load_run(RUNS / active_run)["findings"]]).value_counts().items()) or "no findings")),
+        ("Crack width in mm", "Scale-referenced methods report 0.22 mm precision (planar markers) and 0.16 mm MAE (laser calibration) in the literature (R10 section 4.2, [43] [44])",
+         "Measured only when a scale exists (GSD metadata or two points on a ruler), shown as width ± uncertainty with its basis; a band that straddles an MBEI boundary lists both states; no scale keeps not_measurable. The mask is a heuristic with no measured error of its own",
+         measured(lambda: f"{sum(1 for f in load_run(RUNS / active_run)['findings'] if f.measurements.measurement_basis)} findings with a measured basis")),
         ("Consistency baseline", "Human inspectors: 68% of ratings within one point across 49 inspectors (FHWA); 30% matched expected (Indiana 2026) (R08)",
          "Within-one-grade and weighted kappa reported per asset class with n and CI, against frozen label maps",
          measured(lambda: "; ".join(f"{ac}: within-1 {100 * gr['within_one_grade']:.0f}% (n={gr['n_assessed']})" for ac, gr in live.get("eval", {}).get("grading", {}).items() if gr["n_assessed"]) or "no labelled grades in this run")),
@@ -1818,6 +2334,8 @@ with tab_why:
         """
 **What is deliberately not claimed.** No field accuracy: all numbers come from public datasets. No trained model: the business is rubrics,
 evaluation and workflow (R07). No comparison benchmark against any named vendor exists yet. The R06 cost figures are estimates from
-list prices; the measured column is the only number from this codebase.
+list prices; the measured column is the only number from this codebase. No accuracy is claimed for seismic, sonar or lidar: the seismic
+module has run on a labelled synthetic pair only, its frequency thresholds are team-proposed (validate), sonar has a rubric file and no
+data run, lidar has no code. Crack widths in mm carry a heuristic mask with no measured error of its own.
 """
     )

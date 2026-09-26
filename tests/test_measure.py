@@ -140,7 +140,8 @@ def test_synthetic_crack_with_half_mm_scale_gives_3mm_and_quotes_cs3_row():
     assert cm.crack_width_mm_max == pytest.approx(cm.width_px_max * 0.5)
     assert cm.crack_length_mm == pytest.approx(cm.length_px * 0.5)
     assert cm.area_cm2 == pytest.approx(cm.area_px * 0.25 / 100.0)
-    assert cm.width_uncertainty_mm == pytest.approx(0.5)
+    # +/- 1 px quantisation and the GSD relative-error assumption, in quadrature
+    assert cm.width_uncertainty_mm == pytest.approx(np.hypot(0.5, cm.width_px_p95 * 0.5 * M.GSD_REL_ERR))
     assert cm.scale_basis == "gsd_metadata" and cm.mm_per_px == 0.5
     hint = cm.mbei_condition_state_hint
     row = rubric_row("cracking (reinforced concrete)", "CS3")
@@ -177,9 +178,80 @@ def test_to_measurements_uses_p95_not_max_and_penalises_manual_scale():
     assert any("p95" in n and "not max" in n for n in d["notes"])
     parsed = Measurements.model_validate(d)  # extra "notes" key is ignored by the contract
     assert parsed.crack_width_mm == pytest.approx(d["crack_width_mm"])
+    # the width never leaves as a bare number: basis, length and +/- band survive the contract
+    assert parsed.measurement_basis == "gsd_metadata"
+    assert parsed.crack_length_mm == pytest.approx(gsd.crack_length_mm)
+    assert parsed.crack_width_uncertainty_mm == pytest.approx(gsd.width_uncertainty_mm)
     dm = M.to_measurements(manual)
     assert dm["confidence"] < d["confidence"]
     assert any("manual" in n for n in dm["notes"])
+    assert Measurements.model_validate(dm).measurement_basis == "manual_two_points"
+
+
+def test_unscaled_measurement_reports_zero_confidence_in_the_contract():
+    img = synthetic_crack()
+    px_only = M.measure_crack(img)
+    scaled = M.measure_crack(img, scale=M.Scale(0.5, "gsd_metadata", "t", M.SCALE_CONFIDENCE["gsd_metadata"]))
+    d0, d1 = M.to_measurements(px_only), M.to_measurements(scaled)
+    assert d0["crack_width_mm"] is None and d0["confidence"] == 0.0
+    assert d0["measurement_basis"] is None and d0["crack_length_mm"] is None and d0["crack_width_uncertainty_mm"] is None
+    assert d1["confidence"] > d0["confidence"]
+
+
+def test_sub_resolution_line_is_an_upper_bound_and_band_keeps_cs1():
+    # a 1 px antialiased line at 0.5 mm/px: the true crack may be far thinner than the blurred mask
+    from PIL import ImageFilter
+
+    img = Image.new("RGB", (320, 240), (200, 200, 200))
+    ImageDraw.Draw(img).line([(20, 60), (300, 180)], fill=(60, 60, 60), width=1)
+    img = img.filter(ImageFilter.GaussianBlur(0.8))
+    cm = M.measure_crack(img, scale=M.Scale(0.5, "gsd_metadata", "t", 0.8))
+    assert cm.measurable is True and cm.width_upper_bound is True
+    hint = cm.mbei_condition_state_hint
+    assert hint["width_upper_bound"] is True and hint["band_mm"][0] == 0.0
+    assert "CS1" in hint["band_states"]
+    assert any("upper bound" in n for n in cm.notes)
+    assert any("upper bound" in n for n in M.to_measurements(cm)["notes"])
+
+
+def test_mbei_band_is_widened_to_the_published_method_error():
+    # 0.20 mm +/- 0.10 mm alone would sit inside CS1; the 0.16 mm MAE floor ([44]) crosses 0.30 mm
+    h = M.mbei_hint(0.20, 0.10, "reinforced")
+    assert h["band_states"] == ["CS1", "CS2"] and "straddles" in h["note"]
+    assert h["method_floor_mm"] == M.METHOD_FLOOR_MM
+    assert M.mbei_hint(0.20, 0.10, "reinforced", method_floor_mm=0.0)["band_states"] == ["CS1"]
+
+
+def test_mbei_band_lists_the_middle_state_when_it_spans_cs1_to_cs3():
+    assert M.mbei_hint(0.05, 0.3, "prestressed")["band_states"] == ["CS1", "CS2", "CS3"]
+    assert M.mbei_hint(1.5, 1.5, "reinforced", method_floor_mm=0.0)["band_states"] == ["CS1", "CS2", "CS3"]
+
+
+def test_scale_rejects_zero_negative_and_nan_and_carries_endpoint_error():
+    for bad in (0.0, -0.5, float("nan"), float("inf")):
+        with pytest.raises(ValueError):
+            M.Scale(bad, "gsd_metadata", "t", 0.8)
+    s = M.scale_from_points((0, 0), (100, 0), 50.0)
+    assert s.rel_err == pytest.approx(np.sqrt(2) / 100)
+    assert M.Scale(0.5, "gsd_metadata", "t", 0.8).rel_err == M.GSD_REL_ERR
+    assert M.Scale(0.5, "scale_object", "t", 0.7).rel_err == 0.0
+
+
+def test_cli_rejects_bad_or_conflicting_scale_arguments(tmp_path):
+    p = tmp_path / "crack.png"
+    synthetic_crack().save(p)
+    for argv in (["--gsd", "0"], ["--gsd", "-0.5"], ["--gsd", "nan"], ["--gsd", "0.5", "--points", "0", "0", "200", "0", "--mm", "100"], ["--mm", "100"]):
+        with pytest.raises(SystemExit):
+            M.main(["--image", str(p)] + argv)
+
+
+def test_bbox_outside_the_image_raises_value_error_quoting_the_caller_box():
+    img = synthetic_crack()
+    for box in ((400, 0, 500, 100), (-50, 0, -10, 100)):
+        with pytest.raises(ValueError, match=str(box).replace("(", r"\(").replace(")", r"\)")):
+            M.crack_mask(img, bbox=box)
+        with pytest.raises(ValueError):
+            M.measure_crack(img, bbox=box)
 
 
 def test_blank_image_is_not_measurable_with_reason():

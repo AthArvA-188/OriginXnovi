@@ -150,23 +150,152 @@ def test_grade_with_baseline_uses_frequency_shift_row(tmp_path):
     assert expected["criterion"] in f.native_scale.criteria_matched
     assert f.action.code == expected["action"] and "seismic_shm.json" in f.action.basis
     assert f.defect_type == "seismic_frequency_shift" and f.asset_class == "building_disaster"
-    assert f.evidence.baseline_id == base.signal_id and f.measurements.confidence == 1.0
+    assert f.evidence.baseline_id == base.signal_id
+    # -9.4 % +/- one FFT bin (0.05 Hz / 3.2 Hz = 1.56 %) crosses the 10 % row edge: confidence is lowered
+    assert abs(ind["frequency_shift_uncertainty_pct"]["z"] - 100 * 0.05 / ind["baseline_dominant_frequency_hz"]["z"]) < 1e-6
+    assert f.measurements.confidence == signals.STRADDLE_CONFIDENCE and "straddles" in f.justification
     assert "shift -9." in f.justification and "3.200 Hz" in f.justification
     assert "not_measurable" in f.unified.flags  # PGA family skipped: units unknown
 
 
 def test_grade_takes_worst_family_and_pga_row_with_units(tmp_path):
-    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2, amp=1.0, noise=0.0), "accelerometer", units="m/s2")
-    same = signals.ingest_signal_csv(make_csv(tmp_path / "s.csv", 3.2, amp=1.0, noise=0.0, seed=2), "accelerometer", units="m/s2")
+    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2, amp=1.0, noise=0.0), "accelerometer", units="m/s2", mount="free_field")
+    same = signals.ingest_signal_csv(make_csv(tmp_path / "s.csv", 3.2, amp=1.0, noise=0.0, seed=2), "accelerometer", units="m/s2", mount="free_field")
     ind = signals.indicators(same, base)
     f = signals.grade_signal(same, ind, rubric())
     pga_row = row_for("pga", ind["pga_pct_g"]["z"])
     assert pga_row["value"] == "PGA 6.2-11.5%g" and f.unified.level == pga_row["unified"]  # 10.2 %g; shift ~0 gives S0
     assert f.native_scale.value == pga_row["value"] and pga_row["criterion"] in f.native_scale.criteria_matched
     assert "not_measurable" not in f.unified.flags
-    big = signals.ingest_signal_csv(make_csv(tmp_path / "big.csv", 3.2, amp=5.0, noise=0.0), "accelerometer", units="m/s2")
+    big = signals.ingest_signal_csv(make_csv(tmp_path / "big.csv", 3.2, amp=5.0, noise=0.0), "accelerometer", units="m/s2", mount="free_field")
     fb = signals.grade_signal(big, signals.indicators(big, base), rubric())
     assert fb.unified.level == "S4" and fb.action.code == "escalate"  # 51 %g: 'Severe / Moderate-heavy' row
+
+
+def test_no_baseline_with_known_units_and_low_pga_is_u_not_s0(tmp_path):
+    # ambient shaking 0.02 m/s2 (about 0.2 %g) matches 'PGA<6.2%g' (S0), but site shaking says nothing about the structure
+    for mount in ("free_field", None):
+        rec = signals.ingest_signal_csv(make_csv(tmp_path / f"amb_{mount}.csv", 3.2, amp=0.02, noise=0.0), "accelerometer", units="m/s2", mount=mount)
+        ind = signals.indicators(rec)
+        assert ind["pga_pct_g"]["z"] < 6.2
+        f = signals.grade_signal(rec, ind, rubric())
+        assert f.unified.level == "U" and f.native_scale.value == "U" and f.measurements.confidence == 0.0
+        assert "not_measurable" in f.unified.flags
+        base_row = next(r for r in rubric()["rows"] if r["family"] == "baseline")
+        assert f.native_scale.criteria_matched == [base_row["criterion"]]  # the S0 PGA row is not quoted
+        assert "never S0" in f.justification or "mount" in f.justification
+
+
+def test_no_baseline_high_pga_on_free_field_can_still_raise_the_level(tmp_path):
+    rec = signals.ingest_signal_csv(make_csv(tmp_path / "strong.csv", 3.2, amp=1.0, noise=0.0), "accelerometer", units="m/s2", mount="free_field")
+    f = signals.grade_signal(rec, signals.indicators(rec), rubric())
+    assert f.unified.level == "S1" and f.native_scale.value == "PGA 6.2-11.5%g"  # 10.2 %g
+    assert "not_measurable" in f.unified.flags
+
+
+def test_structure_mounted_sensor_skips_shakemap_rows(tmp_path):
+    # 0.13 g on a deck would read 'PGA 11.5-21.5%g' (S2); ShakeMap describes free-field ground shaking
+    rec = signals.ingest_signal_csv(make_csv(tmp_path / "deck.csv", 2.0, amp=0.13, noise=0.0), "accelerometer", units="g", mount="structure")
+    ind = signals.indicators(rec)
+    assert abs(ind["pga_pct_g"]["z"] - 13.0) < 0.2 and ind["mount"] == "structure"
+    f = signals.grade_signal(rec, ind, rubric())
+    assert f.unified.level == "U" and "free_field" in f.justification
+
+
+def test_seismic_pga_pgv_rows_carry_the_free_field_tag():
+    rb = rubric()
+    assert "Unified mapping is the team's own" in rb["source_note"]
+    for r in rb["rows"]:
+        if r["family"] in ("pga", "pgv"):
+            assert "structure-mounted sensor" in r["source"] and "[team-proposed, validate]" in r["source"]
+
+
+def _two_mode_csv(path, a1, a2, f1=1.1, f2=3.4, seconds=60.0, seed=0):
+    rng = np.random.default_rng(seed)
+    t = np.arange(int(seconds * FS)) / FS
+    z = a1 * np.sin(2 * np.pi * f1 * t) + a2 * np.sin(2 * np.pi * f2 * t) + 0.01 * rng.standard_normal(t.size)
+    pd.DataFrame({"time_s": t, "z": z}).to_csv(path, index=False)
+    return path
+
+
+def test_mode_jump_between_records_is_not_graded_as_a_frequency_shift(tmp_path):
+    # same structure (modes 1.1 and 3.4 Hz unchanged); only the excitation changes which mode dominates
+    base = signals.ingest_signal_csv(_two_mode_csv(tmp_path / "wind.csv", 1.0, 0.3), "accelerometer")
+    rec = signals.ingest_signal_csv(_two_mode_csv(tmp_path / "traffic.csv", 0.3, 1.0, seed=1), "accelerometer")
+    ind = signals.indicators(rec, base)
+    assert abs(ind["dominant_frequency_hz"]["z"] - 3.4) < 0.05  # the global peak jumped mode
+    assert abs(ind["tracked_frequency_hz"]["z"] - 1.1) < 0.02 and abs(ind["frequency_shift_pct"]["z"]) < 2.0
+    f = signals.grade_signal(rec, ind, rubric())
+    assert f.unified.level == "S0" and f.native_scale.value == "df<2%" and "load_posting_review" not in f.unified.flags
+
+
+def test_mode_not_found_makes_frequency_family_not_assessable(tmp_path):
+    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2), "accelerometer")
+    far = signals.ingest_signal_csv(make_csv(tmp_path / "far.csv", 6.0, seed=1), "accelerometer")
+    ind = signals.indicators(far, base)
+    assert ind["frequency_shift_pct"]["z"] is None and any("mode not found" in s for s in ind["frequency_shift_skipped"])
+    f = signals.grade_signal(far, ind, rubric())
+    assert f.unified.level == "U" and f.measurements.confidence == 0.0
+
+
+def test_single_channel_s3_is_kept_but_not_full_confidence(tmp_path):
+    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2), "accelerometer")
+    dmg = signals.ingest_signal_csv(make_csv(tmp_path / "d.csv", 2.72, seed=1), "accelerometer")  # -15 %
+    f = signals.grade_signal(dmg, signals.indicators(dmg, base), rubric())
+    assert f.unified.level == "S3" and f.native_scale.value == "df>=10%"
+    assert f.measurements.confidence == signals.UNCORROBORATED_CONFIDENCE and "not corroborated" in f.justification
+
+
+def test_coarse_fft_bin_makes_frequency_family_not_assessable(tmp_path):
+    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2), "accelerometer")
+    dmg = signals.ingest_signal_csv(make_csv(tmp_path / "d.csv", 3.1, seed=1), "accelerometer")
+    ind = signals.indicators(dmg, base, window_s=5.0)  # 0.2 Hz bin = 6.25 % of 3.2 Hz, above the 2 % first edge
+    assert ind["frequency_shift_uncertainty_pct"]["z"] > 2.0
+    f = signals.grade_signal(dmg, ind, rubric())
+    assert f.unified.level == "U" and "FFT bin" in f.justification
+
+
+def test_baseline_with_no_matching_channel_is_not_reported_as_no_baseline(tmp_path):
+    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2, channels=("z",)), "accelerometer")
+    rec = signals.ingest_signal_csv(make_csv(tmp_path / "x.csv", 3.2, channels=("x",)), "accelerometer", baseline_id=base.signal_id)
+    f = signals.grade_signal(rec, signals.indicators(rec, base), rubric())
+    assert f.unified.level == "U" and f.evidence.baseline_id == base.signal_id
+    assert f.native_scale.criteria_matched == []  # the 'No stored baseline series' row is not quoted
+    assert "No baseline series" not in f.justification and "baseline present" in f.justification and "channel missing" in f.justification
+    # channel names match case-insensitively
+    upper = signals.ingest_signal_csv(make_csv(tmp_path / "Z.csv", 3.2, channels=("Z",)), "accelerometer")
+    assert signals.indicators(upper, base)["frequency_shift_pct"]["Z"] is not None
+
+
+def test_blank_sample_is_interpolated_and_nan_channel_cannot_hide_a_shift(tmp_path):
+    p = make_csv(tmp_path / "b.csv", 3.2)
+    df = pd.read_csv(p)
+    df.loc[100, "z"] = np.nan
+    df.to_csv(p, index=False)
+    base = signals.ingest_signal_csv(p, "accelerometer")
+    rec = signals.ingest_signal_csv(make_csv(tmp_path / "d.csv", 2.9, seed=1), "accelerometer")
+    ind = signals.indicators(rec, base)  # used to raise ValueError: cannot convert float NaN to integer
+    assert ind["frequency_shift_pct"]["z"] is not None
+    assert any("interpolated" in n for n in signals.indicators(base)["notes"])
+    for vals in ({"x": float("nan"), "y": 12.5}, {"y": 12.5, "x": float("nan")}):
+        assert signals._worst_channel(vals) == ("y", 12.5)
+
+
+def test_time_column_gaps_and_milliseconds(tmp_path):
+    t = np.arange(4000) / FS
+    t = np.where(t >= 10.0, t + 5.0, t)  # 5 s telemetry gap
+    pd.DataFrame({"time_s": t, "z": np.sin(2 * np.pi * 3.2 * t)}).to_csv(tmp_path / "gap.csv", index=False)
+    rec = signals.ingest_signal_csv(tmp_path / "gap.csv", "accelerometer")
+    assert rec.labels["time_irregular"] is True and rec.labels["time_gaps"] == 1
+    assert abs(rec.duration_s - 25.0) < 0.01
+    assert any("irregular" in n for n in signals.indicators(rec)["notes"])
+    tm = np.arange(4000) / FS * 1000.0
+    pd.DataFrame({"timestamp": tm, "z": np.sin(2 * np.pi * 3.2 * tm / 1000.0)}).to_csv(tmp_path / "ms.csv", index=False)
+    with pytest.raises(ValueError, match="time-units"):
+        signals.ingest_signal_csv(tmp_path / "ms.csv", "accelerometer")
+    ms = signals.ingest_signal_csv(tmp_path / "ms.csv", "accelerometer", time_units="ms")
+    assert abs(ms.sample_rate_hz - FS) < 1e-6
+    assert abs(signals.indicators(ms)["dominant_frequency_hz"]["z"] - 3.2) < 0.05
 
 
 # ------------------------------------------------------------------------------------------------- export
@@ -202,6 +331,25 @@ def test_write_signal_findings_is_readable_by_load_run_and_merges_with_image_fin
     # rewriting the same finding replaces it, no duplicate line
     signals.write_signal_findings(out, [f])
     assert len(load_run(out)["findings"]) == 2 and (out / "findings.jsonl").read_text(encoding="utf-8").count("\n") == 1
+
+
+def test_regraded_signal_replaces_its_findings_jsonl_row_so_resume_keeps_it(tmp_path):
+    from cascade.pipeline import _read_jsonl, RunConfig, run_cascade
+
+    out = tmp_path / "run"
+    base = signals.ingest_signal_csv(make_csv(tmp_path / "b.csv", 3.2), "accelerometer")
+    d = make_csv(tmp_path / "d.csv", 2.9, seed=1)
+    rec_u = signals.ingest_signal_csv(d, "accelerometer")
+    f_u = signals.grade_signal(rec_u, signals.indicators(rec_u), rubric())
+    signals.write_signal_findings(out, [f_u])
+    rec_b = signals.ingest_signal_csv(d, "accelerometer", baseline_id=base.signal_id)
+    f_b = signals.grade_signal(rec_b, signals.indicators(rec_b, base), rubric())
+    assert f_u.finding_id == f_b.finding_id and f_u.unified.level == "U" and f_b.unified.level == "S2"
+    signals.write_signal_findings(out, [f_b])
+    rows = _read_jsonl(out / "findings.jsonl")
+    assert len(rows) == 1 and rows[0]["unified"]["level"] == "S2"
+    run_cascade([], out, RunConfig())  # a resumed run rebuilds findings.json from findings.jsonl
+    assert [x.unified.level for x in load_run(out)["findings"]] == ["S2"]
 
 
 def test_cli_end_to_end(tmp_path, capsys):

@@ -236,7 +236,7 @@ Stretch only after the four above are done by Saturday noon: 2026 wind-blade set
 | Jie | interior machinery, SW |
 | Runze | software |
 | Drew | a thermal item (illegible) |
-| Box | OUR PROD: SW + HW |
+| Box | OUR PROD: "SW or SW+HW" (two options written; the team has not chosen between them. Scope review 2026-09-25: treat hardware as a reference list of public components until interviews support a kit) |
 
 The words "Reconstruction" and "16%" also appear with no readable context; neither is assigned a meaning here or in R10. The team lead's instruction (verbatim): "also can we have the crack measurements with the data if there is any scale present in the image? to get the dimentions of the crack as a number? Also the scope of the total AI model is changed a lot we are focusing on the cesmic data modelling, and other sencors like heatmaps, sonar data etc. ... go through the images, and change the problem scope as well".
 

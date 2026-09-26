@@ -12,6 +12,11 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 - Research note `docs/research/10_multisensor_scope.md` (R10) added by the research workstream: sonar, seismic/vibration, thermal beyond PV, crack metrology, lidar, SW+HW pricing.
 - Pending: team confirmation of D-001, D-002, D-008 and D-014 at the next sync.
 
+### Product (2026-09-25, evening)
+- Fixed 21 review findings in `measure.py`, `signals.py`, `schema.py`, `grade.py` and the new rubrics: no-baseline seismic series grade U; frequency shift needs two agreeing channels for S3 and carries one FFT bin of uncertainty; underwater rubric U row; crack width with uncertainty, scale basis and length; grader schema excludes measurement fields; NaN-safe signal parsing; CLI guards. 26 new tests.
+- App: Measure crack panel in Findings and review, Sensors tab (CSV upload, baseline, synthetic demo labelled as such, spectrum and time-series charts, save as run), modality chips, Architecture inputs lane with six modalities and whiteboard owners. 198 tests.
+- Docs: D-014 records the whiteboard box as two options (SW or SW+HW); eval_v1 size corrected to 189.
+
 ### Product (2026-09-25, midday)
 - Added `src/cascade/video.py` (FR-4): ffmpeg/ffprobe frame extraction at a fixed interval or on scene changes, dHash near-duplicate suppression, `frames.json` sidecar, `ingest_video`, CLI; `.streamlit/config.toml` raises the upload cap to 1 GB.
 - Added `src/cascade/clientreport.py`: per-client HTML + markdown + JSON reports with inline SVG charts and embedded evidence thumbnails; `clients/index.json`; CLI.
