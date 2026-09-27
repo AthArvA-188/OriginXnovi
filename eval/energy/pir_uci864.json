@@ -1,0 +1,11 @@
+{
+ "label": "REAL (UCI 864, CC BY 4.0); used to INJECT sensor misses",
+ "window": "5min",
+ "min_samples_per_window": 8,
+ "n_occupied_windows": 192,
+ "n_vacant_windows": 846,
+ "miss_rate": 0.005208333333333333,
+ "false_trigger_rate": 0.010638297872340425,
+ "sensors": "S6_PIR or S7_PIR",
+ "sample_interval_s": 30
+}

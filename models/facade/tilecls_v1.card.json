@@ -1,0 +1,52 @@
+{
+  "model_id": "tilecls:resnet18@v1",
+  "file": "models/facade/tilecls_resnet18_v1.onnx",
+  "architecture": "timm resnet18.a1_in1k (Apache-2.0 tag), 2-class head, fine-tuned",
+  "input": {
+    "name": "input",
+    "shape": [
+      "N",
+      3,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "range": "RGB/255 then ImageNet mean/std",
+    "window_px": 224,
+    "note": "heatmap windows are cut at native resolution"
+  },
+  "output": {
+    "name": "logits",
+    "classes": [
+      "no_crack",
+      "crack"
+    ]
+  },
+  "storage": "fp16 weights with Cast to fp32 (fp32 compute in onnxruntime)",
+  "threshold": 0.20497773587703705,
+  "threshold_rule": "highest threshold with recall >= 0.9 on SDNET validation source photos",
+  "training_data": [
+    {
+      "name": "Ozgenel Concrete Crack Images for Classification",
+      "licence": "CC BY 4.0",
+      "url": "https://data.mendeley.com/datasets/5y9wdsg2zt/2"
+    },
+    {
+      "name": "SDNET2018 walls (train source photos only)",
+      "licence": "CC BY 4.0",
+      "url": "https://digitalcommons.usu.edu/all_datasets/48/"
+    }
+  ],
+  "headline": {
+    "sdnet_test_auroc": 0.9182841710249615,
+    "sdnet_test_recall": 0.8386277001270648,
+    "bfdd_ood_auroc": 0.9055987740224524,
+    "bfdd_ood_recall": 0.9316885119506554,
+    "source": "eval/facade/tilecls_v1.json"
+  },
+  "limits": [
+    "trained on close-range concrete tiles; drone facade behaviour = BFDD OOD test only",
+    "AI screening for a human inspector, not a QEWI/FISP finding; FISP says drones/photos do not replace close-up inspection",
+    "no GSD rescaling: window size is in pixels, so apparent crack width depends on camera distance"
+  ]
+}

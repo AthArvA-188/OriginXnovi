@@ -1,0 +1,79 @@
+{
+ "post_hoc": true,
+ "defined_after_hall_run": true,
+ "generated_at": "2026-09-26T22:17:46.058576+00:00",
+ "source_files": [
+  "eval/fire/triggers_hall.csv",
+  "eval/fire/episodes_hall.csv"
+ ],
+ "methods": {
+  "stage1_pm": {
+   "fire": {
+    "n": 17,
+    "alarmed_strict_window": 17,
+    "alarmed_only_in_early_window": 0
+   },
+   "nuisance": {
+    "n": 11,
+    "alarmed_strict_window": 11,
+    "alarmed_only_in_early_window": 0
+   },
+   "other": {
+    "n": 3,
+    "alarmed_strict_window": 2,
+    "alarmed_only_in_early_window": 0
+   }
+  },
+  "two_stage": {
+   "fire": {
+    "n": 17,
+    "alarmed_strict_window": 17,
+    "alarmed_only_in_early_window": 0
+   },
+   "nuisance": {
+    "n": 11,
+    "alarmed_strict_window": 11,
+    "alarmed_only_in_early_window": 0
+   },
+   "other": {
+    "n": 3,
+    "alarmed_strict_window": 2,
+    "alarmed_only_in_early_window": 0
+   }
+  }
+ },
+ "episode_gaps_min": {
+  "n": 27,
+  "min": 7.916666666666667,
+  "median": 39.05,
+  "max": 74.71666666666667
+ },
+ "first_alarm_before_label_start": {
+  "source_file": "eval/fire/episodes_hall_full.csv",
+  "stage1_pm": {
+   "alarmed": 30,
+   "first_alarm_early": 14,
+   "fire_alarmed": 17,
+   "fire_first_alarm_early": 6
+  },
+  "co_delta": {
+   "alarmed": 23,
+   "first_alarm_early": 4,
+   "fire_alarmed": 13,
+   "fire_first_alarm_early": 4
+  },
+  "ml_alone": {
+   "alarmed": 28,
+   "first_alarm_early": 22,
+   "fire_alarmed": 16,
+   "fire_first_alarm_early": 13
+  },
+  "two_stage": {
+   "alarmed": 30,
+   "first_alarm_early": 14,
+   "fire_alarmed": 17,
+   "fire_first_alarm_early": 6
+  }
+ },
+ "note": "Strict window = trigger time between the labelled start and end. Early window = up to 5 minutes before the labelled start (pre-registered). Hall episodes on the same day are 7.9 to 74.7 minutes apart (median 39.0, 27 gaps), so early-window triggers may belong to the previous activity."
+}

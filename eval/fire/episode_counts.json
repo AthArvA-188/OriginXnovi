@@ -1,0 +1,119 @@
+{
+ "generated_at": "2026-09-26T22:17:48.711545+00:00",
+ "sites": {
+  "en54": {
+   "n": 20,
+   "by_kind": {
+    "fire": 13,
+    "nuisance": 7
+   },
+   "by_scenario": [
+    {
+     "kind": "fire",
+     "scenario": "Cable",
+     "n": 4
+    },
+    {
+     "kind": "fire",
+     "scenario": "Candles",
+     "n": 3
+    },
+    {
+     "kind": "fire",
+     "scenario": "Lunts",
+     "n": 3
+    },
+    {
+     "kind": "fire",
+     "scenario": "Wood",
+     "n": 3
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Deodorant",
+     "n": 2
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Ethanol",
+     "n": 4
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Hairspray",
+     "n": 1
+    }
+   ]
+  },
+  "hall": {
+   "n": 31,
+   "by_kind": {
+    "fire": 17,
+    "nuisance": 11,
+    "other": 3
+   },
+   "by_scenario": [
+    {
+     "kind": "fire",
+     "scenario": "Cable",
+     "n": 3
+    },
+    {
+     "kind": "fire",
+     "scenario": "Candles",
+     "n": 4
+    },
+    {
+     "kind": "fire",
+     "scenario": "Lunts",
+     "n": 3
+    },
+    {
+     "kind": "fire",
+     "scenario": "Wood",
+     "n": 7
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Abrasive_Cutting",
+     "n": 1
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Deodorant",
+     "n": 3
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Ethanol,Green_Waste",
+     "n": 1
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Exhaust",
+     "n": 3
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Smoke",
+     "n": 2
+    },
+    {
+     "kind": "nuisance",
+     "scenario": "Welding",
+     "n": 1
+    },
+    {
+     "kind": "other",
+     "scenario": "CO",
+     "n": 2
+    },
+    {
+     "kind": "other",
+     "scenario": "Ethanol",
+     "n": 1
+    }
+   ]
+  }
+ }
+}

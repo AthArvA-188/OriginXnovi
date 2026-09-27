@@ -1,0 +1,837 @@
+{
+ "key": "numeric_hf",
+ "research": {
+  "ask": "ASK 1: Find ML models on Hugging Face or similar hubs that take numeric input (sensor time series, meter readings, tabular features) and can process building data: forecasting, anomaly detection, classification/regression, imputation. For each: HF id, licence, size, CPU/GPU needs, pip package and Windows Python support, input/output, zero-shot vs fine-tune, and which Cerebro problem it fits. Recommend a primary model and a lightweight fallback that runs in Streamlit without a GPU. Give a build spec for a src/cascade/numeric/ NumericAgent tested on real public building data, with a measured backtest against a seasonal-naive baseline.",
+  "findings_md": "## Bottom line\n\n**Primary model: Amazon Chronos-2 (`amazon/chronos-2`).** Licence Apache-2.0, 120M parameters. It forecasts zero-shot and handles univariate, multivariate and covariate inputs. It outputs quantiles, and the card says it runs on GPU or CPU [1][2][4].\n\n**Fast pretrained alternative: `amazon/chronos-bolt-small`.** Apache-2.0, 48M parameters [5]. It uses the same pip package [3].\n\n**Lightweight fallback: scikit-learn `HistGradientBoostingRegressor`.** It uses lag and calendar features and a split-conformal band. For anomalies it pairs with a robust-z or IsolationForest scorer. scikit-learn 1.9.1 is already in `origin_hack`, so the fallback needs no new dependency [33][34].\n\nThese choices come from a measured pilot, run today in scratch on real Building Data Genome 2 (BDG2) data (details below). Both Chronos models and the scikit-learn fallback beat the seasonal-naive baseline. Chronos-2 on CPU was the most accurate by WAPE and MASE.\n\nModels to avoid, and why:\n- **Moirai 2.0:** licence is `cc-by-nc-4.0`, and the card says \"research purposes only\" [10].\n- **TimesFM 3.0:** the weights are non-commercial and non-production. TimesFM 2.5 weights stay Apache-2.0 [9].\n- **TabPFN:** the default weights (3.5), and versions 2.5 through 3, are under non-commercial licences, and the package asks you to accept terms through a login. Only TabPFN-2 uses the \"Prior Labs License (Apache 2.0 with attribution)\" [23][24].\n- **TiRex:** it uses the NXAI Community License, which adds commercial terms for large enterprises [27][28].\n\n## What Cerebro needs from numeric ML\n\n| Problem in Cerebro | Task | Where it lives now |\n|---|---|---|\n| Common-area and floor energy (Ask 3) | Day-ahead load forecast with a band | nothing yet |\n| Circuit current | Anomaly score | `electrical.py` has hour-of-week baselines, marked \"anomaly indicators only\" |\n| Room humidity after storms | Forecast | `water.py forecast()`, currently rule-based |\n| Pipe flow and pressure (Ask 6) | Forecast plus anomaly score | nothing yet |\n| Fault type and occupancy | Tabular classification | nothing yet |\n\nAll of these fit one interface: forecast with quantiles, or give an anomaly score, plus provenance. None of them should set a rubric level or actuate anything.\n\n## Survey: what each candidate actually is (read from cards and PyPI, 2026-09-26)\n\n**Chronos family (Amazon) [1]-[7]**\n- Package: `chronos-forecasting` 2.3.2, released 2026-09-08. It needs Python >=3.10, `torch<3,>=2.2`, `transformers<6,>=4.41` and `pandas<4` [3].\n- Models: `amazon/chronos-2` (120M), `autogluon/chronos-2-small` (28M), and Chronos-Bolt tiny, mini, small and base (9M, 21M, 48M, 205M). All are Apache-2.0 [2][6][7].\n- Chronos-2 maximums: context 8192, horizon 1024 [1]. The paper claims \"state-of-the-art\" zero-shot results on fev-bench, GIFT-Eval and Chronos Benchmark II, and includes energy and retail case studies [4]. These are the authors' claims; we did not reproduce them.\n- `Chronos2Pipeline.predict_df` takes a long DataFrame with id, timestamp and target columns, plus an optional `future_df` for known covariates [1][2].\n- **Install finding on this machine:** chronos-forecasting pulls in transformers 5.17.0, which requires `huggingface-hub<2.0` [45]. `origin_hack` has huggingface_hub 2.0.0, so pip would downgrade it. The repo itself only needs `>=0.23`. Keep Chronos in its own conda env or its own process.\n\n**TimesFM 2.5 (Google) [8][9]**\n- Id: `google/timesfm-2.5-200m-pytorch`. Apache-2.0, 200M parameters, context up to 1024, horizon up to 256, continuous quantile head [8].\n- The `timesfm` PyPI package is 3.0.2 (extras include `timesfm[torch]`). Its README says 2.5 code stays under `src/timesfm`, and that 3.0 weights are \"restricted to non-commercial, non-production use\" [9].\n- Verdict: a viable univariate second opinion. Not tested here.\n\n**Moirai 2.0 (Salesforce)**\n- `Salesforce/moirai-2.0-R-small`, 11.4M parameters, licence `cc-by-nc-4.0`, \"research purposes only\" [10].\n- `uni2ts` 2.0.0 pins `numpy~=1.26.0` and `torch<2.5` [11]. numpy 1.26.4 has no cp313 Windows wheel [50].\n- Verdict: avoid, for both the licence and the install.\n\n**IBM Granite: TTM-r2, TSPulse, FlowState [12]-[15][29]**\n- TTM-r2: Apache-2.0, 805K parameters or more, runs on CPU. It needs a context of at least 512 or 1024. The open version supports only minutely and hourly data (r2.1 adds daily and weekly) [12].\n- TSPulse (`ibm-granite/granite-timeseries-tspulse-r1`): Apache-2.0, about 1M parameters, \"GPU-free inference\". It does zero-shot anomaly detection, imputation, classification and search. Anomaly detection needs about 1536 to 2048 points. The card claims +20% on TSB-AD [13].\n- The IBM TSPulse anomaly notebook uses `TSPulseForReconstruction` with `TimeSeriesAnomalyDetectionPipeline` and `AnomalyScoreMethods.TIME_RECONSTRUCTION` / `FREQUENCY_RECONSTRUCTION` [14].\n- **Blocker for `origin_hack`:** granite-tsfm 0.3.9 requires `scikit-learn<1.8` and `torch<2.12,>=2.10`, and Python 3.11 to 3.13. The env has scikit-learn 1.9.1 [15].\n- Verdict: TSPulse is the best-fitting permissive zero-shot anomaly model, but only in a separate env. It is a stretch goal.\n\n**MOMENT (AutonLab) [16][17]**\n- MIT licence, 0.3B parameters for the large model. Tasks: forecasting, classification, anomaly detection by reconstruction, imputation [16].\n- `momentfm` pins `numpy==1.25.2` and `transformers==4.33.3`, and the README recommends Python 3.11 [17]. numpy 1.25.2 has no cp312 or cp313 Windows wheel [50].\n- Verdict: avoid here (install risk).\n\n**Toto (Datadog) [18][19]**\n- Apache-2.0, 151M parameters. Trained on observability metrics, which is close to sensor telemetry. Multivariate, Student-T mixture output [18].\n- `toto-ts` pins `torch==2.7.0`, `numpy==1.26.4` and roughly 30 other exact versions [19]. That forces Python 3.12 or lower.\n- Verdict: maybe, in a separate Python 3.12 env only.\n\n**Lag-Llama [20][21]**\n- Apache-2.0, 2.45M parameters, probabilistic output. The card says it \"performs best when finetuned\" [20].\n- Requirements pin `gluonts[torch]<=0.14.4` [21].\n- Verdict: avoid (old stack, weaker zero-shot claim).\n\n**Sundial (THUML) [22]**\n- `thuml/sundial-base-128m`, Apache-2.0, 128M parameters. Loads with `trust_remote_code`; the card recommends `transformers==4.40.1` [22].\n- Verdict: maybe. The version pin clashes with Chronos's transformers 5.x.\n\n**Tabular foundation models [23]-[26]**\n- TabPFN: the package is Apache-2.0, but the weight licences vary by version as listed above. The package warns that CPU handles only moderate data (older versions about 1,000 samples) [23]. The `tabpfn` 9.0.0 package also pulls in lightgbm, matplotlib and skrub [49].\n- TabICL: BSD-3-Clause for code and HF weights. v2 has both `TabICLClassifier` and `TabICLRegressor`, a scikit-learn-style API, and works best with 300 to 100K rows [25][26].\n- Verdict: TabICL is the permissive choice if a fault-type or occupancy classifier is wanted. Plain gradient boosting is enough for the demo.\n\n**Classical models [32]-[34]**\n- LightGBM is MIT-licensed and has a win_amd64 wheel.\n- scikit-learn's HistGradientBoosting (which the docs say is \"inspired by LightGBM\") supports `loss='quantile'` and native NaN handling. IsolationForest is in scikit-learn 1.9.1. Both are already installed.\n\n**Domain-specific: NREL BuildingsBench [30][31]**\n- BSD-3. Transformers pretrained on Buildings-900K (synthetic EnergyPlus data). The paper finds that \"synthetically pretrained models generalize surprisingly well to real commercial buildings\" [31].\n- Checkpoints are on S3, not HF [30].\n- Verdict: maybe. Good for citing, but not needed for the build.\n\n## Real datasets checked\n\n- **BDG2** [35][36]: 3,053 meters, 1,636 buildings, 19 sites, hourly, 2016-2017.\n  - Licence: the LICENSE file header reads \"Attribution-ShareAlike 4.0 Unported\" (CC BY-SA 4.0).\n  - The files are on Git LFS and download from `media.githubusercontent.com`: `electricity_cleaned.csv` is 174,977,911 bytes (sha256 `b6ffc9b4...a3`, matches the LFS pointer), `water_cleaned.csv` is 15.4 MB with 146 water meters, plus `weather.csv` and `metadata.csv`.\n- **LEAD1.0** [37][38]: human-annotated anomalies on GEPIII/BDG2 electricity meters. `lead1.0-small.zip` (10.0 MB) holds 200 buildings, 1,749,494 hourly rows for 2016, and 37,296 rows labelled anomalous.\n  - Licence: the GitHub API reports none. The Kaggle page was blocked to our fetcher, so the terms are **unverified**. Use it only for internal evaluation.\n- **UCI Occupancy Detection** [39]: CC BY 4.0, 20,560 one-minute rows of temperature, humidity, light, CO2 and humidity ratio.\n- **LBNL FDD** [40][41]: CC BY 4.0. The file-server folders are all named `Simulated_LBNL_FDD_Data_Sets_*`, so label these results \"simulated\".\n\n## Measured pilot (scratch only, 2026-09-26, not repo results)\n\n**Forecasting setup**\n- Data: 20 BDG2 office electricity meters, drawn with seed 0 from 146 eligible (≤1% missing, median above 5 kWh).\n- Test: 54 daily origins at 00:00 from 2017-11-01 to 2017-12-24, 24-hour horizon, 1024-hour context for Chronos. That is 25,920 hourly forecasts.\n- Machine: CPU only, 8 torch threads, shared with other jobs.\n\n| Model | WAPE % | MASE (mean over meters) | CV(RMSE) % | NMBE % | Meters better than seasonal naive | 80% band coverage |\n|---|---|---|---|---|---|---|\n| Seasonal naive (lag 168) | 11.09 | 0.964 | 37.44 | 0.24 | reference | none |\n| Naive (lag 24) | 14.84 | 1.159 | 56.15 | 0.66 | 7/20 | none |\n| scikit-learn HGB, lags + calendar | 8.87 | 0.664 | 31.47 | -0.07 | 19/20 | 0.766 (split-conformal, trained to Sep) |\n| HGB + observed weather (oracle) | 8.96 | 0.659 | 32.33 | 0.26 | 19/20 | none |\n| Chronos-Bolt-small, zero-shot | 7.42 | 0.601 | 28.01 | 0.09 | 19/20 | 0.784 |\n| Chronos-2, zero-shot, univariate | 7.04 | 0.562 | 29.32 | -0.22 | 20/20 | 0.744 |\n\n- MASE is scaled by the in-sample mean of |y − y(t−168)| over the training period.\n- The split-conformal HGB row has WAPE 9.28%, because that model was trained only up to September.\n\n**Timings**\n- CPU inference for all 1,080 forecasts: Chronos-Bolt-small 26.9 s, Chronos-2 125.0 s.\n- Model load from cache: 0.8 s and 1.3 s. Downloads: 183 MB and 456 MB.\n- Installing the CPU torch wheel plus chronos took 12m49s. That wheel is 124 MB, while the cu126 CUDA wheel is 2.6 GB [43]. So CPU torch is the pragmatic choice, and a GPU is not needed.\n\n**Stall warning:** one process that fit HGB models and then imported torch and ran Chronos made no progress for more than 20 minutes. The same Chronos code in its own process finished in about 3 minutes. We did not find the cause. Run Chronos in its own process.\n\n**Anomaly setup:** LEAD1.0-small, split by building (140 train, 60 held out, seed 0), 490,417 held-out readings, anomaly rate 2.07%.\n\n| Scorer | ROC-AUC | PR-AUC |\n|---|---|---|\n| Robust z (residual vs 4-week seasonal median) | 0.778 | 0.178 |\n| IsolationForest | 0.773 | 0.155 |\n| Supervised HGB | 0.913 | 0.630 |\n\nChance-level PR-AUC is about 0.021. So labelled data beats unsupervised scoring by a wide margin, and unsupervised IsolationForest adds nothing over the simple baseline.\n\n**Caveats**\n- We did not check whether BDG2 is in the Chronos pretraining corpus. Label the zero-shot results \"possible leakage, unverified\".\n- Twenty meters and one season is small. The build must re-measure and show only its own eval JSON.\n\n## Deployment fit\n\nStreamlit Community Cloud gives 690 MB to 2.7 GB of RAM and at most 2 CPU cores [42]. So the web app should serve **precomputed** Chronos forecasts (parquet plus provenance) and run only the scikit-learn fallback live.\n\n## Safety\n\nEvery NumericAgent output is an indicator, never a control action. It turns into an Observation with no rubric level, carrying model id, HF revision SHA, licence and data label. Every action needs human approval.",
+  "sources": [
+   {
+    "n": 1,
+    "title": "amazon/chronos-2 model card",
+    "url": "https://huggingface.co/amazon/chronos-2",
+    "supports": "Apache-2.0, 120M params, univariate/multivariate/covariates, quantiles, context 8192/horizon 1024, CPU+GPU, predict_df example",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 2,
+    "title": "amazon-science/chronos-forecasting GitHub README",
+    "url": "https://github.com/amazon-science/chronos-forecasting",
+    "supports": "Model table with ids and sizes (chronos-2 120M, chronos-2-small 28M, bolt tiny/mini/small/base), Apache-2.0, predict_df with future_df",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 3,
+    "title": "chronos-forecasting on PyPI (and JSON API)",
+    "url": "https://pypi.org/pypi/chronos-forecasting/json",
+    "supports": "v2.3.2 (2026-09-08), Requires-Python >=3.10, deps torch<3,>=2.2, transformers<6,>=4.41, pandas<4, py3-none-any wheel",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 4,
+    "title": "Chronos-2: From Univariate to Universal Forecasting (arXiv 2510.15821)",
+    "url": "https://arxiv.org/abs/2510.15821",
+    "supports": "Group attention, covariate-informed zero-shot, SOTA claim on fev-bench/GIFT-Eval/Chronos Bench II, energy and retail case studies",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 5,
+    "title": "amazon/chronos-bolt-small model card",
+    "url": "https://huggingface.co/amazon/chronos-bolt-small",
+    "supports": "Apache-2.0, 48M params, quantile output, CPU/CUDA/MPS, zero-shot",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 6,
+    "title": "amazon/chronos-bolt-tiny model card",
+    "url": "https://huggingface.co/amazon/chronos-bolt-tiny",
+    "supports": "Chronos-Bolt size table 9M/21M/48M/205M, Apache-2.0",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 7,
+    "title": "autogluon/chronos-2-small model card",
+    "url": "https://huggingface.co/autogluon/chronos-2-small",
+    "supports": "Apache-2.0, 27.9M params small Chronos-2 variant",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 8,
+    "title": "google/timesfm-2.5-200m-pytorch model card",
+    "url": "https://huggingface.co/google/timesfm-2.5-200m-pytorch",
+    "supports": "Apache-2.0, 200M params, context 1024, horizon 256, continuous quantile head, example code",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 9,
+    "title": "timesfm on PyPI (README) and GitHub",
+    "url": "https://pypi.org/project/timesfm/",
+    "supports": "v3.0.2; timesfm[torch] extra; 2.5 code under src/timesfm; TimesFM 3.0 weights under timesfm-non-commercial-license-v1.0, non-production; weights up to 2.5 Apache-2.0",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 10,
+    "title": "Salesforce/moirai-2.0-R-small model card",
+    "url": "https://huggingface.co/Salesforce/moirai-2.0-R-small",
+    "supports": "cc-by-nc-4.0, 11.4M params, 'This release is for research purposes only'",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 11,
+    "title": "uni2ts PyPI JSON",
+    "url": "https://pypi.org/pypi/uni2ts/json",
+    "supports": "v2.0.0 pins numpy~=1.26.0, torch<2.5,>=2.1, gluonts~=0.14.3",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 12,
+    "title": "ibm-granite/granite-timeseries-ttm-r2 model card",
+    "url": "https://huggingface.co/ibm-granite/granite-timeseries-ttm-r2",
+    "supports": "Apache-2.0, 805K+ params, CPU-capable, minimum context 512/1024, minutely/hourly only (r2.1 adds daily/weekly), zero-shot and fine-tune",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 13,
+    "title": "ibm-granite/granite-timeseries-tspulse-r1 model card",
+    "url": "https://huggingface.co/ibm-granite/granite-timeseries-tspulse-r1",
+    "supports": "Apache-2.0, ~1M params, GPU-free, anomaly detection/imputation/classification/search, AD needs ~1536-2048 points, TSB-AD +20% claim",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 14,
+    "title": "granite-tsfm TSPulse anomaly detection notebook",
+    "url": "https://github.com/ibm-granite/granite-tsfm/blob/main/notebooks/hfdemo/tspulse_anomaly_detection.ipynb",
+    "supports": "API: TSPulseForReconstruction, TimeSeriesAnomalyDetectionPipeline, AnomalyScoreMethods.TIME_RECONSTRUCTION/FREQUENCY_RECONSTRUCTION/PREDICTIVE",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 15,
+    "title": "granite-tsfm PyPI JSON",
+    "url": "https://pypi.org/pypi/granite-tsfm/json",
+    "supports": "v0.3.9 Requires-Python <3.14,>=3.11; deps scikit-learn<1.8, torch<2.12,>=2.10, transformers[torch]<6",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 16,
+    "title": "AutonLab/MOMENT-1-large model card",
+    "url": "https://huggingface.co/AutonLab/MOMENT-1-large",
+    "supports": "MIT, 0.3B params, tasks forecasting/classification/anomaly/imputation/embedding, Python 3.11 recommended",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 17,
+    "title": "momentfm PyPI JSON",
+    "url": "https://pypi.org/pypi/momentfm/json",
+    "supports": "v0.1.4 pins numpy==1.25.2, transformers==4.33.3, torch~=2.0, huggingface-hub==0.24.0",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 18,
+    "title": "Datadog/Toto-Open-Base-1.0 model card",
+    "url": "https://huggingface.co/Datadog/Toto-Open-Base-1.0",
+    "supports": "Apache-2.0, 151M params, observability-metric training data, multivariate, Student-T mixture output, BOOM/GIFT-Eval claims",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 19,
+    "title": "toto-ts PyPI JSON",
+    "url": "https://pypi.org/pypi/toto-ts/json",
+    "supports": "v0.2.0 pins torch==2.7.0, numpy==1.26.4, transformers==4.52.1, gluonts[torch]==0.16.2 and many exact pins",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 20,
+    "title": "time-series-foundation-models/Lag-Llama model card",
+    "url": "https://huggingface.co/time-series-foundation-models/Lag-Llama",
+    "supports": "Apache-2.0, 2.45M params, probabilistic, 'performs best when finetuned', context from 32",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 21,
+    "title": "Lag-Llama requirements.txt",
+    "url": "https://github.com/time-series-foundation-models/lag-llama/blob/main/requirements.txt",
+    "supports": "gluonts[torch]<=0.14.4, torch>=2.0.0, wandb",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 22,
+    "title": "thuml/sundial-base-128m model card",
+    "url": "https://huggingface.co/thuml/sundial-base-128m",
+    "supports": "Apache-2.0, 128M params, trust_remote_code, transformers==4.40.1 recommended, generative samples, context up to 2880",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 23,
+    "title": "PriorLabs/TabPFN GitHub README",
+    "url": "https://github.com/PriorLabs/TabPFN",
+    "supports": "TabPFN-3.5 default; 2.5/2.6/3/3.5 weights non-commercial; TabPFN-2 Prior Labs License (Apache 2.0 + attribution); licence acceptance via login/TABPFN_TOKEN; CPU limits; ModelVersion.V2 usage",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 24,
+    "title": "Prior-Labs/TabPFN-v2-reg model card",
+    "url": "https://huggingface.co/Prior-Labs/TabPFN-v2-reg",
+    "supports": "Prior Labs License (Apache 2.0 with additional attribution requirement); CPU with GPU optional",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 25,
+    "title": "soda-inria/tabicl GitHub README and LICENSE",
+    "url": "https://github.com/soda-inria/tabicl",
+    "supports": "TabICLv2 default, TabICLClassifier and TabICLRegressor, 300-100K rows optimal, BSD 3-Clause licence file",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 26,
+    "title": "jingang/TabICL Hugging Face page",
+    "url": "https://huggingface.co/jingang/TabICL",
+    "supports": "licence tag bsd-3-clause; TabICL and TabICLv2 papers",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 27,
+    "title": "NX-AI/TiRex model card",
+    "url": "https://huggingface.co/NX-AI/TiRex",
+    "supports": "nx-ai-community-license, 35M params, tirex-ts package, tested on Linux/macOS only",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 28,
+    "title": "NX-AI/tirex LICENSE",
+    "url": "https://github.com/NX-AI/tirex/blob/main/LICENSE",
+    "supports": "NXAI Community License based on Llama 3 licence with Additional Commercial Terms for large enterprises",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 29,
+    "title": "ibm-granite/granite-timeseries-flowstate-r1 model card",
+    "url": "https://huggingface.co/ibm-granite/granite-timeseries-flowstate-r1",
+    "supports": "Apache-2.0, 9.07M params (18.5M for v1.1 per update note), sampling-rate invariant zero-shot forecaster, GIFT-Eval MASE claim",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 30,
+    "title": "NREL/BuildingsBench GitHub",
+    "url": "https://github.com/NREL/BuildingsBench",
+    "supports": "BSD-3-Clause, Buildings-900K synthetic pretraining, checkpoints on OEDI S3, persistence baselines NRMSE",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 31,
+    "title": "BuildingsBench paper (arXiv 2307.00142)",
+    "url": "https://arxiv.org/abs/2307.00142",
+    "supports": "'Synthetically pretrained models generalize surprisingly well to real commercial buildings'; fine-tuning helps most targets",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 32,
+    "title": "microsoft/LightGBM LICENSE",
+    "url": "https://github.com/microsoft/LightGBM/blob/master/LICENSE",
+    "supports": "MIT licence; PyPI lightgbm 4.7.0 has win_amd64 wheel",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 33,
+    "title": "scikit-learn IsolationForest docs (1.9.1)",
+    "url": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html",
+    "supports": "API (fit, score_samples, decision_function), params, Liu/Ting/Zhou 2008 reference",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 34,
+    "title": "scikit-learn HistGradientBoostingRegressor docs",
+    "url": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html",
+    "supports": "loss='quantile', native NaN support, 'inspired by LightGBM'",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 35,
+    "title": "buds-lab/building-data-genome-project-2 GitHub",
+    "url": "https://github.com/buds-lab/building-data-genome-project-2",
+    "supports": "3,053 meters, 1,636 buildings, 19 sites, hourly 2016-2017, file layout (meters/cleaned, weather, metadata); files served via Git LFS media URLs",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 36,
+    "title": "BDG2 LICENSE file",
+    "url": "https://github.com/buds-lab/building-data-genome-project-2/blob/master/LICENSE",
+    "supports": "Header 'Attribution-ShareAlike 4.0 Unported' (Creative Commons BY-SA 4.0 text)",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 37,
+    "title": "samy101/lead-dataset GitHub",
+    "url": "https://github.com/samy101/lead-dataset",
+    "supports": "LEAD1.0 annotated GEPIII meters; data/lead1.0-small.zip 10,027,589 bytes; GitHub API licence null (no licence stated)",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 38,
+    "title": "LEAD1.0 paper (arXiv 2203.17256)",
+    "url": "https://arxiv.org/abs/2203.17256",
+    "supports": "1,413 annotated smart-meter series over one year; eight AD methods benchmarked",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 39,
+    "title": "UCI Occupancy Detection dataset",
+    "url": "https://archive.ics.uci.edu/dataset/357/occupancy+detection",
+    "supports": "CC BY 4.0, 20,560 instances, temperature/humidity/light/CO2/humidity ratio, per-minute, DOI 10.24432/C5X01N",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 40,
+    "title": "LBNL Fault Detection and Diagnostics Datasets (OEDI 5763)",
+    "url": "https://data.openei.org/submissions/5763",
+    "supports": "CC BY 4.0, DOI 10.25984/1881324, seven HVAC system types, simulation/lab/field",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 41,
+    "title": "LBNL FDD file server index",
+    "url": "https://fdddata.lbl.gov/data/",
+    "supports": "All listed folders are named Simulated_LBNL_FDD_Data_Sets_* (RTU, SDAHU, DDAHU, FCU, FPU, chiller, boiler)",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 42,
+    "title": "Streamlit Community Cloud: manage your app (resource limits)",
+    "url": "https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app",
+    "supports": "CPU 0.078-2 cores, memory 690 MB-2.7 GB, storage up to 50 GB (as of Feb 2024)",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 43,
+    "title": "PyTorch wheel index cu126 / cpu",
+    "url": "https://download.pytorch.org/whl/cu126/torch/",
+    "supports": "torch-2.14.0+cu126-cp313-win_amd64 exists (Content-Length 2,602,775,157); cpu wheel torch-2.14.0+cpu-cp313 is 123,995,955 bytes",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 44,
+    "title": "torch PyPI JSON",
+    "url": "https://pypi.org/pypi/torch/json",
+    "supports": "torch 2.14.0 (2026-09-02) has cp310-cp314 win_amd64 wheels",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 45,
+    "title": "transformers 5.17.0 PyPI JSON",
+    "url": "https://pypi.org/pypi/transformers/5.17.0/json",
+    "supports": "requires huggingface-hub<2.0,>=1.5.0 (conflicts with origin_hack's huggingface_hub 2.0.0)",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 46,
+    "title": "Hugging Face Hub API model_info (revision SHAs, licence tags)",
+    "url": "https://huggingface.co/api/models/amazon/chronos-2",
+    "supports": "amazon/chronos-2 sha 29ec3766d36d6f73f0696f85560a422f50e8498c; chronos-bolt-small sha 772f3d25d38aec6d914c8949dab4462e2d46f5d8; licence tags per model; none gated",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 47,
+    "title": "Kaggle LEAD competition (energy-anomaly-detection) rules",
+    "url": "https://www.kaggle.com/competitions/energy-anomaly-detection/rules",
+    "supports": "UNVERIFIED: could not open (fetch blocked); data terms unknown",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 48,
+    "title": "BDG2 paper, Scientific Data 7, 368 (2020)",
+    "url": "https://doi.org/10.1038/s41597-020-00712-x",
+    "supports": "Citation for BDG2 (cited via the repo README; paper itself not opened)",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 49,
+    "title": "tabpfn PyPI JSON",
+    "url": "https://pypi.org/pypi/tabpfn/json",
+    "supports": "v9.0.0 Apache-2.0 package; deps torch>=2.5, lightgbm>=4.4, skrub, matplotlib",
+    "accessed": "2026-09-26"
+   },
+   {
+    "n": 50,
+    "title": "numpy 1.26.4 and 1.25.2 release files (PyPI JSON)",
+    "url": "https://pypi.org/pypi/numpy/1.26.4/json",
+    "supports": "numpy 1.26.4 win wheels only up to cp312; 1.25.2 only up to cp311, so pins in uni2ts/toto-ts/momentfm block Python 3.13",
+    "accessed": "2026-09-26"
+   }
+  ],
+  "candidates": [
+   {
+    "name": "Chronos-2",
+    "kind": "model",
+    "id_or_url": "amazon/chronos-2 (rev 29ec3766d36d6f73f0696f85560a422f50e8498c)",
+    "license": "Apache-2.0 (HF card tag license:apache-2.0)",
+    "fit": "Primary forecaster. Common-area and floor energy day-ahead with 10/50/90 bands. Humidity progression and water-flow forecasting with covariates (rain, temperature, schedule) through future_df. Anomaly indicator = actual outside the forecast band.",
+    "runs_on": "CPU measured: 125 s for 1,080 x 24 h forecasts (8 threads, loaded laptop). GPU optional.",
+    "size": "120M params, 456 MB download",
+    "verdict": "use. Best measured pilot WAPE 7.04% vs seasonal-naive 11.09%; permissive licence. Run in its own env or process: its transformers needs huggingface-hub<2."
+   },
+   {
+    "name": "Chronos-Bolt-small",
+    "kind": "model",
+    "id_or_url": "amazon/chronos-bolt-small (rev 772f3d25d38aec6d914c8949dab4462e2d46f5d8)",
+    "license": "Apache-2.0",
+    "fit": "Fast univariate forecaster for many meters or circuits. Second model to show agreement.",
+    "runs_on": "CPU measured: 26.9 s for 1,080 forecasts",
+    "size": "48M params, 183 MB",
+    "verdict": "use as secondary. Pilot WAPE 7.42%, 80% band coverage 0.784."
+   },
+   {
+    "name": "Chronos-2-small",
+    "kind": "model",
+    "id_or_url": "autogluon/chronos-2-small",
+    "license": "Apache-2.0",
+    "fit": "Smaller Chronos-2 with the same covariate API, for tighter CPU budgets",
+    "runs_on": "CPU/GPU (not measured)",
+    "size": "28M params",
+    "verdict": "maybe. Not measured."
+   },
+   {
+    "name": "scikit-learn HistGradientBoosting + split-conformal band",
+    "kind": "tool",
+    "id_or_url": "sklearn.ensemble.HistGradientBoostingRegressor / Classifier (scikit-learn 1.9.1, in origin_hack)",
+    "license": "BSD-3-Clause (scikit-learn)",
+    "fit": "Lightweight fallback that runs live in Streamlit: lag and calendar forecaster with conformal 80% band; supervised anomaly classifier when labels exist",
+    "runs_on": "CPU, already installed",
+    "size": "KB-MB models",
+    "verdict": "use as fallback. Pilot WAPE 8.87% (19/20 meters beat seasonal naive); conformal coverage 0.766; LEAD supervised PR-AUC 0.630."
+   },
+   {
+    "name": "IsolationForest / robust z-score",
+    "kind": "tool",
+    "id_or_url": "sklearn.ensemble.IsolationForest; robust z on residual vs 4-week seasonal median",
+    "license": "BSD-3-Clause",
+    "fit": "Unsupervised anomaly indicator for circuits, pipe flow and meters without labels",
+    "runs_on": "CPU",
+    "size": "tiny",
+    "verdict": "use robust-z as the baseline. IsolationForest did not beat it on LEAD (PR-AUC 0.155 vs 0.178)."
+   },
+   {
+    "name": "TimesFM 2.5",
+    "kind": "model",
+    "id_or_url": "google/timesfm-2.5-200m-pytorch",
+    "license": "Apache-2.0 (weights up to 2.5); TimesFM 3.0 weights are non-commercial",
+    "fit": "Univariate forecasting, second opinion",
+    "runs_on": "torch CPU/GPU",
+    "size": "200M params",
+    "verdict": "maybe. Permissive but not measured. Do not use TimesFM 3.0 (non-commercial, non-production)."
+   },
+   {
+    "name": "Moirai 2.0",
+    "kind": "model",
+    "id_or_url": "Salesforce/moirai-2.0-R-small",
+    "license": "cc-by-nc-4.0, research purposes only",
+    "fit": "Universal forecaster",
+    "runs_on": "uni2ts pins numpy~=1.26/torch<2.5 (no Python 3.13)",
+    "size": "11.4M params",
+    "verdict": "avoid: non-commercial licence and install blockers"
+   },
+   {
+    "name": "Granite TinyTimeMixer r2",
+    "kind": "model",
+    "id_or_url": "ibm-granite/granite-timeseries-ttm-r2",
+    "license": "Apache-2.0",
+    "fit": "Tiny CPU forecaster, minutely or hourly, with exogenous-variable fine-tuning",
+    "runs_on": "CPU; granite-tsfm needs scikit-learn<1.8 and torch<2.12",
+    "size": "805K+ params",
+    "verdict": "maybe, separate env only. Conflicts with origin_hack's scikit-learn 1.9.1."
+   },
+   {
+    "name": "Granite TSPulse",
+    "kind": "model",
+    "id_or_url": "ibm-granite/granite-timeseries-tspulse-r1",
+    "license": "Apache-2.0",
+    "fit": "Zero-shot anomaly detection (pipe flow/pressure, circuit current), sensor-gap imputation, classification",
+    "runs_on": "CPU (GPU-free per card); separate env because of granite-tsfm pins",
+    "size": "~1M params",
+    "verdict": "maybe, stretch goal. Best permissive zero-shot anomaly option, but needs about 1,536+ points and its own env."
+   },
+   {
+    "name": "MOMENT-1",
+    "kind": "model",
+    "id_or_url": "AutonLab/MOMENT-1-large (also -small, -base)",
+    "license": "MIT",
+    "fit": "Anomaly by reconstruction, imputation, classification embeddings",
+    "runs_on": "momentfm pins numpy==1.25.2, transformers==4.33.3; Python 3.11 recommended",
+    "size": "0.3B (large)",
+    "verdict": "avoid here: pins cannot install on Python 3.13"
+   },
+   {
+    "name": "Toto",
+    "kind": "model",
+    "id_or_url": "Datadog/Toto-Open-Base-1.0",
+    "license": "Apache-2.0",
+    "fit": "Multivariate telemetry forecasting and anomaly (trained on observability metrics)",
+    "runs_on": "toto-ts pins torch==2.7.0, numpy==1.26.4 (Python 3.12 max)",
+    "size": "151M params",
+    "verdict": "maybe, separate Python 3.12 env only; heavy pins"
+   },
+   {
+    "name": "Lag-Llama",
+    "kind": "model",
+    "id_or_url": "time-series-foundation-models/Lag-Llama",
+    "license": "Apache-2.0",
+    "fit": "Probabilistic univariate forecasting",
+    "runs_on": "gluonts<=0.14.4 stack",
+    "size": "2.45M params",
+    "verdict": "avoid: old stack; card says it performs best when fine-tuned"
+   },
+   {
+    "name": "Sundial",
+    "kind": "model",
+    "id_or_url": "thuml/sundial-base-128m",
+    "license": "Apache-2.0",
+    "fit": "Generative probabilistic forecasting",
+    "runs_on": "transformers==4.40.1 recommended, trust_remote_code",
+    "size": "128M params",
+    "verdict": "maybe: its transformers pin clashes with Chronos's 5.x"
+   },
+   {
+    "name": "TabPFN",
+    "kind": "model",
+    "id_or_url": "Prior-Labs/TabPFN-v2-reg / -clf (v2 weights); package default TabPFN-3.5",
+    "license": "Package Apache-2.0; v2 weights Prior Labs License (Apache 2.0 + attribution); 2.5/2.6/3/3.5 weights non-commercial, licence acceptance via login",
+    "fit": "Small tabular classification/regression (fault type, occupancy)",
+    "runs_on": "CPU limited (~1,000 samples for older versions); GPU recommended",
+    "size": "n/a",
+    "verdict": "avoid by default (non-commercial default weights, login). Only with ModelVersion.V2 plus attribution."
+   },
+   {
+    "name": "TabICL v2",
+    "kind": "model",
+    "id_or_url": "jingang/TabICL (pip tabicl 2.2.0)",
+    "license": "BSD-3-Clause (code and HF tag)",
+    "fit": "Tabular classifier/regressor for fault type or occupancy",
+    "runs_on": "CPU ok for small data, GPU for large",
+    "size": "n/a (not stated on card)",
+    "verdict": "maybe: the permissive tabular foundation model if a TFM is wanted; HGB suffices for the demo"
+   },
+   {
+    "name": "TiRex",
+    "kind": "model",
+    "id_or_url": "NX-AI/TiRex",
+    "license": "NXAI Community License (commercial terms for large enterprises)",
+    "fit": "Zero-shot forecasting",
+    "runs_on": "tested on Linux/macOS only per card",
+    "size": "35M params",
+    "verdict": "avoid: restrictive licence, Windows untested"
+   },
+   {
+    "name": "FlowState",
+    "kind": "model",
+    "id_or_url": "ibm-granite/granite-timeseries-flowstate-r1",
+    "license": "Apache-2.0",
+    "fit": "Sampling-rate-invariant zero-shot forecaster (sensors at mixed rates)",
+    "runs_on": "granite-tsfm (same pins as TTM)",
+    "size": "9.07M params",
+    "verdict": "maybe: separate env; not measured"
+   },
+   {
+    "name": "BuildingsBench",
+    "kind": "model",
+    "id_or_url": "https://github.com/NREL/BuildingsBench",
+    "license": "BSD-3-Clause",
+    "fit": "Building-load-specific pretrained transformers (synthetic Buildings-900K)",
+    "runs_on": "PyTorch; checkpoints on OEDI S3",
+    "size": "S/M/L",
+    "verdict": "maybe: cite as domain evidence; not needed for the build"
+   },
+   {
+    "name": "LightGBM",
+    "kind": "tool",
+    "id_or_url": "lightgbm 4.7.0 (PyPI, win_amd64 wheel)",
+    "license": "MIT",
+    "fit": "Gradient boosting for lag and tabular features",
+    "runs_on": "CPU",
+    "size": "small",
+    "verdict": "maybe: sklearn HGB gives the same capability with no new dependency"
+   },
+   {
+    "name": "Building Data Genome 2",
+    "kind": "dataset",
+    "id_or_url": "https://github.com/buds-lab/building-data-genome-project-2",
+    "license": "CC BY-SA 4.0 (LICENSE header 'Attribution-ShareAlike 4.0 Unported')",
+    "fit": "Real hourly electricity (175 MB) and water (146 meters, 15.4 MB) data for forecasting backtests",
+    "runs_on": "CSV via Git LFS media URL",
+    "size": "3,053 meters, 1,636 buildings",
+    "verdict": "use: primary real evaluation data"
+   },
+   {
+    "name": "LEAD1.0-small",
+    "kind": "dataset",
+    "id_or_url": "https://github.com/samy101/lead-dataset (data/lead1.0-small.zip)",
+    "license": "Not stated in repo (GitHub API: none); Kaggle terms unverified",
+    "fit": "Human-annotated hourly energy anomalies for measured anomaly evaluation",
+    "runs_on": "10 MB zip",
+    "size": "200 buildings, 1,749,494 rows, 37,296 anomalies",
+    "verdict": "use for internal eval only; cite paper; do not redistribute"
+   },
+   {
+    "name": "UCI Occupancy Detection",
+    "kind": "dataset",
+    "id_or_url": "https://archive.ics.uci.edu/dataset/357/occupancy+detection",
+    "license": "CC BY 4.0",
+    "fit": "Tabular occupancy classification (for smart switching, Ask 3)",
+    "runs_on": "328 KB zip",
+    "size": "20,560 rows",
+    "verdict": "maybe: optional classification demo"
+   },
+   {
+    "name": "LBNL FDD datasets",
+    "kind": "dataset",
+    "id_or_url": "https://data.openei.org/submissions/5763",
+    "license": "CC BY 4.0",
+    "fit": "Labelled HVAC fault data (RTU/AHU/VAV/FCU/chiller/boiler)",
+    "runs_on": "CSV zips",
+    "size": "per system",
+    "verdict": "maybe: file-server data is SIMULATED; label it so"
+   }
+  ],
+  "build_spec": {
+   "goal": "Add src/cascade/numeric/, a NumericAgent layer with one interface: fit / forecast (10/50/90 quantiles) / anomaly_score, each returning provenance. Backends: seasonal-naive baseline; scikit-learn HGB forecaster with split-conformal band and robust-z / IsolationForest / supervised-HGB anomaly scorers (always available, run live in Streamlit); Chronos-2 and Chronos-Bolt-small (optional, run in their own process and env, results precomputed to parquet). Evaluate on REAL BDG2 office electricity (rolling-origin, day-ahead) and REAL LEAD1.0 anomaly labels, and show the measured results in a new Streamlit tab. Outputs become indicator-only Observations: they never set a rubric level and never actuate anything.",
+   "data": "REAL: (1) BDG2 (CC BY-SA 4.0) from https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/: data/meters/cleaned/electricity_cleaned.csv (174,977,911 bytes, sha256 b6ffc9b4dfcefe5c753594730a08ae822b0d50fec6815abb8f185591e6c630a3); data/meters/cleaned/water_cleaned.csv (15,394,905 bytes, 146 water meters, optional second target); data/weather/weather.csv (19,457,782 bytes); data/metadata/metadata.csv (272,024 bytes). (2) LEAD1.0-small from https://raw.githubusercontent.com/samy101/lead-dataset/main/data/lead1.0-small.zip (10,027,589 bytes; columns building_id, timestamp, meter_reading, anomaly; 200 buildings; licence not stated, so internal evaluation only and not committed to git). Cache under data/external/ (gitignored); record sha256 of each file at download and store the licence string. OPTIONAL: UCI Occupancy (CC BY 4.0). SYNTHETIC: only the existing cascade.building.synthetic tower, used to wire the agent into the demo, labelled synthetic and never used for accuracy.",
+   "model": "Primary: amazon/chronos-2 (Apache-2.0, 120M, pin revision 29ec3766d36d6f73f0696f85560a422f50e8498c), zero-shot, univariate context 1024 h, prediction_length 24, quantiles [0.1, 0.5, 0.9]. Optional covariate run passes observed temperature as future covariate, labelled 'oracle weather'. Secondary: amazon/chronos-bolt-small (pin 772f3d25d38aec6d914c8949dab4462e2d46f5d8). Fallback (live in app): sklearn HistGradientBoostingRegressor(max_iter=300, learning_rate=0.05, random_state=0) on lag24/48/72/168/336 + hour + day-of-week, with a split-conformal band from the previous month's residuals. Anomaly: robust-z baseline; IsolationForest(n_estimators=200, max_samples=4096, random_state=0); HistGradientBoostingClassifier trained on labelled buildings.",
+   "pipeline_steps": [
+    "1. datasets.py: fetch(name) downloads the BDG2 and LEAD files to data/external/, checks sha256 (hard-coded for electricity_cleaned; record the others on first download into data/external/MANIFEST.json), and returns a DataFrame plus a DataCard (source URL, licence, real/synthetic, sha256, access date).",
+    "2. base.py: frozen dataclasses Provenance (model_id, backend, revision, licence, data_card, params, created_utc, code_git_sha from drift._git_head), ForecastResult (index, q10, q50, q90, provenance), AnomalyResult (scores, threshold, flags, provenance). Protocol NumericModel with name, licence, fit(y, X=None), forecast(context, horizon, X_future=None) and anomaly_score(y).",
+    "3. baselines.py: SeasonalNaive(period=168), Naive(24), RobustZ(window=28 d, seasonal median of 4 weekly lags, MAD scale shifted by 1 step so no leakage).",
+    "4. tabular.py: HGBForecaster (direct day-ahead using only lags >= 24 h; conformal band), IsoForestScorer, HGBAnomalyClassifier. Keep features per building, normalised by a trailing median and IQR.",
+    "5. chronos_backend.py: an import-guarded ChronosForecaster with available() -> bool. It runs as a SUBPROCESS (scripts/numeric_chronos_precompute.py under the cerebro_ts env Python, path from env var CEREBRO_TS_PYTHON). It calls torch.set_num_threads(8) and BaseChronosPipeline.from_pretrained(model_id, revision=PIN, device_map='cpu'). Chronos-2 predict_quantiles returns a LIST of (1, H, 3) tensors; stack them. Output goes to eval/numeric/forecasts_<model>.parquet plus provenance JSON. Never import torch into the Streamlit or sklearn process: in our pilot, a combined process stalled for more than 20 minutes (cause not diagnosed).",
+    "6. backtest.py: rolling_origin(series_by_id, origins=daily 00:00 from 2017-11-01 to 2017-12-24, horizon=24, context=1024). Train sklearn on data before 2017-11-01 only. Metrics per model: MAE, WAPE, CV(RMSE), NMBE, MASE (scale = in-sample mean |y - y(t-168)|), pinball loss at 0.1/0.5/0.9, 80% band coverage, per-meter wins vs seasonal naive. Meter selection: primaryspaceusage=='Office', <=1% missing, median > 5 kWh, <=1% zeros in the test window, rng seed 0, N=20 (also run N=50 if time allows). Write eval/numeric/backtest_bdg2.json.",
+    "7. anomaly eval: split LEAD1.0-small by building (60 test, seed 0). Report ROC-AUC, PR-AUC, prevalence, and precision/recall at a fixed alert budget (top 1% of scores) for robust-z, IsolationForest and supervised HGB. Write eval/numeric/anomaly_lead.json. Optionally add Chronos band-exceedance as a fourth scorer if time allows.",
+    "8. agent.py: NumericAgent.select(task) picks Chronos precomputed results if the parquet exists and its provenance pin matches, else the sklearn fallback, and always keeps the seasonal-naive baseline. to_observations() maps flags to building Observation(kind='load_event' or 'sensor_event') carrying provenance, level=None, and the note 'indicator only - human review'. Thresholds go in rules.THRESHOLDS with tag [team-proposed, validate].",
+    "9. Wire into the building layer: electrical.baseline_anomalies stays; NumericAgent adds a model-based score column next to it. For water.forecast, optionally add a Chronos-2 RH forecast with rain as covariate on the SYNTHETIC tower (labelled synthetic, no accuracy claim).",
+    "10. Streamlit tab 'Numeric AI' in app/streamlit_app.py. Shows: meter picker; st.line_chart / Altair of context, actuals, q50, q10-q90 band and seasonal-naive; metrics table read ONLY from eval/numeric/*.json; per-meter wins bar; LEAD building timeline with human labels vs flags; provenance card; banner 'Forecasts and scores are advisory; no equipment is switched without human approval'. The live fallback retrains HGB for the selected meter in under 10 s with st.cache_data.",
+    "11. Tests (pytest, synthetic series labelled synthetic): SeasonalNaive is exact on a pure period-168 signal; metrics match hand-computed values; a no-leakage test perturbs future values and checks forecasts are unchanged; the conformal band covers 80% ± tolerance on i.i.d. noise; NumericAgent falls back when the Chronos parquet is missing or its revision pin mismatches; Observations carry level None and provenance.",
+    "12. CLIs: python -m cascade.numeric.datasets --fetch bdg2 lead; python scripts/numeric_backtest.py --n 20; %CEREBRO_TS_PYTHON% scripts/numeric_chronos_precompute.py --models amazon/chronos-2 amazon/chronos-bolt-small; then re-run numeric_backtest.py to merge the Chronos parquet into the JSON."
+   ],
+   "evaluation": "Forecast task: day-ahead (24 h) rolling-origin backtest on held-out Nov 1 to Dec 24 2017 (54 origins) for 20 randomly drawn eligible BDG2 office meters (seed 0), no fitting on the test window. Primary metric: WAPE and mean MASE vs the seasonal-naive (lag 168) baseline, plus CV(RMSE), NMBE, 80% band coverage, pinball loss and per-meter win count. The scratch pilot (2026-09-26, same protocol) measured WAPE: seasonal naive 11.09%, HGB 8.87%, Chronos-Bolt-small 7.42%, Chronos-2 7.04%; coverage 0.766 (HGB conformal), 0.784 (Bolt), 0.744 (Chronos-2). The build must re-measure and publish its own numbers; pilot numbers are expectations only. Anomaly task: LEAD1.0-small, 60 held-out buildings, anomaly rate about 2.07%. Baseline robust-z (pilot ROC-AUC 0.778, PR-AUC 0.178); IsolationForest (0.773/0.155); supervised HGB (0.913/0.630). Report chance PR-AUC = prevalence.",
+   "env_and_deps": "(a) origin_hack (Python 3.13, scikit-learn 1.9.1, pandas 3, numpy 2.5): NO new packages for the fallback, baselines, backtest or app. Do NOT pip install chronos-forecasting here: it pulls transformers 5.17.0, which requires huggingface-hub<2.0 and would downgrade the env's 2.0.0. (b) New conda env for Chronos (conda, never venv): `C:\\Users\\HP\\miniconda3\\Scripts\\conda.exe create -n cerebro_ts python=3.13 -y`; then `conda run -n cerebro_ts pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu` (CPU wheel 124 MB; the cu126 wheel is 2.6 GB and is not needed, since CPU inference measured 27 s / 125 s for 1,080 forecasts); then `pip install chronos-forecasting==2.3.2 pandas pyarrow`. The measured install of CPU torch + chronos into a target folder took 12m49s on this machine. First `import chronos` took 30-90 s on Windows. Set HF_HOME to a known folder; models download 183 MB (Bolt-small) and 456 MB (Chronos-2) unauthenticated. Windows notes: use absolute paths; set PYTHONUNBUFFERED=1 for logs; call torch.set_num_threads(8). Deploy note: Streamlit Community Cloud has 690 MB to 2.7 GB RAM and 2 CPUs max, so ship precomputed Chronos parquet and run only sklearn live.",
+   "est_hours": 5,
+   "files_to_create": [
+    "src/cascade/numeric/__init__.py",
+    "src/cascade/numeric/base.py",
+    "src/cascade/numeric/baselines.py",
+    "src/cascade/numeric/tabular.py",
+    "src/cascade/numeric/chronos_backend.py",
+    "src/cascade/numeric/datasets.py",
+    "src/cascade/numeric/backtest.py",
+    "src/cascade/numeric/agent.py",
+    "scripts/numeric_backtest.py",
+    "scripts/numeric_chronos_precompute.py",
+    "eval/numeric/backtest_bdg2.json (generated)",
+    "eval/numeric/anomaly_lead.json (generated)",
+    "eval/numeric/forecasts_chronos_2.parquet (generated)",
+    "eval/numeric/forecasts_chronos_bolt_small.parquet (generated)",
+    "tests/test_numeric_baselines.py",
+    "tests/test_numeric_backtest.py",
+    "tests/test_numeric_agent.py",
+    "app/streamlit_app.py (edit: add 'Numeric AI' tab)",
+    ".gitignore (edit: data/external/)"
+   ],
+   "reuse_from_repo": [
+    "src/cascade/building/electrical.py baseline_anomalies/anomaly_runs: the existing hour-of-week indicator; the NumericAgent score sits beside it and, like it, never sets a level",
+    "src/cascade/building/water.py forecast/storm_responses: optional Chronos-2 RH forecast with rain covariate on the synthetic tower",
+    "src/cascade/building/model.py Observation and ObservationKind 'load_event'/'sensor_event' for agent output",
+    "src/cascade/building/rules.py Threshold registry (alert thresholds tagged [team-proposed, validate])",
+    "src/cascade/drift.py _git_head/fingerprint pattern for model-identity pinning (HF revision SHA in Provenance)",
+    "src/cascade/evalmetrics.py pattern: the app shows only numbers the eval JSON contains",
+    "src/cascade/building/synthetic.py synthetic tower for demo wiring (labelled synthetic)",
+    "Scratch pilot scripts to port: C:\\Users\\HP\\AppData\\Local\\Temp\\claude\\E--origin-hack\\5dd83316-e9df-42fe-9235-8e04db2688c6\\scratchpad\\research\\ask1_numeric\\pilot_backtest.py, chronos_only.py, pilot_conformal.py, pilot_anomaly.py"
+   ],
+   "outputs_for_website": "'Numeric AI' tab. (1) Forecast chart per BDG2 meter: last 7 days of actuals, next 24 h q50 line, shaded q10-q90 band, dashed seasonal-naive, from Chronos-2 (precomputed) or the HGB fallback (live). (2) Backtest table: model vs seasonal-naive with WAPE, MASE, CV(RMSE), NMBE, 80% coverage, meters-won, plus n meters, n origins, test window and dataset licence. (3) Per-meter MASE bar chart (model vs baseline). (4) Anomaly panel: one LEAD building's hourly load with human-labelled anomalies vs flagged hours, and the ROC/PR-AUC table for robust-z, IsolationForest and supervised HGB. (5) Provenance card: model id, HF revision SHA, licence, backend, data real/synthetic, sha256, run date. (6) Banner: advisory indicator only; every action needs human approval; no life-safety or equipment control.",
+   "honesty_labels": [
+    "REAL DATA: BDG2 hourly meters 2016-2017 (CC BY-SA 4.0) and LEAD1.0-small human anomaly labels (licence not stated; internal evaluation only)",
+    "SYNTHETIC: any tower or sensor series from cascade.building.synthetic is demo wiring only and never used for accuracy claims",
+    "PILOT NUMBERS in this research note were measured in scratch on 2026-09-26 (20 meters, 54 origins); the app must show only numbers its own eval JSON produced",
+    "ZERO-SHOT CAVEAT: we did not check whether BDG2 or GEPIII is in the Chronos pretraining corpus; label Chronos results 'possible pretraining overlap, unverified'",
+    "ORACLE WEATHER: any variant using observed temperature as a future covariate is an upper bound, not a deployable forecast",
+    "ADVISORY ONLY: numeric outputs are indicators with level None; they never set rubric levels, switch loads or touch life-safety systems; every action needs human approval",
+    "TIMINGS were measured on a shared laptop CPU with other jobs running"
+   ]
+  },
+  "conclusions": [
+   "Use Chronos-2 (amazon/chronos-2, Apache-2.0, 120M) as the primary numeric model. In a measured CPU pilot on 20 real BDG2 office meters (54 day-ahead origins), it reached WAPE 7.04% and mean MASE 0.562 versus 11.09% and 0.964 for seasonal naive, and beat that baseline on 20/20 meters.",
+   "Chronos-Bolt-small (48M, Apache-2.0) was nearly as good (WAPE 7.42%) and about 4.6x faster on CPU (26.9 s vs 125.0 s for 1,080 forecasts), with the best-calibrated 80% band (coverage 0.784).",
+   "The lightweight fallback needs no new dependencies. scikit-learn HistGradientBoosting on lag and calendar features reached WAPE 8.87%, beat seasonal naive on 19/20 meters, and gave an 80% split-conformal band with 0.766 coverage. It is suitable for live use in Streamlit.",
+   "A GPU is not needed. CPU torch (124 MB wheel) is enough; the CUDA wheel is 2.6 GB. Keep Chronos in a separate conda env and process: transformers 5.17 requires huggingface-hub<2.0, while origin_hack has 2.0.0, and a combined sklearn+torch process stalled in our pilot.",
+   "For anomalies, labels matter most. On LEAD1.0 held-out buildings, supervised HGB reached PR-AUC 0.630 vs 0.178 for a robust-z baseline and 0.155 for IsolationForest (chance about 0.021).",
+   "Avoid on licence grounds: Moirai 2.0 (CC-BY-NC), TimesFM 3.0 weights (non-commercial), TabPFN 2.5 to 3.5 weights (non-commercial, login), TiRex (NXAI community licence). Avoid on install grounds for Python 3.13: MOMENT, Toto, Lag-Llama and uni2ts (old numpy/torch/gluonts pins).",
+   "TSPulse (Apache-2.0, about 1M params, CPU) is the best permissive zero-shot anomaly model, but granite-tsfm needs scikit-learn<1.8, so it belongs in a separate env as a stretch goal.",
+   "BDG2 also has 146 real water meters, which can feed a water-flow forecast and anomaly demo for Ask 6 with the same NumericAgent."
+  ],
+  "open_questions": [
+   "Is BDG2/GEPIII data part of the Chronos-2 or Chronos-Bolt pretraining corpora? If so, the zero-shot pilot numbers may be optimistic. Not checked.",
+   "What licence covers LEAD1.0 annotations and the Kaggle GEPIII/LEAD data? The repo states none and the Kaggle rules page could not be opened.",
+   "Does Chronos-2 with covariates (forecast weather, occupancy schedule) improve on univariate for BDG2 offices? Not measured; the oracle-weather HGB variant did not improve WAPE.",
+   "Will Cerebro receive real BMS/BACnet or sub-meter feeds, at what frequency and format? The NumericAgent input schema should match them.",
+   "Is a separate granite-tsfm env (scikit-learn<1.8) worth it for TSPulse zero-shot anomaly and imputation within the deadline?",
+   "Why did a single process that fit sklearn HGB and then ran torch/Chronos stall on Windows (possible OpenMP runtime conflict)? Not diagnosed; the workaround is process separation.",
+   "ASHRAE Guideline 14 hourly calibration thresholds (commonly quoted as CV(RMSE) <= 30%, |NMBE| <= 10%) were seen only in secondary sources and not verified against the standard text. Do not display them as pass/fail criteria without verification.",
+   "The pilot used only 20 office meters in one winter window; results for other building types and seasons are unmeasured."
+  ]
+ },
+ "verify": {
+  "ask": "numeric_hf (Ask 1: an ML model that takes numeric input for building data, plus the NumericAgent build_spec)",
+  "checks": [
+   {
+    "item": "amazon/chronos-2: exists, licence, size, gating, pin",
+    "claim": "Apache-2.0, 120M params, 456 MB, rev 29ec3766d36d6f73f0696f85560a422f50e8498c, not gated",
+    "verified": true,
+    "evidence": "HF API https://huggingface.co/api/models/amazon/chronos-2 (accessed 2026-09-26): sha 29ec3766d36d..., gated False, tag license:apache-2.0, safetensors 119,477,664 params, model.safetensors 477,930,472 bytes. That is 478 MB decimal or 456 MiB, so '456 MB' is really MiB. Commit history: weights added 2025-10-30 (95a9710e); every later commit, including 29ec376 on 2026-06-05, changes only the README or deployment guide. The model card lists Max context 8192, Max prediction 1024, covariates, and CPU and GPU inference."
+   },
+   {
+    "item": "amazon/chronos-bolt-small",
+    "claim": "Apache-2.0, 48M, 183 MB, rev 772f3d25d38aec6d914c8949dab4462e2d46f5d8",
+    "verified": true,
+    "evidence": "HF API: sha 772f3d25..., gated False, license:apache-2.0, 47,718,016 params, model.safetensors 190,888,824 bytes (191 MB, or 182 MiB). The card has the 9M/21M/48M/205M table and says CPU/CUDA/MPS. For training data the card says only 'nearly 100 billion time series observations' and names no corpus."
+   },
+   {
+    "item": "autogluon/chronos-2-small",
+    "claim": "Apache-2.0, 28M",
+    "verified": true,
+    "evidence": "HF API: license:apache-2.0, 27,934,624 params, 111.7 MB, not gated."
+   },
+   {
+    "item": "chronos-forecasting 2.3.2 installs on Windows with Python 3.13",
+    "claim": "py3-none-any; torch<3,>=2.2; transformers<6,>=4.41; pandas<4",
+    "verified": true,
+    "evidence": "PyPI JSON: 2.3.2 uploaded 2026-09-08, requires_python >=3.10, deps as claimed plus accelerate<2,>=1.1 and einops. A pip --dry-run --ignore-installed under Python 3.13 resolved chronos-forecasting 2.3.2, torch 2.14.0, transformers 5.17.0, huggingface_hub 1.33.0, accelerate 1.15.0, pandas 3.0.6, pyarrow 25.0.1 and numpy 2.5.3 (report at scratchpad/research/verify_numeric_hf/pip_report.json). The pilot's pylib has the same versions."
+   },
+   {
+    "item": "transformers 5.17 conflicts with origin_hack's huggingface_hub 2.0",
+    "claim": "transformers 5.17.0 requires huggingface-hub<2.0",
+    "verified": true,
+    "evidence": "PyPI JSON for transformers 5.17.0: 'huggingface-hub<2.0,>=1.5.0'. origin_hack has huggingface_hub 2.0.0 (released 2026-09-24) and no torch, transformers or chronos. A separate env is required."
+   },
+   {
+    "item": "torch 2.14.0 CPU wheel for cp313 on Windows",
+    "claim": "CPU wheel 123,995,955 bytes; cu126 wheel 2,602,775,157 bytes",
+    "verified": true,
+    "evidence": "HEAD on download.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp313-cp313-win_amd64.whl returned 200 with Content-Length 123995955; the cu126 wheel returned 2602775157. On PyPI, torch 2.14.0 has win_amd64 wheels for cp310 to cp314 at about 124 MB, and these are CPU builds."
+   },
+   {
+    "item": "Pilot forecast numbers (WAPE 7.04 / 7.42 / 8.87 / 11.09; MASE 0.562; Chronos-2 wins 20/20; timings 26.9 s / 125.0 s)",
+    "claim": "Measured in scratch 2026-09-26",
+    "verified": true,
+    "evidence": "ask1_numeric/chronos_log2.txt contains exactly these values: snaive168 WAPE 11.09, gbm 8.87 with 19 wins, chronos_bolt_small 7.42 with coverage 0.784, chronos_2 7.04 with MASE 0.562, 20 wins and coverage 0.744. It also logs Bolt at 26.9 s and Chronos-2 at 125.0 s for 1080 x 24 h, and a Chronos-2 raw output of type list with shape (1, 24, 3). The pilot did not pass revision=, but the cached snapshot folder is 29ec3766..."
+   },
+   {
+    "item": "HGB conformal coverage 0.766 goes with WAPE 8.87%",
+    "claim": "HGB fallback: WAPE 8.87% and conformal coverage 0.766",
+    "verified": false,
+    "evidence": "I re-ran pilot_conformal.py and got coverage_80 0.766 with WAPE_pct_gbm_train_to_sep 9.28, snaive 11.09 and mean band width 28.71 kWh. The 0.766 band comes from a model trained to 2017-09-30. The 8.87% model was trained to 2017-10-31 and has no band. These are two different models."
+   },
+   {
+    "item": "LEAD anomaly pilot (ROC/PR-AUC 0.778/0.178, 0.773/0.155, 0.913/0.630; prevalence 0.0207)",
+    "claim": "Measured on 60 held-out buildings",
+    "verified": true,
+    "evidence": "Re-running pilot_anomaly.py reproduced every number exactly: n_rows_test 490,417, prevalence 0.0207, isoforest fit 19 s, HGB fit 42 s. The split is by building and the rolling stats use shift(1), so I found no leakage. None of the 37,296 anomalies has a zero reading; 107,653 rows have NaN readings and are dropped."
+   },
+   {
+    "item": "BDG2 files, URLs, sizes, sha256",
+    "claim": "electricity 174,977,911 B sha b6ffc9b4...; water 15,394,905 B, 146 meters; weather 19,457,782 B; metadata 272,024 B",
+    "verified": true,
+    "evidence": "HEAD on each media.githubusercontent.com URL returned 200 with the claimed Content-Length. Local sha256 of electricity_cleaned.csv is b6ffc9b4dfcefe5c753594730a08ae822b0d50fec6815abb8f185591e6c630a3. Other hashes: water cf3474e7d3ca89b7e04674ef80ed6d6248473f5ccd523b1624ad73625d5fb220, weather a8189f1c6acdf3b9933a9e6354b8e7c1278cd56a7075929623a17565d44f04bd, metadata 992d0b29f24f96ad4332bc4dbb534b7bdd7dd2689aad093f94e93068ecddca02. The water file has 146 meter columns. A live range request on weather.csv returned these fields: timestamp, site_id, airTemperature, cloudCoverage, dewTemperature, precipDepth1HR, precipDepth6HR, seaLvlPressure, windDirection, windSpeed. Metadata has primaryspaceusage and building_id_kaggle. The README gives 3,053 meters, 1,636 buildings and 19 sites."
+   },
+   {
+    "item": "BDG2 licence",
+    "claim": "CC BY-SA 4.0",
+    "verified": false,
+    "evidence": "The LICENSE file's first line is 'Attribution-ShareAlike 4.0 Unported', but the body is the CC BY-SA 3.0 Unported legal code. It uses the 3.0 terms 'Collection', 'Adaptation' and 'Section 1(f)' and cites 'Attribution-ShareAlike 3.0 US'. The GitHub API reports NOASSERTION, and the README states no licence. Attribution and share-alike apply either way, but calling it 'CC BY-SA 4.0' outright is overconfident."
+   },
+   {
+    "item": "LEAD1.0-small",
+    "claim": "10,027,589 B zip; columns building_id, timestamp, meter_reading, anomaly; 200 buildings; 1,749,494 rows; 37,296 anomalies; no licence",
+    "verified": true,
+    "evidence": "HEAD on raw.githubusercontent.com returned 200 with Content-Length 10027589, and the local zip sha256 is b0e34c66c0c4ce780b7bb19b199d33e19210675f16be102a5ac32d6b22e39d8f. The CSV has the stated columns, 1,749,494 rows, 200 buildings and 37,296 anomalies, covering 2016-01-01 to 2016-12-31. The GitHub API licence field is null. The arXiv 2203.17256 abstract describes 1,413 series annotated from ASHRAE GEPIII and 8 methods. The Kaggle rules are still unverified."
+   },
+   {
+    "item": "Evaluation circularity: pretraining overlap with the BDG2 test window",
+    "claim": "Pretraining overlap was not checked, so it is 'possible, unverified'",
+    "verified": true,
+    "evidence": "The HF dataset Salesforce/GiftEvalPretrain (Apache-2.0, 'research purposes only' in its README) contains the folders bdg-2_bear, bdg-2_fox, bdg-2_panther and bdg-2_rat, plus bull, cockatoo and hog. I downloaded the fox, rat and hog arrow files. 4 of the 20 pilot meters (Fox_office_Brandy, Fox_office_Susanne, Rat_office_Craig, Rat_office_Jamal) are there with the exact Nov-Dec 2017 test values (max abs diff about 6e-5, corr 1.0). Hog_office_Rolando appears in 'hog', but its values differ (corr -0.13). Table 6 of the Chronos-2 paper (arxiv.org/html/2510.15821) lists its real pretraining datasets, and none of them is a BDG-2 subset; its only building dataset is the synthetic Buildings-900K. So Chronos-2 is probably clean. Chronos-Bolt's corpus is not listed on its card, and any GIFT-Eval-pretrained second-opinion model (Moirai 2.0 uses a 'Subset of GIFT-Eval Pretrain', and possibly TimesFM, Toto, FlowState) could have seen these test values."
+   },
+   {
+    "item": "Test-window selection look-ahead and imputation",
+    "claim": "No fitting on the test window",
+    "verified": true,
+    "evidence": "The eligibility rule uses the zero fraction in the test window, which is a mild look-ahead. A pre-test-only rule gives the same 146 eligible offices, so the choice does not change the outcome. The series are imputed with interpolate(limit=6).ffill().bfill() over the whole series, so context can borrow future values and 128 imputed test-window target hours are scored. The effect is small but should be removed."
+   },
+   {
+    "item": "Live HGB fallback retrains in under 10 s",
+    "claim": "Under 10 s per meter with st.cache_data",
+    "verified": false,
+    "evidence": "Measured 13.78 s for one meter (15,000 rows, max_iter 300) on this laptop at 14% reported CPU load with other jobs running. Reading one column from the 175 MB CSV took 2.0 s; reading parquet took 0.16 s. Streamlit Cloud allows at most 2 cores."
+   },
+   {
+    "item": "Install time 12m49s / pip environment",
+    "claim": "Measured install time",
+    "verified": false,
+    "evidence": "Not re-measured. pip config debug shows that C:\\ProgramData\\pip\\pip.ini, C:\\Users\\HP\\pip\\pip.ini and AppData\\Roaming\\pip\\pip.ini all set extra-index-url https://pypi.ngc.nvidia.com and no-cache-dir=true. That host currently fails DNS, and pip retries it 5 times per package, which probably explains the slow install. My dry-run also took more than 5 minutes."
+   },
+   {
+    "item": "Streamlit Community Cloud limits",
+    "claim": "690 MB-2.7 GB RAM, 0.078-2 CPU, as of Feb 2024",
+    "verified": true,
+    "evidence": "docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app: 'CPU: 0.078 cores minimum, 2 cores maximum', 'Memory: 690MB minimum, 2.7GBs maximum', 'Storage: 50GB maximum', as of February 2024."
+   },
+   {
+    "item": "UCI Occupancy; LBNL FDD",
+    "claim": "CC BY 4.0, 20,560 rows; LBNL CC BY 4.0, file server data simulated",
+    "verified": true,
+    "evidence": "The UCI page states a CC BY 4.0 licence, 20,560 instances and DOI 10.24432/C5X01N (I did not verify the 328 KB zip size). OEDI 5763 is CC BY 4.0 with DOI 10.25984/1881324 and describes simulated, lab and field data. The fdddata.lbl.gov/data/ index lists only Simulated_LBNL_FDD_Data_Sets_* folders plus Website_test_data."
+   },
+   {
+    "item": "Avoid-list licence and pin claims",
+    "claim": "Moirai CC-BY-NC research only; TimesFM 3.0 non-commercial; momentfm, toto-ts and uni2ts pins; granite-tsfm needs sklearn<1.8; TiRex other; TabPFN v2 Prior Labs License; TabICL BSD-3",
+    "verified": true,
+    "evidence": "Checked on HF API and cards and on PyPI JSON: Moirai 2.0 R-small is cc-by-nc-4.0, 'This release is for research purposes only', 11.39M params. The timesfm 3.0.2 README says weights up to 2.5 are Apache-2.0 and the 3.0 weights are 'timesfm-non-commercial-license-v1.0 ... non-commercial, non-production'. momentfm 0.1.4 pins numpy==1.25.2, which has win wheels only up to cp311. toto-ts 0.2.0 pins torch==2.7.0, numpy==1.26.4 (cp312 max) and scikit-learn==1.5.0. uni2ts 2.0.0 pins numpy~=1.26.0 and torch<2.5. granite-tsfm 0.3.9 needs scikit-learn<1.8, torch<2.12,>=2.10 and Python <3.14. TiRex is tagged license:other and tirex-ts declares the NXAI Community License. TabPFN-v2-reg: 'Prior Labs License (Apache 2.0 with additional attribution requirement)'. The TabICL LICENSE is BSD 3-Clause. Small size discrepancies: TimesFM 2.5 has 231.3M params in its safetensors (the card says 200M), and MOMENT-1-large has 346M (0.35B, listed as 0.3B)."
+   },
+   {
+    "item": "Repo reuse targets exist",
+    "claim": "drift._git_head, rules.THRESHOLDS, electrical.baseline_anomalies/anomaly_runs, water.forecast/storm_responses, Observation kinds load_event/sensor_event",
+    "verified": true,
+    "evidence": "All found by grep: drift.py:112 _git_head, rules.py:115 THRESHOLDS, electrical.py:271/315, water.py:191/749, and model.py:35 ObservationKind includes 'sensor_event' and 'load_event'. Observation.level is Optional (model.py:231). The app already has 11 top-level st.tabs at streamlit_app.py:2254 in a 3,317-line file. .gitignore does not yet cover data/external/. origin_hack has pyarrow 25.0.1 and altair 6.3.0."
+   },
+   {
+    "item": "Supporting repo URLs",
+    "claim": "NREL/BuildingsBench BSD-3; microsoft/LightGBM MIT",
+    "verified": true,
+    "evidence": "Both repos now redirect: NREL/BuildingsBench goes to NatLabRockies/BuildingsBench (BSD-3-Clause) and microsoft/LightGBM goes to lightgbm-org/LightGBM (MIT). lightgbm 4.7.0 has a py3-none-win_amd64 wheel."
+   }
+  ],
+  "corrections": [
+   "The HGB fallback's numbers must come from one model. The 0.766 conformal coverage belongs to an HGB trained to 2017-09-30 with an October calibration month, and that model's WAPE is 9.28% (I re-ran it). WAPE 8.87% belongs to a different HGB, trained to 2017-10-31 with no band. Write 'HGB + split-conformal: WAPE 9.28%, 80% coverage 0.766', or re-measure both from one model.",
+   "BDG2 licence: the LICENSE header reads 'Attribution-ShareAlike 4.0 Unported', but the body is the CC BY-SA 3.0 Unported legal code, and GitHub detects NOASSERTION. Describe it as 'CC BY-SA (LICENSE header says 4.0 Unported; text is the 3.0 Unported legal code)' rather than plain 'CC BY-SA 4.0'. Attribution and share-alike apply either way.",
+   "Model sizes: the Chronos-2 weights are 477,930,472 bytes (478 MB, or 456 MiB). Chronos-Bolt-small is 190,888,824 bytes (191 MB, or 182 MiB). Use one unit consistently.",
+   "Zero-shot caveat: the Chronos-2 paper's Table 6 (real pretraining datasets) contains no BDG-2 subset; its only building data is the synthetic Buildings-900K. GIFT-Eval Pretrain does include bdg-2_bear, bdg-2_fox, bdg-2_panther, bdg-2_rat, bull, cockatoo and hog. 4 of the 20 pilot meters (Fox_office_Brandy, Fox_office_Susanne, Rat_office_Craig, Rat_office_Jamal) appear there with the exact Nov-Dec 2017 test-window values. Chronos-Bolt's training corpus is not stated on its card. So the note 'we did not check' is out of date. Replace it with these specifics.",
+   "'Chronos-2 beat seasonal naive on 20/20 meters' holds only for the pilot's 20 meters, 12 of which come from sites in GIFT-Eval Pretrain (Fox, Hog, Rat).",
+   "First-import time of chronos was about 28 s to 89 s in the logs (it says 30-90 s); timings were measured with other jobs running.",
+   "TimesFM 2.5: the HF safetensors metadata counts 231.3M params (the card name says 200M). MOMENT-1-large has 346M params (0.35B).",
+   "Source URLs have moved: NREL/BuildingsBench is now NatLabRockies/BuildingsBench, and microsoft/LightGBM is now lightgbm-org/LightGBM. Both redirect, and their licences are unchanged.",
+   "The 12m49s install time is probably inflated by pip.ini at three levels (ProgramData, user and roaming), which sets extra-index-url https://pypi.ngc.nvidia.com. That host fails DNS, and pip retries it 5 times per package. no-cache-dir=true is also set.",
+   "'Under 10 s' live HGB retrain was not reproduced: 13.8 s for one meter on this laptop with other jobs running."
+  ],
+  "blocking_issues": [
+   "No hard blocker for building the spec. Every model and dataset exists, is ungated and is reachable. The Chronos stack resolves for Python 3.13 on Windows, and the pilot numbers reproduce, apart from the HGB WAPE/coverage mix-up. Three items must be fixed before public claims or deploy, or the result is not honest:",
+   "(1) Public deploy and LEAD redistribution. LEAD states no licence, so default copyright applies. The spec's anomaly panel shows a LEAD building's hourly series with human labels in the website, which republishes that material. Keep the LEAD timeline local-only (or behind a flag), and publish only the aggregate ROC/PR-AUC numbers with a citation.",
+   "(2) The deployed app has no data. data/external is gitignored, so the live HGB fallback and the context charts cannot run on a deployed instance. Commit a small derived parquet of the selected BDG2 meters and forecasts, with a BDG2 attribution and share-alike notice.",
+   "(3) Test-pool contamination risk. The exact test-window values of 4 of the 20 pilot meters are in GIFT-Eval Pretrain. Chronos-2 appears clean per its paper's Table 6. Chronos-Bolt's corpus is unknown, and any GIFT-Eval-trained second model could have seen those values. Either exclude the sites Bear, Fox, Panther, Rat, Bull, Cockatoo and Hog from the eligible pool (46 of the 146 eligible offices remain, enough for N=20), or report metrics split by overlap group."
+  ],
+  "recommended_changes_to_build_spec": [
+   "Step 6 meter selection: add the exclusion site_id not in {Bear, Fox, Panther, Rat, Bull, Cockatoo, Hog} (reason: in Salesforce/GiftEvalPretrain). Base the zero-fraction eligibility on pre-test data only (2017-01-01 to 2017-10-31); it yields the same 146 eligible offices, so nothing is lost. Keep seed 0 and N=20. Record the excluded sites and the reason in backtest_bdg2.json.",
+   "Step 6 and the backtest: impute context causally only (ffill with a limit, or pass NaN, since Chronos accepts NaN in context), with no bfill and no two-sided interpolation across the origin. Score only hours whose raw target is non-missing; 128 test-window target hours are NaN across the eligible meters.",
+   "Step 4 HGB: produce the point forecast and the conformal band from the same model (train to 2017-09-30, calibrate on Oct 2017, test Nov 1 to Dec 24). Publish that model's WAPE (about 9.3% in the pilot), not 8.87%. Optionally add a second 'refit through Oct' row with no band, clearly labelled.",
+   "Step 10 live fallback: do not retrain on every click. Precompute the per-meter HGB models or forecasts in the backtest script and load them. If a live fit is kept, use max_iter=100 or early_stopping=True, and wrap the fit in st.cache_resource. It measured 13.8 s at max_iter 300.",
+   "Step 10 anomaly panel: show only the aggregate LEAD metrics table (ROC-AUC, PR-AUC, prevalence, precision and recall at the top-1% budget). For the timeline, plot a BDG2 meter with our robust-z and model flags and no LEAD labels. Keep any LEAD-labelled timeline behind a local-only flag.",
+   "Deploy data: add eval/numeric/bdg2_selected.parquet (the 20 meters' Sep to Dec 2017 hourly series), plus the forecasts parquet, to git with an ATTRIBUTION note (BDG2, Miller et al. 2020, CC BY-SA, share-alike applies to the data file). Keep the full CSVs under data/external/ (gitignored).",
+   "Env setup (b): run pip with --isolated, or set PIP_CONFIG_FILE=NUL, so the dead pypi.ngc.nvidia.com extra-index (set in 3 pip.ini files) does not add retries. Example: `conda run -n cerebro_ts python -m pip install --isolated torch==2.14.0 chronos-forecasting==2.3.2 pyarrow`. On Windows the PyPI torch wheel is already the 124 MB CPU build. Set HF_HOME and pass revision=PIN in from_pretrained; kwargs flow to AutoConfig/AutoModel.",
+   "Provenance: store the GIFT-Eval overlap finding in the model's provenance card: 'Chronos-2 paper Table 6 lists no BDG-2 subset (checked 2026-09-26); Chronos-Bolt corpus unstated'. Keep 'possible pretraining overlap' on Bolt results.",
+   "App wiring: put the new tab in app/numeric_tab.py and add only a small import and tab entry in streamlit_app.py. The file is 3,317 lines with 11 top-level tabs, and other asks are editing it in parallel.",
+   "Scope for time: MUST = datasets, baselines, HGB + conformal, backtest JSON, Chronos precompute, anomaly JSON, tab, tests. CUT first = step 9 RH-on-synthetic-tower, the N=50 run, the Chronos band-exceedance anomaly scorer, and the oracle-weather covariate run.",
+   "Add .gitignore entries for data/external/ and the cerebro_ts HF cache folder. Record the sha256 values of water, weather, metadata and LEAD from this check in MANIFEST.json."
+  ],
+  "go": true
+ }
+}

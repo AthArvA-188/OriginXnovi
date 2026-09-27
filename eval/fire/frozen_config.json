@@ -1,0 +1,40 @@
+{
+ "frozen_config": {
+  "k_consecutive": 3,
+  "verify_window_s": 60,
+  "median_window": "30min",
+  "median_min_periods": 5,
+  "slope_lag_samples": 6,
+  "stage1_channel": "PM_Total_Room_d",
+  "co_channel": "CO_Room_d",
+  "stage1_quantile": 0.999,
+  "stage2_p_fire": 0.5,
+  "hgb": {
+   "max_iter": 150,
+   "learning_rate": 0.1,
+   "class_weight": "balanced",
+   "random_state": 0
+  },
+  "train_bg_subsample": 3,
+  "pre_start_s": 300,
+  "bg_before_s": 1800,
+  "bg_after_s": 3600,
+  "warmup_s": 1800,
+  "warmup_gap_s": 1800,
+  "run_gap_s": 60,
+  "sample_s": 10,
+  "en54_split_gap_s": 600,
+  "hall_merge": {
+   "13": 14
+  },
+  "n_boot": 1000,
+  "seed": 0,
+  "headline_features": "full",
+  "ablation_features": "deltas",
+  "within_site_cv": "leave-one-recording-day-out on EN54",
+  "cross_site": "train on all EN54, test once on the Industrial Hall"
+ },
+ "hash": "a08cb131d01d34be",
+ "frozen_at": "2026-09-26T21:14:08.525801+00:00",
+ "note": "All settings fixed before the Industrial Hall was scored. The hall stage refuses to run when these differ."
+}

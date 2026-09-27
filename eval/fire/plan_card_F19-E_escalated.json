@@ -1,0 +1,875 @@
+{
+ "building_id": "SYN-TOWER-01",
+ "synthetic": true,
+ "banner": "DECISION SUPPORT ONLY. Cerebro never controls, silences or overrides the fire alarm system, sprinklers, fire pumps, smoke control, elevator recall or Phase II, stair locks or HVAC. The Fire Safety Director (FSD) and then the fire department incident commander (IC) decide.",
+ "zone_id": "F19-E",
+ "floor_id": "F19",
+ "level": 19,
+ "top": 32,
+ "detections": [
+  "F22"
+ ],
+ "alert_floors": [
+  18,
+  19,
+  20,
+  21,
+  22,
+  23
+ ],
+ "staging_floor": 17,
+ "relocation_floors": [
+  16,
+  15,
+  14
+ ],
+ "relocation_note": "relocate occupants of F18-F23 down the evacuation stair to F14-F16; the approved Emergency Plan's predetermined relocation floors override this",
+ "smoke_watch_floors": [
+  24
+ ],
+ "evac_stair": "A",
+ "attack_stair": "B",
+ "standpipe_landing": 18,
+ "fd_lift_exit_floor": 17,
+ "passenger_banks": [
+  "HIGH"
+ ],
+ "panel": "P-F19",
+ "circuits": [
+  "C-F19-1",
+  "C-F19-2",
+  "C-F19-3",
+  "C-F19-4"
+ ],
+ "zone_circuits": [
+  "C-F19-2"
+ ],
+ "feeder_path": [
+  "P-F19",
+  "SWB-1"
+ ],
+ "risers": [
+  "R1@F19",
+  "L1@F19"
+ ],
+ "floor_control_valve": "Stair A at F19",
+ "water_watch": [
+  {
+   "node": "F18-E",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "room",
+   "score": 0.6,
+   "hops": 1,
+   "path": [
+    "F19-E",
+    "F18-E"
+   ]
+  },
+  {
+   "node": "F18-N",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "room",
+   "score": 0.6,
+   "hops": 1,
+   "path": [
+    "F19-N",
+    "F18-N"
+   ]
+  },
+  {
+   "node": "F18-S",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "room",
+   "score": 0.6,
+   "hops": 1,
+   "path": [
+    "F19-S",
+    "F18-S"
+   ]
+  },
+  {
+   "node": "F18-W",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "room",
+   "score": 0.6,
+   "hops": 1,
+   "path": [
+    "F19-W",
+    "F18-W"
+   ]
+  },
+  {
+   "node": "F17-E",
+   "floor_id": "F17",
+   "level": 17,
+   "kind": "room",
+   "score": 0.36,
+   "hops": 2,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F17-E"
+   ]
+  },
+  {
+   "node": "F17-N",
+   "floor_id": "F17",
+   "level": 17,
+   "kind": "room",
+   "score": 0.36,
+   "hops": 2,
+   "path": [
+    "F19-N",
+    "F18-N",
+    "F17-N"
+   ]
+  },
+  {
+   "node": "F17-S",
+   "floor_id": "F17",
+   "level": 17,
+   "kind": "room",
+   "score": 0.36,
+   "hops": 2,
+   "path": [
+    "F19-S",
+    "F18-S",
+    "F17-S"
+   ]
+  },
+  {
+   "node": "F17-W",
+   "floor_id": "F17",
+   "level": 17,
+   "kind": "room",
+   "score": 0.36,
+   "hops": 2,
+   "path": [
+    "F19-W",
+    "F18-W",
+    "F17-W"
+   ]
+  },
+  {
+   "node": "F16-E",
+   "floor_id": "F16",
+   "level": 16,
+   "kind": "room",
+   "score": 0.216,
+   "hops": 3,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F17-E",
+    "F16-E"
+   ]
+  },
+  {
+   "node": "F16-N",
+   "floor_id": "F16",
+   "level": 16,
+   "kind": "room",
+   "score": 0.216,
+   "hops": 3,
+   "path": [
+    "F19-N",
+    "F18-N",
+    "F17-N",
+    "F16-N"
+   ]
+  },
+  {
+   "node": "F16-S",
+   "floor_id": "F16",
+   "level": 16,
+   "kind": "room",
+   "score": 0.216,
+   "hops": 3,
+   "path": [
+    "F19-S",
+    "F18-S",
+    "F17-S",
+    "F16-S"
+   ]
+  },
+  {
+   "node": "F16-W",
+   "floor_id": "F16",
+   "level": 16,
+   "kind": "room",
+   "score": 0.216,
+   "hops": 3,
+   "path": [
+    "F19-W",
+    "F18-W",
+    "F17-W",
+    "F16-W"
+   ]
+  },
+  {
+   "node": "F18-CORE",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "core",
+   "score": 0.18,
+   "hops": 2,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F18-CORE"
+   ]
+  },
+  {
+   "node": "F18-SHAFT",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "shaft",
+   "score": 0.18,
+   "hops": 2,
+   "path": [
+    "F19-CORE",
+    "F19-SHAFT",
+    "F18-SHAFT"
+   ]
+  },
+  {
+   "node": "F15-E",
+   "floor_id": "F15",
+   "level": 15,
+   "kind": "room",
+   "score": 0.1296,
+   "hops": 4,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F17-E",
+    "F16-E",
+    "F15-E"
+   ]
+  },
+  {
+   "node": "F15-N",
+   "floor_id": "F15",
+   "level": 15,
+   "kind": "room",
+   "score": 0.1296,
+   "hops": 4,
+   "path": [
+    "F19-N",
+    "F18-N",
+    "F17-N",
+    "F16-N",
+    "F15-N"
+   ]
+  },
+  {
+   "node": "F15-S",
+   "floor_id": "F15",
+   "level": 15,
+   "kind": "room",
+   "score": 0.1296,
+   "hops": 4,
+   "path": [
+    "F19-S",
+    "F18-S",
+    "F17-S",
+    "F16-S",
+    "F15-S"
+   ]
+  },
+  {
+   "node": "F15-W",
+   "floor_id": "F15",
+   "level": 15,
+   "kind": "room",
+   "score": 0.1296,
+   "hops": 4,
+   "path": [
+    "F19-W",
+    "F18-W",
+    "F17-W",
+    "F16-W",
+    "F15-W"
+   ]
+  },
+  {
+   "node": "F17-CORE",
+   "floor_id": "F17",
+   "level": 17,
+   "kind": "core",
+   "score": 0.108,
+   "hops": 3,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F17-E",
+    "F17-CORE"
+   ]
+  },
+  {
+   "node": "F17-SHAFT",
+   "floor_id": "F17",
+   "level": 17,
+   "kind": "shaft",
+   "score": 0.108,
+   "hops": 3,
+   "path": [
+    "F19-CORE",
+    "F19-SHAFT",
+    "F18-SHAFT",
+    "F17-SHAFT"
+   ]
+  },
+  {
+   "node": "F14-E",
+   "floor_id": "F14",
+   "level": 14,
+   "kind": "room",
+   "score": 0.0778,
+   "hops": 5,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F17-E",
+    "F16-E",
+    "F15-E",
+    "F14-E"
+   ]
+  },
+  {
+   "node": "F14-N",
+   "floor_id": "F14",
+   "level": 14,
+   "kind": "room",
+   "score": 0.0778,
+   "hops": 5,
+   "path": [
+    "F19-N",
+    "F18-N",
+    "F17-N",
+    "F16-N",
+    "F15-N",
+    "F14-N"
+   ]
+  },
+  {
+   "node": "F14-S",
+   "floor_id": "F14",
+   "level": 14,
+   "kind": "room",
+   "score": 0.0778,
+   "hops": 5,
+   "path": [
+    "F19-S",
+    "F18-S",
+    "F17-S",
+    "F16-S",
+    "F15-S",
+    "F14-S"
+   ]
+  },
+  {
+   "node": "F14-W",
+   "floor_id": "F14",
+   "level": 14,
+   "kind": "room",
+   "score": 0.0778,
+   "hops": 5,
+   "path": [
+    "F19-W",
+    "F18-W",
+    "F17-W",
+    "F16-W",
+    "F15-W",
+    "F14-W"
+   ]
+  },
+  {
+   "node": "F16-CORE",
+   "floor_id": "F16",
+   "level": 16,
+   "kind": "core",
+   "score": 0.0648,
+   "hops": 4,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F17-E",
+    "F16-E",
+    "F16-CORE"
+   ]
+  },
+  {
+   "node": "F16-SHAFT",
+   "floor_id": "F16",
+   "level": 16,
+   "kind": "shaft",
+   "score": 0.0648,
+   "hops": 4,
+   "path": [
+    "F19-CORE",
+    "F19-SHAFT",
+    "F18-SHAFT",
+    "F17-SHAFT",
+    "F16-SHAFT"
+   ]
+  },
+  {
+   "node": "F18-ELEC",
+   "floor_id": "F18",
+   "level": 18,
+   "kind": "electrical_room",
+   "score": 0.054,
+   "hops": 3,
+   "path": [
+    "F19-E",
+    "F18-E",
+    "F18-CORE",
+    "F18-ELEC"
+   ]
+  }
+ ],
+ "elec_reached": [
+  "F18-ELEC"
+ ],
+ "smoke_sensors": {
+  "F24": [
+   "F24-SHAFT-LK",
+   "F24-CORE-RH",
+   "F24-CORE-T"
+  ]
+ },
+ "hazards": [
+  {
+   "kind": "impairment",
+   "text": "OPEN IMPAIRMENT ON AN ALERT OR RELOCATION FLOOR: sprinkler at F23 since 2026-09-20. SYNTHETIC: floor control valve at F23 closed for tenant fit-out; fire watch assigned",
+   "floor_ids": [
+    "F23"
+   ],
+   "near": true,
+   "basis": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm; https://www.nist.gov/el/interstate-bank-building-fire-los-angeles-1988"
+  },
+  {
+   "kind": "ess",
+   "text": "Battery room ESS-1 (lithium-ion (SYNTHETIC)) in F01-ELEC: nobody opens the door; remote gas readings only (trigger E5).",
+   "floor_ids": [
+    "F01"
+   ],
+   "near": false,
+   "basis": "ESS_NEAR_FLOORS: [team-proposed, validate] https://fsri.org/research-update/report-four-firefighters-injured-lithium-ion-battery-energy-storage-system"
+  },
+  {
+   "kind": "water_near_electrical",
+   "text": "Firefighting water may reach electrical room F18-ELEC below the fire; isolation or salvage only on IC order by a qualified person.",
+   "floor_ids": [
+    "F18"
+   ],
+   "near": true,
+   "basis": "WATER_WATCH_MAX_HOPS: [team-proposed, validate]; REACH_MIN [team-proposed, validate]"
+  },
+  {
+   "kind": "roof",
+   "text": "roof: emergency helicopter landing facility or approved equivalency (SYNTHETIC; LAFD Requirement No. 10) Helicopter use is a fire department decision.",
+   "floor_ids": [],
+   "near": false,
+   "basis": "https://lafd.org/sites/default/files/pdf_files/EHLF-Reg10.pdf"
+  }
+ ],
+ "occupants": {
+  "per_alert_floor": {
+   "F18": 86,
+   "F19": 86,
+   "F20": 86,
+   "F21": 86,
+   "F22": 86,
+   "F23": 86
+  },
+  "total_to_relocate": 516,
+  "per_evac_stair": {
+   "A": 516
+  },
+  "assistance_on_alert_floors": [
+   {
+    "floor_id": "F18",
+    "count": 1,
+    "note": "SYNTHETIC entry 1: self-identified as needing help",
+    "synthetic": true
+   },
+   {
+    "floor_id": "F20",
+    "count": 1,
+    "note": "SYNTHETIC entry 2: self-identified as needing help",
+    "synthetic": true
+   }
+  ],
+  "assistance_count": 2,
+  "basis": "OCC_LOAD_SQFT_PER_PERSON: [PUBLIC, secondary] https://www.houstonpermittingcenter.org/media/9311/download?inline= (design figure, not a headcount; use the warden count)"
+ },
+ "decisions": [
+  {
+   "id": "D0",
+   "owner": "FSD",
+   "phase": 1,
+   "question": "AI early alert with no listed alarm: check by camera; if staff must look, they go by stair, never by elevator. Fire seen: pull the alarm and call 911.",
+   "ai_role": "evidence only",
+   "basis": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm"
+  },
+  {
+   "id": "D1",
+   "owner": "FSD",
+   "phase": 1,
+   "question": "Call 911 (or designate someone). The AI never delays or replaces this call.",
+   "ai_role": "evidence only",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf"
+  },
+  {
+   "id": "D2",
+   "owner": "FSD",
+   "phase": 2,
+   "question": "Approve the protect strategy (alert and relocation floors, evacuation stair) and read one consistent voice message live.",
+   "ai_role": "evidence only",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf; https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30; https://www.nist.gov/system/files/documents/el/fire_research/TN1664.pdf"
+  },
+  {
+   "id": "D3",
+   "owner": "IC",
+   "phase": 3,
+   "question": "Fire department incident commander takes command; building systems move only on IC orders; IC designates the attack and evacuation stairs.",
+   "ai_role": "evidence only",
+   "basis": "https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30; https://up.codes/s/fire-fighter-s-smoke-control-panel; https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf"
+  },
+  {
+   "id": "D4",
+   "owner": "IC",
+   "phase": 4,
+   "question": "Widen the alert zone or order a total evacuation when an escalation trigger fires.",
+   "ai_role": "evidence only",
+   "basis": "https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30"
+  },
+  {
+   "id": "D5",
+   "owner": "IC",
+   "phase": 5,
+   "question": "Authorize resets, fire watch where systems are impaired, and re-occupancy.",
+   "ai_role": "evidence only",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf; https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30"
+  }
+ ],
+ "triggers": [
+  {
+   "id": "E1",
+   "text": "An alarm or waterflow signal on a floor outside the alert set: add that floor and the floors next to it.",
+   "status": "fired",
+   "detail": "alarm on F22: alert set widened to F18-F23 (floors in between included [team-proposed, validate])",
+   "basis": "https://up.codes/s/emergency-voice-alarm-communication-systems"
+  },
+  {
+   "id": "E2",
+   "text": "An alarm on the fire floor +2 or higher: possible upward spread [team-proposed, validate].",
+   "status": "fired",
+   "detail": "alarm on F22, at least 2 floors above the fire: possible upward spread",
+   "basis": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm"
+  },
+  {
+   "id": "E3",
+   "text": "Smoke reported in the evacuation stair: FSD and IC choose another stair.",
+   "status": "armed",
+   "detail": "",
+   "basis": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir89-4035.pdf"
+  },
+  {
+   "id": "E4",
+   "text": "An open system impairment on any alert or relocation floor.",
+   "status": "fired",
+   "detail": "impairment on F23",
+   "basis": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm; https://www.nist.gov/el/interstate-bank-building-fire-los-angeles-1988"
+  },
+  {
+   "id": "E5",
+   "text": "An alarm in the battery (ESS) room: nobody opens the door; remote gas readings only.",
+   "status": "armed",
+   "detail": "",
+   "basis": "https://fsri.org/research-update/report-four-firefighters-injured-lithium-ion-battery-energy-storage-system"
+  },
+  {
+   "id": "E6",
+   "text": "A person who needs help on an alert floor is not accounted for.",
+   "status": "watch",
+   "detail": "2 person(s) needing help on the alert floors",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf"
+  }
+ ],
+ "automatic_sequence": [
+  {
+   "section": "Verify on the fire alarm panel",
+   "item": "[ ] A1 Voice alarm on F18-F20 (alarm floor, floor above, floor below)",
+   "detail": "any listed initiating device",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings; https://up.codes/s/emergency-voice-alarm-communication-systems",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Verify on the fire alarm panel",
+   "item": "[ ] A2 Elevator Phase I recall",
+   "detail": "ONLY IF an elevator lobby or hoistway detector activates (LAFD matrix row 'Recall All Elevators', footnote g); manual pull, area smoke, duct detector and waterflow do not recall elevators",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Verify on the fire alarm panel",
+   "item": "[ ] A3 Smoke control and stair pressurization start",
+   "detail": "per the building's approved smoke-control matrix",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings; https://up.codes/s/stairway-and-ramp-pressurization-alternative",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Verify on the fire alarm panel",
+   "item": "[ ] A4 Air handlers shut down and dampers close",
+   "detail": "per the approved matrix",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Verify on the fire alarm panel",
+   "item": "[ ] A5 Held doors release and stair doors unlock",
+   "detail": "per the approved matrix",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Verify on the fire alarm panel",
+   "item": "[ ] A6 Annunciation at the fire control room and the 24-hour remote station",
+   "detail": "any listed initiating device",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings",
+   "executes": false,
+   "requires_approval_by": null
+  }
+ ],
+ "lines": [
+  {
+   "section": "Incident",
+   "item": "F19-E on F19",
+   "detail": "F19 E office; floor 19 of 32",
+   "basis": "SYNTHETIC building",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Protect",
+   "item": "Alert floors: F18-F23",
+   "detail": "code minimum is the fire floor, the floor above and the floor below; widened by E1 (F22)",
+   "basis": "FIRE_ALERT_ABOVE: https://up.codes/s/emergency-voice-alarm-communication-systems",
+   "executes": false,
+   "requires_approval_by": "FSD"
+  },
+  {
+   "section": "Protect",
+   "item": "Relocation floors: F14-F16",
+   "detail": "relocate occupants of F18-F23 down the evacuation stair to F14-F16; the approved Emergency Plan's predetermined relocation floors override this",
+   "basis": "FIRE_RELOCATE_MIN_BELOW: [team-proposed, validate] https://www.nist.gov/system/files/documents/el/fire_research/TN1664.pdf; FIRE_RELOCATE_FLOORS: [team-proposed, validate]",
+   "executes": false,
+   "requires_approval_by": "FSD"
+  },
+  {
+   "section": "Protect",
+   "item": "Evacuation stair: Stair A",
+   "detail": "the stair farther from the fire zone; suggestion only: the fire department designates stairs on arrival",
+   "basis": "[team-proposed, validate]",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Protect",
+   "item": "Smoke watch: F24",
+   "detail": "read shaft and core sensors above the alert zone (building sensors, not listed smoke detectors)",
+   "basis": "FIRE_SMOKE_WATCH_ABOVE: [team-proposed, validate] https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir89-4035.pdf",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Fire department",
+   "item": "Staging floor: F17",
+   "detail": "staging at least two floors below the fire",
+   "basis": "FIRE_STAGING_BELOW: [PUBLIC, secondary] https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Fire department",
+   "item": "Attack stair: Stair B, standpipe hose connection at the F18 landing",
+   "detail": "equipment one floor below the fire; suggestion only: the fire department designates stairs on arrival",
+   "basis": "FIRE_EQUIP_BELOW: [PUBLIC, secondary] https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf; https://up.codes/s/location-of-class-i-standpipe-hose-connections",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Fire department",
+   "item": "Fire service elevators FSAE-1, FSAE-2: Phase II, exit at F17",
+   "detail": "fire department only; crews leave the car at least two floors below the fire",
+   "basis": "FIRE_LIFT_EXIT_BELOW: [PUBLIC, secondary] https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Elevators",
+   "item": "Passenger banks serving F19: HIGH",
+   "detail": "Phase I recall expected ONLY IF an elevator lobby or hoistway detector activates (LAFD matrix, footnote g); verify on the FACP. Never send staff up in an elevator to check an alarm.",
+   "basis": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings; https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Electrical",
+   "item": "Panel P-F19; circuits C-F19-1, C-F19-2, C-F19-3, C-F19-4",
+   "detail": "circuits feeding F19-E: C-F19-2; de-energize only by a qualified person on IC order",
+   "basis": "building model feeds edges",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Electrical",
+   "item": "Feeder path: P-F19 -> SWB-1",
+   "detail": "panel to main switchboard",
+   "basis": "building model feeds edges",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Water",
+   "item": "Risers on F19: R1@F19, L1@F19",
+   "detail": "domestic riser and storm leader (not fire protection)",
+   "basis": "building model",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Water",
+   "item": "Sprinkler floor control valve for F19: in Stair A",
+   "detail": "supervised valve per floor; operate only on IC order",
+   "basis": "https://up.codes/s/floor-control-valves",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Water",
+   "item": "Standpipes: Stair A, Stair B",
+   "detail": "hose connection at every floor landing",
+   "basis": "https://up.codes/s/location-of-class-i-standpipe-hose-connections",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Water",
+   "item": "Firefighting water may migrate to 27 node(s) below",
+   "detail": "highest path scores: F18-E (0.60), F18-N (0.60), F18-S (0.60), F18-W (0.60), F17-E (0.36); plan salvage covers",
+   "basis": "WATER_WATCH_MAX_HOPS: [team-proposed, validate]; REACH_MIN [team-proposed, validate]",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Hazards",
+   "item": "impairment",
+   "detail": "OPEN IMPAIRMENT ON AN ALERT OR RELOCATION FLOOR: sprinkler at F23 since 2026-09-20. SYNTHETIC: floor control valve at F23 closed for tenant fit-out; fire watch assigned",
+   "basis": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm; https://www.nist.gov/el/interstate-bank-building-fire-los-angeles-1988",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Hazards",
+   "item": "ess",
+   "detail": "Battery room ESS-1 (lithium-ion (SYNTHETIC)) in F01-ELEC: nobody opens the door; remote gas readings only (trigger E5).",
+   "basis": "ESS_NEAR_FLOORS: [team-proposed, validate] https://fsri.org/research-update/report-four-firefighters-injured-lithium-ion-battery-energy-storage-system",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Hazards",
+   "item": "water near electrical",
+   "detail": "Firefighting water may reach electrical room F18-ELEC below the fire; isolation or salvage only on IC order by a qualified person.",
+   "basis": "WATER_WATCH_MAX_HOPS: [team-proposed, validate]; REACH_MIN [team-proposed, validate]",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Hazards",
+   "item": "roof",
+   "detail": "roof: emergency helicopter landing facility or approved equivalency (SYNTHETIC; LAFD Requirement No. 10) Helicopter use is a fire department decision.",
+   "basis": "https://lafd.org/sites/default/files/pdf_files/EHLF-Reg10.pdf",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Occupants",
+   "item": "Design load on alert floors: 516",
+   "detail": "F18 86, F19 86, F20 86, F21 86, F22 86, F23 86",
+   "basis": "OCC_LOAD_SQFT_PER_PERSON: [PUBLIC, secondary] https://www.houstonpermittingcenter.org/media/9311/download?inline= (design figure, not a headcount; use the warden count)",
+   "executes": false,
+   "requires_approval_by": null
+  },
+  {
+   "section": "Occupants",
+   "item": "People needing help on alert floors: 2",
+   "detail": "wardens confirm each one (trigger E6)",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf",
+   "executes": false,
+   "requires_approval_by": "FSD"
+  },
+  {
+   "section": "Human decisions",
+   "item": "D0 (FSD)",
+   "detail": "AI early alert with no listed alarm: check by camera; if staff must look, they go by stair, never by elevator. Fire seen: pull the alarm and call 911. AI role: evidence only.",
+   "basis": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm",
+   "executes": false,
+   "requires_approval_by": "FSD"
+  },
+  {
+   "section": "Human decisions",
+   "item": "D1 (FSD)",
+   "detail": "Call 911 (or designate someone). The AI never delays or replaces this call. AI role: evidence only.",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf",
+   "executes": false,
+   "requires_approval_by": "FSD"
+  },
+  {
+   "section": "Human decisions",
+   "item": "D2 (FSD)",
+   "detail": "Approve the protect strategy (alert and relocation floors, evacuation stair) and read one consistent voice message live. AI role: evidence only.",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf; https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30; https://www.nist.gov/system/files/documents/el/fire_research/TN1664.pdf",
+   "executes": false,
+   "requires_approval_by": "FSD"
+  },
+  {
+   "section": "Human decisions",
+   "item": "D3 (IC)",
+   "detail": "Fire department incident commander takes command; building systems move only on IC orders; IC designates the attack and evacuation stairs. AI role: evidence only.",
+   "basis": "https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30; https://up.codes/s/fire-fighter-s-smoke-control-panel; https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Human decisions",
+   "item": "D4 (IC)",
+   "detail": "Widen the alert zone or order a total evacuation when an escalation trigger fires. AI role: evidence only.",
+   "basis": "https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30",
+   "executes": false,
+   "requires_approval_by": "IC"
+  },
+  {
+   "section": "Human decisions",
+   "item": "D5 (IC)",
+   "detail": "Authorize resets, fire watch where systems are impaired, and re-occupancy. AI role: evidence only.",
+   "basis": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf; https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30",
+   "executes": false,
+   "requires_approval_by": "IC"
+  }
+ ],
+ "generated_by": "cascade.building.fire.plan_for_incident (deterministic rules, no ML)"
+}

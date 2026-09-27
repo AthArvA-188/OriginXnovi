@@ -1,0 +1,345 @@
+{
+  "attribution": "BFDD: Pixel-Level Aligned RGB-IR Image Dataset for Building Facade Defect Segmentation, Mendeley Data 9ych7czvyg v1, CC BY 4.0, https://data.mendeley.com/datasets/9ych7czvyg/1 (accessed 2026-09-26)",
+  "rule": "frames sorted by labelled crack pixels; percentiles (90, 50, 10)",
+  "label": "REAL drone facade photos from the BFDD out-of-domain TEST set",
+  "model_id": "tilecls:resnet18@v1",
+  "threshold": 0.20497773587703705,
+  "samples": [
+    {
+      "file": "eval/facade/samples/DJI_20250624185706_0142.jpg",
+      "labelled": "eval/facade/samples/DJI_20250624185706_0142_labelled_cracks.jpg",
+      "percentile": 90,
+      "labelled_crack_px": 11899,
+      "size": [
+        640,
+        512
+      ],
+      "windows": [
+        {
+          "box": [
+            0,
+            0,
+            224,
+            224
+          ],
+          "p_crack": 0.9685,
+          "label_crack_px": 2950,
+          "label": "crack"
+        },
+        {
+          "box": [
+            224,
+            0,
+            448,
+            224
+          ],
+          "p_crack": 0.9734,
+          "label_crack_px": 2612,
+          "label": "crack"
+        },
+        {
+          "box": [
+            416,
+            0,
+            640,
+            224
+          ],
+          "p_crack": 0.968,
+          "label_crack_px": 4004,
+          "label": "crack"
+        },
+        {
+          "box": [
+            0,
+            224,
+            224,
+            448
+          ],
+          "p_crack": 0.3181,
+          "label_crack_px": 219,
+          "label": "crack"
+        },
+        {
+          "box": [
+            224,
+            224,
+            448,
+            448
+          ],
+          "p_crack": 0.1462,
+          "label_crack_px": 246,
+          "label": "crack"
+        },
+        {
+          "box": [
+            416,
+            224,
+            640,
+            448
+          ],
+          "p_crack": 0.5904,
+          "label_crack_px": 1968,
+          "label": "crack"
+        },
+        {
+          "box": [
+            0,
+            288,
+            224,
+            512
+          ],
+          "p_crack": 0.1697,
+          "label_crack_px": 0,
+          "label": "no crack"
+        },
+        {
+          "box": [
+            224,
+            288,
+            448,
+            512
+          ],
+          "p_crack": 0.0875,
+          "label_crack_px": 0,
+          "label": "no crack"
+        },
+        {
+          "box": [
+            416,
+            288,
+            640,
+            512
+          ],
+          "p_crack": 0.7588,
+          "label_crack_px": 1962,
+          "label": "crack"
+        }
+      ],
+      "seconds": 0.32
+    },
+    {
+      "file": "eval/facade/samples/DJI_20250625174429_0090.jpg",
+      "labelled": "eval/facade/samples/DJI_20250625174429_0090_labelled_cracks.jpg",
+      "percentile": 50,
+      "labelled_crack_px": 4341,
+      "size": [
+        640,
+        512
+      ],
+      "windows": [
+        {
+          "box": [
+            0,
+            0,
+            224,
+            224
+          ],
+          "p_crack": 0.3325,
+          "label_crack_px": 55,
+          "label": "crack"
+        },
+        {
+          "box": [
+            224,
+            0,
+            448,
+            224
+          ],
+          "p_crack": 0.9999,
+          "label_crack_px": 922,
+          "label": "crack"
+        },
+        {
+          "box": [
+            416,
+            0,
+            640,
+            224
+          ],
+          "p_crack": 0.9999,
+          "label_crack_px": 986,
+          "label": "crack"
+        },
+        {
+          "box": [
+            0,
+            224,
+            224,
+            448
+          ],
+          "p_crack": 0.498,
+          "label_crack_px": 423,
+          "label": "crack"
+        },
+        {
+          "box": [
+            224,
+            224,
+            448,
+            448
+          ],
+          "p_crack": 0.9193,
+          "label_crack_px": 931,
+          "label": "crack"
+        },
+        {
+          "box": [
+            416,
+            224,
+            640,
+            448
+          ],
+          "p_crack": 0.2352,
+          "label_crack_px": 405,
+          "label": "crack"
+        },
+        {
+          "box": [
+            0,
+            288,
+            224,
+            512
+          ],
+          "p_crack": 0.9208,
+          "label_crack_px": 858,
+          "label": "crack"
+        },
+        {
+          "box": [
+            224,
+            288,
+            448,
+            512
+          ],
+          "p_crack": 0.825,
+          "label_crack_px": 916,
+          "label": "crack"
+        },
+        {
+          "box": [
+            416,
+            288,
+            640,
+            512
+          ],
+          "p_crack": 0.314,
+          "label_crack_px": 387,
+          "label": "crack"
+        }
+      ],
+      "seconds": 0.316
+    },
+    {
+      "file": "eval/facade/samples/DJI_20250624182954_0063.jpg",
+      "labelled": "eval/facade/samples/DJI_20250624182954_0063_labelled_cracks.jpg",
+      "percentile": 10,
+      "labelled_crack_px": 962,
+      "size": [
+        640,
+        512
+      ],
+      "windows": [
+        {
+          "box": [
+            0,
+            0,
+            224,
+            224
+          ],
+          "p_crack": 0.1655,
+          "label_crack_px": 560,
+          "label": "crack"
+        },
+        {
+          "box": [
+            224,
+            0,
+            448,
+            224
+          ],
+          "p_crack": 0.6977,
+          "label_crack_px": 269,
+          "label": "crack"
+        },
+        {
+          "box": [
+            416,
+            0,
+            640,
+            224
+          ],
+          "p_crack": 0.4712,
+          "label_crack_px": 67,
+          "label": "crack"
+        },
+        {
+          "box": [
+            0,
+            224,
+            224,
+            448
+          ],
+          "p_crack": 0.1507,
+          "label_crack_px": 0,
+          "label": "no crack"
+        },
+        {
+          "box": [
+            224,
+            224,
+            448,
+            448
+          ],
+          "p_crack": 0.1501,
+          "label_crack_px": 0,
+          "label": "no crack"
+        },
+        {
+          "box": [
+            416,
+            224,
+            640,
+            448
+          ],
+          "p_crack": 0.2659,
+          "label_crack_px": 66,
+          "label": "crack"
+        },
+        {
+          "box": [
+            0,
+            288,
+            224,
+            512
+          ],
+          "p_crack": 0.1107,
+          "label_crack_px": 0,
+          "label": "no crack"
+        },
+        {
+          "box": [
+            224,
+            288,
+            448,
+            512
+          ],
+          "p_crack": 0.1888,
+          "label_crack_px": 0,
+          "label": "no crack"
+        },
+        {
+          "box": [
+            416,
+            288,
+            640,
+            512
+          ],
+          "p_crack": 0.2643,
+          "label_crack_px": 66,
+          "label": "crack"
+        }
+      ],
+      "seconds": 0.294
+    }
+  ]
+}

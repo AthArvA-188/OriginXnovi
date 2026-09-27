@@ -1,0 +1,90 @@
+{
+  "id": "ndt_strength_v1",
+  "created": "2026-09-26T15:21:41",
+  "coverage": 0.9,
+  "target": "fc,cyl (MPa): compressive strength normalised to a 150x300 mm cylinder (Matthews et al. database convention)",
+  "data": "REAL: Matthews et al. 2025 NDT databases, Zenodo 10.5281/zenodo.15392443, CC BY 4.0",
+  "models": {
+    "sonreb": {
+      "law": {
+        "features": [
+          "rn",
+          "vp"
+        ],
+        "intercept": -8.754781392455628,
+        "coef": [
+          0.8582590368178151,
+          1.08482725417711
+        ],
+        "form": "ln fc = intercept + coef[0]*ln(rn) + coef[1]*ln(vp)"
+      },
+      "fitted_on": "SonReb database, 3299 rows, 53 studies",
+      "q_log_k0": 0.6739365083957374,
+      "q_log_by_k": {
+        "1": 0.5287988998277919,
+        "3": 0.4509975430830693,
+        "5": 0.40305094361722604
+      },
+      "rn_range": [
+        8.0,
+        63.5
+      ],
+      "vp_range_ms": [
+        1510.0,
+        5660.0
+      ]
+    },
+    "rn_only": {
+      "law": {
+        "features": [
+          "rn"
+        ],
+        "intercept": -2.3496207252883083,
+        "coef": [
+          1.637913865246244
+        ],
+        "form": "ln fc = intercept + coef[0]*ln(rn)"
+      },
+      "fitted_on": "rebound database, 10428 rows, 85 studies",
+      "q_log_k0": 0.6698713015024285,
+      "q_log_by_k": {
+        "1": 0.612173706146002,
+        "3": 0.4943933864424094,
+        "5": 0.46925666028040824
+      },
+      "rn_range": [
+        8.0,
+        79.3
+      ]
+    },
+    "vp_only": {
+      "law": {
+        "features": [
+          "vp"
+        ],
+        "intercept": -13.847397255443802,
+        "coef": [
+          2.042971345820361
+        ],
+        "form": "ln fc = intercept + coef[0]*ln(vp)"
+      },
+      "fitted_on": "UPV database, 6103 rows, 88 studies",
+      "q_log_k0": 0.7936409832750382,
+      "q_log_by_k": {
+        "1": 0.7625037234946874,
+        "3": 0.6134730561434945,
+        "5": 0.5876235763487052
+      },
+      "vp_range_ms": [
+        981.0,
+        5779.0
+      ]
+    }
+  },
+  "interval_note": "q_log_k0 = conformal 90% quantile of |ln fc - ln pred| over leave-one-study-out residuals; q_log_by_k after shifting by k same-study specimens",
+  "limits": [
+    "estimate for an engineer, never a structural verdict",
+    "calibrate with cores before any decision",
+    "rebound and UPV depend on moisture, carbonation, surface finish, aggregate and rebar; the database mixes all of these"
+  ]
+}

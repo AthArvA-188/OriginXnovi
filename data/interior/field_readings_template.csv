@@ -1,0 +1,5 @@
+reading_id,building_id,floor,zone_id,wall_id,face,substrate,x_m,y_m,height_m,captured_at,inspector_id,method,instrument_model,scale,value,unit,dry_reference_value,ambient_t_c,ambient_rh_pct,surface_t_c,delta_t_c,photo_ids,rn_median,n_impacts,orientation,path_mm,transit_us,test_type,sample_type,core_fc_mpa,design_fc_mpa,notes
+EXAMPLE-1,BLDG-EXAMPLE,F03,,W-12,N,concrete,,,,,,rebound,(hammer model),rn,,,,,,,,,,12,horizontal,,,,,,,EXAMPLE ROW - replace; median of >= 10 impacts per EN 12504-2 / ASTM C805 practice
+EXAMPLE-2,BLDG-EXAMPLE,F03,,W-12,N,concrete,,,,,,upv,(UPV model),m_per_s,,,,,,,,,,,,,,direct,,,,EXAMPLE ROW - replace
+EXAMPLE-3,BLDG-EXAMPLE,F03,,W-07,S,gypsum,,,,,,pinless_meter,(meter model),relative_0_100,,,,,,,,,,,,,,,,,,EXAMPLE ROW - replace; take a dry reference on the same wall type
+EXAMPLE-4,BLDG-EXAMPLE,F03,F03-N,,,other,,,,,,rh_probe,,pct_rh,,,,,,,,,,,,,,,,,,EXAMPLE ROW - replace

@@ -1,0 +1,354 @@
+{
+ "created_utc": "2026-09-26T21:01:48Z",
+ "code_git_sha": "0a3fb76f733d00fe3dee9cfee58caf68315c5e16",
+ "config": {
+  "test_start": "2017-11-01",
+  "last_origin": "2017-12-24",
+  "horizon": 24,
+  "context": 1024,
+  "hgb_train_end": "2017-10-01",
+  "hgb_calib_end": "2017-11-01",
+  "mase_period": 168,
+  "alpha": 0.2
+ },
+ "selection": {
+  "n_office_meters": 296,
+  "n_eligible_before_exclusion": 136,
+  "n_eligible_after_exclusion": 37,
+  "excluded_sites": [
+   "Bear",
+   "Bull",
+   "Cockatoo",
+   "Fox",
+   "Hog",
+   "Panther",
+   "Rat"
+  ],
+  "exclusion_reason": "sites present in https://huggingface.co/datasets/Salesforce/GiftEvalPretrain (possible pretraining overlap)",
+  "rule": {
+   "primaryspaceusage": "Office",
+   "max_missing_pre_test": 0.01,
+   "min_median_kwh_pre_test": 5.0,
+   "max_zero_share": 0.01,
+   "max_flat_day_share": 0.05,
+   "flat_day": "daily max-min <= 0.1% of pre-test median",
+   "zero_window": [
+    "2017-01-01",
+    "2017-11-01"
+   ],
+   "seed": 0,
+   "n": 20
+  },
+  "chosen": [
+   "Eagle_office_Bridgett",
+   "Eagle_office_Donovan",
+   "Eagle_office_Randolph",
+   "Eagle_office_Sheree",
+   "Peacock_office_Annie",
+   "Peacock_office_Elton",
+   "Peacock_office_Norman",
+   "Robin_office_Antonina",
+   "Robin_office_Gayle",
+   "Robin_office_Lindsay",
+   "Robin_office_Maryann",
+   "Robin_office_Sammie",
+   "Robin_office_Soledad",
+   "Robin_office_Wai",
+   "Wolf_office_Cary",
+   "Wolf_office_Darleen",
+   "Wolf_office_Elisabeth",
+   "Wolf_office_Emanuel",
+   "Wolf_office_Haydee",
+   "Wolf_office_Joana"
+  ],
+  "site_of": {
+   "Robin_office_Gayle": "Robin",
+   "Robin_office_Lindsay": "Robin",
+   "Robin_office_Wai": "Robin",
+   "Robin_office_Antonina": "Robin",
+   "Robin_office_Soledad": "Robin",
+   "Robin_office_Maryann": "Robin",
+   "Robin_office_Sammie": "Robin",
+   "Peacock_office_Norman": "Peacock",
+   "Peacock_office_Annie": "Peacock",
+   "Peacock_office_Elton": "Peacock",
+   "Wolf_office_Joana": "Wolf",
+   "Wolf_office_Darleen": "Wolf",
+   "Wolf_office_Cary": "Wolf",
+   "Wolf_office_Elisabeth": "Wolf",
+   "Wolf_office_Emanuel": "Wolf",
+   "Wolf_office_Haydee": "Wolf",
+   "Eagle_office_Sheree": "Eagle",
+   "Eagle_office_Bridgett": "Eagle",
+   "Eagle_office_Donovan": "Eagle",
+   "Eagle_office_Randolph": "Eagle"
+  }
+ },
+ "mase_scale_kWh": {
+  "Eagle_office_Bridgett": 20.033007859649125,
+  "Eagle_office_Donovan": 8.208911244826487,
+  "Eagle_office_Randolph": 12.150611944091487,
+  "Eagle_office_Sheree": 5.074235248944068,
+  "Peacock_office_Annie": 11.172739543223859,
+  "Peacock_office_Elton": 9.240129265679169,
+  "Peacock_office_Norman": 4.814125951360888,
+  "Robin_office_Antonina": 32.11289399195576,
+  "Robin_office_Gayle": 7.853356140020111,
+  "Robin_office_Lindsay": 5.409741471845148,
+  "Robin_office_Maryann": 20.046689705882354,
+  "Robin_office_Sammie": 9.256911324786325,
+  "Robin_office_Soledad": 2.6510512825348926,
+  "Robin_office_Wai": 24.440262512639027,
+  "Wolf_office_Cary": 37.329314247023994,
+  "Wolf_office_Darleen": 8.778706555213374,
+  "Wolf_office_Elisabeth": 9.954888742221385,
+  "Wolf_office_Emanuel": 4.368045986043881,
+  "Wolf_office_Haydee": 3.8275705575460433,
+  "Wolf_office_Joana": 3.74205828722334
+ },
+ "hgb_params": {
+  "max_iter": 300,
+  "learning_rate": 0.05,
+  "random_state": 0,
+  "lags_h": [
+   24,
+   48,
+   72,
+   168,
+   336
+  ],
+  "calendar": [
+   "hour",
+   "dow"
+  ]
+ },
+ "hgb_fit_seconds_per_meter": {
+  "Eagle_office_Bridgett": 0.93,
+  "Eagle_office_Donovan": 1.19,
+  "Eagle_office_Randolph": 1.06,
+  "Eagle_office_Sheree": 1.4,
+  "Peacock_office_Annie": 1.29,
+  "Peacock_office_Elton": 1.24,
+  "Peacock_office_Norman": 1.2,
+  "Robin_office_Antonina": 1.35,
+  "Robin_office_Gayle": 1.2,
+  "Robin_office_Lindsay": 0.8,
+  "Robin_office_Maryann": 1.12,
+  "Robin_office_Sammie": 1.11,
+  "Robin_office_Soledad": 0.48,
+  "Robin_office_Wai": 1.1,
+  "Wolf_office_Cary": 0.87,
+  "Wolf_office_Darleen": 1.18,
+  "Wolf_office_Elisabeth": 1.13,
+  "Wolf_office_Emanuel": 1.11,
+  "Wolf_office_Haydee": 1.3,
+  "Wolf_office_Joana": 1.14
+ },
+ "hgb_refit_point_only": true,
+ "sklearn_version": "1.9.1",
+ "pandas_version": "3.0.6",
+ "data": {
+  "name": "BDG2 electricity_cleaned",
+  "label": "REAL",
+  "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/meters/cleaned/electricity_cleaned.csv",
+  "licence": "CC BY-SA (LICENSE header says 4.0 Unported; body is the 3.0 Unported legal code; GitHub reports NOASSERTION). Attribution and share-alike apply.",
+  "sha256": "b6ffc9b4dfcefe5c753594730a08ae822b0d50fec6815abb8f185591e6c630a3",
+  "accessed": "2026-09-26",
+  "citation": "Building Data Genome Project 2 (Miller et al. 2020), Scientific Data 7, 368, doi:10.1038/s41597-020-00712-x"
+ },
+ "imputation": "causal only: forward fill up to 6 h for lags/contexts; targets are raw and NaN targets are not scored",
+ "selection_diagnostics": {
+  "flat_day_rule": "share of days 2017-01-01 to 2017-11-01 (exclusive) whose max - min <= 0.1% of the pre-test median; limit 0.05",
+  "pool_without_flat_rule": {
+   "before_exclusion": 145,
+   "after_exclusion": 44
+  },
+  "pool_at_chosen_limit": {
+   "before_exclusion": 136,
+   "after_exclusion": 37
+  },
+  "removed_by_flat_rule": {
+   "Fox_office_Bernard": {
+    "site": "Fox",
+    "flat_day_share": 0.0658,
+    "flat_days": 20,
+    "days": 304,
+    "in_excluded_site": true,
+    "min_kwh_in_window": 24.8,
+    "max_kwh_in_window": 163.16
+   },
+   "Hog_office_Bill": {
+    "site": "Hog",
+    "flat_day_share": 0.0954,
+    "flat_days": 29,
+    "days": 304,
+    "in_excluded_site": true,
+    "min_kwh_in_window": 154.665,
+    "max_kwh_in_window": 538.549
+   },
+   "Lamb_office_Caitlin": {
+    "site": "Lamb",
+    "flat_day_share": 0.6382,
+    "flat_days": 194,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 0.0018,
+    "max_kwh_in_window": 140.4
+   },
+   "Lamb_office_Gerardo": {
+    "site": "Lamb",
+    "flat_day_share": 0.8487,
+    "flat_days": 258,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 0.0018,
+    "max_kwh_in_window": 0.0018
+   },
+   "Lamb_office_Raymond": {
+    "site": "Lamb",
+    "flat_day_share": 0.8487,
+    "flat_days": 258,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 0.0004,
+    "max_kwh_in_window": 0.0004
+   },
+   "Lamb_office_Stefani": {
+    "site": "Lamb",
+    "flat_day_share": 0.5099,
+    "flat_days": 155,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 0.0013,
+    "max_kwh_in_window": 34.44
+   },
+   "Lamb_office_Vasiliki": {
+    "site": "Lamb",
+    "flat_day_share": 0.4408,
+    "flat_days": 134,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 0.0559,
+    "max_kwh_in_window": 683.35
+   },
+   "Lamb_office_Velma": {
+    "site": "Lamb",
+    "flat_day_share": 0.4408,
+    "flat_days": 134,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 0.0206,
+    "max_kwh_in_window": 222.7
+   },
+   "Robin_office_Shirlene": {
+    "site": "Robin",
+    "flat_day_share": 0.1678,
+    "flat_days": 51,
+    "days": 304,
+    "in_excluded_site": false,
+    "min_kwh_in_window": 19.5,
+    "max_kwh_in_window": 63.0
+   }
+  },
+  "near_constant_window": [
+   "2017-04-01",
+   "2017-10-31"
+  ],
+  "alternative_limits": {
+   "0.01": {
+    "before_exclusion": 121,
+    "after_exclusion": 24,
+    "also_removed_after_exclusion": {
+     "Robin_office_Addie": {
+      "site": "Robin",
+      "flat_days": 5,
+      "flat_day_share": 0.0164
+     },
+     "Robin_office_Adolph": {
+      "site": "Robin",
+      "flat_days": 8,
+      "flat_day_share": 0.0263
+     },
+     "Robin_office_Antonina": {
+      "site": "Robin",
+      "flat_days": 5,
+      "flat_day_share": 0.0164
+     },
+     "Robin_office_Dina": {
+      "site": "Robin",
+      "flat_days": 7,
+      "flat_day_share": 0.023
+     },
+     "Robin_office_Donald": {
+      "site": "Robin",
+      "flat_days": 7,
+      "flat_day_share": 0.023
+     },
+     "Robin_office_Gayle": {
+      "site": "Robin",
+      "flat_days": 7,
+      "flat_day_share": 0.023
+     },
+     "Robin_office_Lindsay": {
+      "site": "Robin",
+      "flat_days": 10,
+      "flat_day_share": 0.0329
+     },
+     "Robin_office_Maryann": {
+      "site": "Robin",
+      "flat_days": 5,
+      "flat_day_share": 0.0164
+     },
+     "Robin_office_Saul": {
+      "site": "Robin",
+      "flat_days": 5,
+      "flat_day_share": 0.0164
+     },
+     "Robin_office_Serena": {
+      "site": "Robin",
+      "flat_days": 5,
+      "flat_day_share": 0.0164
+     },
+     "Robin_office_Soledad": {
+      "site": "Robin",
+      "flat_days": 6,
+      "flat_day_share": 0.0197
+     },
+     "Robin_office_Victor": {
+      "site": "Robin",
+      "flat_days": 7,
+      "flat_day_share": 0.023
+     },
+     "Robin_office_Wai": {
+      "site": "Robin",
+      "flat_days": 7,
+      "flat_day_share": 0.023
+     }
+    }
+   }
+  },
+  "draw_without_flat_rule_same_seed": [
+   "Eagle_office_Bridgett",
+   "Eagle_office_Donovan",
+   "Eagle_office_Henriette",
+   "Eagle_office_Sheree",
+   "Lamb_office_Gerardo",
+   "Lamb_office_Raymond",
+   "Peacock_office_Burl",
+   "Peacock_office_Elton",
+   "Peacock_office_Norman",
+   "Robin_office_Antonina",
+   "Robin_office_Dina",
+   "Robin_office_Donald",
+   "Robin_office_Gayle",
+   "Robin_office_Lindsay",
+   "Robin_office_Sammie",
+   "Robin_office_Serena",
+   "Robin_office_Victor",
+   "Wolf_office_Darleen",
+   "Wolf_office_Joana",
+   "Wolf_office_Rochelle"
+  ],
+  "created_utc": "2026-09-26T22:30:56Z"
+ }
+}

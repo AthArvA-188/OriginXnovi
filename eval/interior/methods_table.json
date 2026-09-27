@@ -1,0 +1,112 @@
+{
+  "methods": [
+    {
+      "method": "Pin moisture meter",
+      "captures": "electrical resistance between two pins pushed into the material",
+      "data": "one number on a meter-specific scale (%MC for wood, WME, or a relative 0-100 scale)",
+      "public_labelled_data": "none found",
+      "cerebro": "rule-graded: wood %MC against WOOD_MC_MAX; other scales need a dry reference on the same meter, else U",
+      "sources": [
+        "protimeter",
+        "usda_wood"
+      ]
+    },
+    {
+      "method": "Pinless (capacitance / RF) meter",
+      "captures": "dielectric response a short depth under the surface",
+      "data": "relative reading; not comparable across meters or materials",
+      "public_labelled_data": "none found",
+      "cerebro": "rule-graded as U unless compared with a dry reference on the same meter",
+      "sources": [
+        "protimeter"
+      ]
+    },
+    {
+      "method": "Infrared thermography",
+      "captures": "surface temperature; wet areas can show as cooler patches",
+      "data": "thermograms and temperature differences; depends on the indoor-outdoor gradient; does not measure moisture content directly",
+      "public_labelled_data": "no open interior-moisture thermal set found (BFDD IR is exterior)",
+      "cerebro": "photo grading with the interior_water rubric (image rows); ML not trained",
+      "sources": [
+        "irt_moisture",
+        "irt_gpr"
+      ]
+    },
+    {
+      "method": "RH / temperature probes and sensors",
+      "captures": "air or in-wall relative humidity and temperature over time",
+      "data": "time series (%RH, degC)",
+      "public_labelled_data": "Tampere timber-wall lab measurements (CC BY 4.0), not LA high-rise walls",
+      "cerebro": "rule-graded by interior_water.json (RH rows) and the building water module; no ML forecaster shipped",
+      "sources": [
+        "tampere",
+        "epa_guide"
+      ]
+    },
+    {
+      "method": "Rebound hammer",
+      "captures": "surface hardness of concrete (rebound number, median of many impacts)",
+      "data": "rebound number RN",
+      "public_labelled_data": "Matthews et al. database (CC BY 4.0), paired with core/cube strength",
+      "cerebro": "ML strength estimate (RN-only power law, or SonReb with UPV) with a 90% interval; calibrate with cores",
+      "sources": [
+        "matthews_db",
+        "bam_data"
+      ]
+    },
+    {
+      "method": "Ultrasonic pulse velocity (UPV)",
+      "captures": "speed of a sound pulse through concrete; lower speed suggests weaker or cracked concrete",
+      "data": "velocity Vp (m/s) from path length and transit time; direct, semi-direct or indirect",
+      "public_labelled_data": "Matthews et al. database (CC BY 4.0)",
+      "cerebro": "ML strength estimate (Vp-only power law, or SonReb with rebound) with a 90% interval",
+      "sources": [
+        "matthews_db",
+        "bam_data"
+      ]
+    },
+    {
+      "method": "Ground-penetrating radar (GPR)",
+      "captures": "reflections of radio waves from rebar, voids and moisture below the surface",
+      "data": "radargrams",
+      "public_labelled_data": "none found for interior walls",
+      "cerebro": "not modelled; record the reading and photos",
+      "sources": [
+        "irt_gpr",
+        "fhwa_ndt"
+      ]
+    },
+    {
+      "method": "Impact echo",
+      "captures": "resonant frequency after a small impact; finds delamination and thickness",
+      "data": "frequency spectra",
+      "public_labelled_data": "none found for interior walls",
+      "cerebro": "not modelled; record only",
+      "sources": [
+        "fhwa_ndt"
+      ]
+    },
+    {
+      "method": "Tap / hammer sounding",
+      "captures": "hollow sound over delaminated plaster, render or concrete",
+      "data": "inspector's marked areas (qualitative)",
+      "public_labelled_data": "none found",
+      "cerebro": "record only (method 'sounding' in the readings template)",
+      "sources": [
+        "fhwa_ndt"
+      ]
+    },
+    {
+      "method": "Mold sampling",
+      "captures": "spores or surface growth in samples",
+      "data": "lab counts; EPA says sampling is usually unnecessary when growth is visible and there are no federal limits",
+      "public_labelled_data": "none",
+      "cerebro": "record only; visible mold is graded from photos by the interior_water rubric",
+      "sources": [
+        "epa_sampling",
+        "epa_guide"
+      ]
+    }
+  ],
+  "accessed": "2026-09-26"
+}

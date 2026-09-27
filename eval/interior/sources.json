@@ -1,0 +1,76 @@
+{
+  "sources": {
+    "matthews_db": {
+      "title": "Matthews, Allaix, Wijte, Vullings: Non-destructive Estimation of Concrete Compressive Strength: Databases (Zenodo 15392443)",
+      "url": "https://zenodo.org/records/15392443",
+      "licence": "CC BY 4.0",
+      "accessed": "2026-09-26"
+    },
+    "matthews_paper": {
+      "title": "Matthews et al. 2026, Advancing non-destructive concrete compressive strength estimation, NDT&E International 158, 103549 (TNO full text)",
+      "url": "https://publications.tno.nl/publication/34645091/4b25FibC/matthews-2026-advancing.pdf",
+      "licence": "CC BY 4.0",
+      "accessed": "2026-09-26"
+    },
+    "bam_data": {
+      "title": "Gebauer et al., Interrelated Data Set from Nondestructive and Destructive Material Testing of Concrete Compressive Strength Specimens (Harvard Dataverse)",
+      "url": "https://doi.org/10.7910/DVN/AFCITK",
+      "licence": "CC0 1.0 (Dataverse metadata)",
+      "accessed": "2026-09-26"
+    },
+    "bam_paper": {
+      "title": "Gebauer et al. 2023, Data in Brief (PMC10196957)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10196957/",
+      "licence": "CC BY 4.0 article",
+      "accessed": "2026-09-26"
+    },
+    "tampere": {
+      "title": "Mikkonen and Vinha, Hygrothermal measurements of timber-framed wall structures (Zenodo 17778563)",
+      "url": "https://zenodo.org/records/17778563",
+      "licence": "CC BY 4.0",
+      "accessed": "2026-09-26"
+    },
+    "irt_moisture": {
+      "title": "Comparison of IRT and other techniques to assess moisture content of wall specimens (Sensors, PMC9101659)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9101659/",
+      "licence": "CC BY 4.0 article",
+      "accessed": "2026-09-26"
+    },
+    "irt_gpr": {
+      "title": "IRT and GPR techniques for moisture detection in buildings (Sensors, PMC7696806)",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7696806/",
+      "licence": "CC BY 4.0 article",
+      "accessed": "2026-09-26"
+    },
+    "protimeter": {
+      "title": "Protimeter: comparing pinless vs pin moisture meters",
+      "url": "https://blog.protimeter.com/blog/comparing-pinless-moisture-meters-vs.-pin-moisture-meters",
+      "licence": "vendor page",
+      "accessed": "2026-09-26"
+    },
+    "epa_sampling": {
+      "title": "EPA: Mold testing or sampling",
+      "url": "https://www.epa.gov/mold/mold-testing-or-sampling",
+      "licence": "US government page",
+      "accessed": "2026-09-26"
+    },
+    "epa_guide": {
+      "title": "EPA: A brief guide to mold, moisture and your home",
+      "url": "https://www.epa.gov/mold/brief-guide-mold-moisture-and-your-home",
+      "licence": "US government page",
+      "accessed": "2026-09-26"
+    },
+    "fhwa_ndt": {
+      "title": "FHWA SHRP2 R06A: Nondestructive Testing for Concrete Bridge Decks",
+      "url": "https://www.fhwa.dot.gov/goshrp2/Solutions/Construction/R06A/Nondestructive_Testing_for_Concrete_Bridge_Decks",
+      "licence": "US government page",
+      "accessed": "2026-09-26"
+    },
+    "usda_wood": {
+      "title": "USDA FPL Wood Handbook chapter 14 (source of WOOD_MC_MAX in the shared threshold table)",
+      "url": "https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr282/chapter_14_fpl_gtr282.pdf",
+      "licence": "US government",
+      "accessed": "2026-09-26"
+    }
+  }
+}

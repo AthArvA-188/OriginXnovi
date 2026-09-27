@@ -1,0 +1,183 @@
+{
+ "generated_utc": "2026-09-26T23:21:53Z",
+ "runtime_s": 223.1,
+ "python": "3.13.15",
+ "platform": "Windows-11-10.0.26200-SP0",
+ "versions": {
+  "numpy": "2.5.3",
+  "pandas": "3.0.6",
+  "sklearn": "1.9.1"
+ },
+ "command": "python scripts/train_energy_models.py",
+ "raw_files": {
+  "robod": {
+   "url": "https://ndownloader.figshare.com/files/36228765",
+   "file": "robod_SupplementaryData.zip",
+   "bytes": 4464742,
+   "sha256": "c9ce6b6085d42fe44550fa89dedd25d38feede42e090c552796b84cb7b0b3939",
+   "accessed": "2026-09-26",
+   "licence": "CC BY 4.0",
+   "provenance": "copied from the research download of the same URL (sha256 recorded); not re-downloaded"
+  },
+  "uci357": {
+   "url": "https://archive.ics.uci.edu/static/public/357/occupancy+detection.zip",
+   "file": "uci357_occupancy_detection.zip",
+   "bytes": 335713,
+   "sha256": "4ae3f46aa98eedff564a9f6924d1635173e2fd2c816004342a9be93076d3a81a",
+   "accessed": "2026-09-26",
+   "licence": "CC BY 4.0",
+   "provenance": "copied from the research download of the same URL (sha256 recorded); not re-downloaded"
+  },
+  "uci864": {
+   "url": "https://archive.ics.uci.edu/static/public/864/room+occupancy+estimation.zip",
+   "file": "uci864_room_occupancy_estimation.zip",
+   "bytes": 114333,
+   "sha256": "a0db79ee96ea297c22458ac77a28fba20d41246e75d24b2655ca3ab624cc08fd",
+   "accessed": "2026-09-26",
+   "licence": "CC BY 4.0"
+  },
+  "bdg2_meta": {
+   "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/metadata/metadata.csv",
+   "file": "bdg2_metadata.csv",
+   "bytes": 272024,
+   "sha256": "992d0b29f24f96ad4332bc4dbb534b7bdd7dd2689aad093f94e93068ecddca02",
+   "accessed": "2026-09-26",
+   "licence": "CC BY-SA (version ambiguous: header 4.0, body 3.0 legal code)",
+   "provenance": "copied from the research download of the same URL (sha256 recorded); not re-downloaded"
+  },
+  "bdg2_elec": {
+   "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/meters/cleaned/electricity_cleaned.csv",
+   "file": "bdg2_electricity_cleaned.csv",
+   "bytes": 174977911,
+   "sha256": "b6ffc9b4dfcefe5c753594730a08ae822b0d50fec6815abb8f185591e6c630a3",
+   "accessed": "2026-09-26",
+   "licence": "CC BY-SA (version ambiguous)",
+   "provenance": "copied from the research download of the same URL (sha256 recorded); not re-downloaded"
+  },
+  "bdg2_weather": {
+   "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/weather/weather.csv",
+   "file": "bdg2_weather.csv",
+   "bytes": 19457782,
+   "sha256": "a8189f1c6acdf3b9933a9e6354b8e7c1278cd56a7075929623a17565d44f04bd",
+   "accessed": "2026-09-26",
+   "licence": "CC BY-SA (version ambiguous)",
+   "provenance": "copied from the research download of the same URL (sha256 recorded); not re-downloaded"
+  },
+  "noaa_monthly": {
+   "url": "https://www.ncei.noaa.gov/access/services/data/v1?dataset=normals-monthly-1991-2020&stations=USW00093134,USW00023174&dataTypes=MLY-CLDD-NORMAL,MLY-HTDD-NORMAL,MLY-TAVG-NORMAL&includeStationName=true&format=csv",
+   "file": "noaa_normals_monthly_1991_2020.csv",
+   "bytes": 2118,
+   "sha256": "dfba5a1b8e4a9055e8cf821f1241be743a523e3081a91390e4b8b2739e21d671",
+   "accessed": "2026-09-26",
+   "licence": "US government data"
+  },
+  "noaa_annual": {
+   "url": "https://www.ncei.noaa.gov/access/services/data/v1?dataset=normals-annualseasonal-1991-2020&stations=USW00093134,USW00023174&dataTypes=ANN-CLDD-NORMAL,ANN-HTDD-NORMAL&includeStationName=true&format=csv",
+   "file": "noaa_normals_annual_1991_2020.csv",
+   "bytes": 191,
+   "sha256": "b850dedcfe36413fde885efc043b60fd8ba9d83124bda5387a4975aad21f97cc",
+   "accessed": "2026-09-26",
+   "licence": "US government data"
+  },
+  "openmeteo_2025": {
+   "url": "https://archive-api.open-meteo.com/v1/archive?latitude=34.0511&longitude=-118.2353&start_date=2025-01-01&end_date=2025-12-31&hourly=temperature_2m,shortwave_radiation&timezone=GMT",
+   "file": "openmeteo_la_2025_gmt.json",
+   "bytes": 252952,
+   "sha256": "ca20e3108ea6c0ac282985536795f95bdda1551a7acde3fd855fcbbd9806d90b",
+   "accessed": "2026-09-26",
+   "licence": "CC BY 4.0 (free tier non-commercial)"
+  }
+ },
+ "sources": {
+  "robod": {
+   "key": "robod",
+   "file": "robod_SupplementaryData.zip",
+   "url": "https://ndownloader.figshare.com/files/36228765",
+   "licence": "CC BY 4.0",
+   "label": "REAL",
+   "cite": "Tekler et al. 2022, ROBOD, figshare 19234530, doi:10.1007/s12273-022-0925-9"
+  },
+  "uci357": {
+   "key": "uci357",
+   "file": "uci357_occupancy_detection.zip",
+   "url": "https://archive.ics.uci.edu/static/public/357/occupancy+detection.zip",
+   "licence": "CC BY 4.0",
+   "label": "REAL",
+   "cite": "Candanedo & Feldheim 2016, UCI Occupancy Detection (357)"
+  },
+  "uci864": {
+   "key": "uci864",
+   "file": "uci864_room_occupancy_estimation.zip",
+   "url": "https://archive.ics.uci.edu/static/public/864/room+occupancy+estimation.zip",
+   "licence": "CC BY 4.0",
+   "label": "REAL",
+   "cite": "UCI Room Occupancy Estimation (864)"
+  },
+  "bdg2_meta": {
+   "key": "bdg2_meta",
+   "file": "bdg2_metadata.csv",
+   "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/metadata/metadata.csv",
+   "licence": "CC BY-SA (version ambiguous: header 4.0, body 3.0 legal code)",
+   "label": "REAL",
+   "cite": "Miller et al., Building Data Genome 2"
+  },
+  "bdg2_elec": {
+   "key": "bdg2_elec",
+   "file": "bdg2_electricity_cleaned.csv",
+   "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/meters/cleaned/electricity_cleaned.csv",
+   "licence": "CC BY-SA (version ambiguous)",
+   "label": "REAL",
+   "cite": "Miller et al., Building Data Genome 2"
+  },
+  "bdg2_weather": {
+   "key": "bdg2_weather",
+   "file": "bdg2_weather.csv",
+   "url": "https://media.githubusercontent.com/media/buds-lab/building-data-genome-project-2/master/data/weather/weather.csv",
+   "licence": "CC BY-SA (version ambiguous)",
+   "label": "REAL",
+   "cite": "Miller et al., Building Data Genome 2"
+  },
+  "noaa_monthly": {
+   "key": "noaa_monthly",
+   "file": "noaa_normals_monthly_1991_2020.csv",
+   "url": "https://www.ncei.noaa.gov/access/services/data/v1?dataset=normals-monthly-1991-2020&stations=USW00093134,USW00023174&dataTypes=MLY-CLDD-NORMAL,MLY-HTDD-NORMAL,MLY-TAVG-NORMAL&includeStationName=true&format=csv",
+   "licence": "US government data",
+   "label": "REAL",
+   "cite": "NOAA NCEI U.S. Climate Normals 1991-2020 (monthly)"
+  },
+  "noaa_annual": {
+   "key": "noaa_annual",
+   "file": "noaa_normals_annual_1991_2020.csv",
+   "url": "https://www.ncei.noaa.gov/access/services/data/v1?dataset=normals-annualseasonal-1991-2020&stations=USW00093134,USW00023174&dataTypes=ANN-CLDD-NORMAL,ANN-HTDD-NORMAL&includeStationName=true&format=csv",
+   "licence": "US government data",
+   "label": "REAL",
+   "cite": "NOAA NCEI U.S. Climate Normals 1991-2020 (annual)"
+  },
+  "openmeteo_2025": {
+   "key": "openmeteo_2025",
+   "file": "openmeteo_la_2025_gmt.json",
+   "url": "https://archive-api.open-meteo.com/v1/archive?latitude=34.0511&longitude=-118.2353&start_date=2025-01-01&end_date=2025-12-31&hourly=temperature_2m,shortwave_radiation&timezone=GMT",
+   "licence": "CC BY 4.0 (free tier non-commercial)",
+   "label": "REANALYSIS",
+   "cite": "Open-Meteo Historical Weather API"
+  }
+ },
+ "extra_sources": [
+  {
+   "key": "noaa_gml_solar",
+   "cite": "NOAA GML, General Solar Position Calculations (equations used for day length and sunset)",
+   "url": "https://gml.noaa.gov/grad/solcalc/solareqns.PDF",
+   "licence": "US government work",
+   "label": "COMPUTED",
+   "accessed": "2026-09-26"
+  },
+  {
+   "key": "chronos_bolt_small",
+   "cite": "Hugging Face model card, amazon/chronos-bolt-small (zero-shot comparator)",
+   "url": "https://huggingface.co/amazon/chronos-bolt-small",
+   "licence": "Apache-2.0",
+   "label": "MODEL",
+   "accessed": "2026-09-26"
+  }
+ ]
+}

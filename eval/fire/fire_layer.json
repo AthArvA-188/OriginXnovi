@@ -1,0 +1,452 @@
+{
+ "building_id": "SYN-TOWER-01",
+ "synthetic": true,
+ "stairs": [
+  {
+   "stair_id": "A",
+   "name": "Stair A (west)",
+   "zone_side": "W",
+   "rect_m": [
+    11.0,
+    12.0,
+    14.0,
+    18.0
+   ],
+   "serves": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20",
+    "F21",
+    "F22",
+    "F23",
+    "F24",
+    "F25",
+    "F26",
+    "F27",
+    "F28",
+    "F29",
+    "F30",
+    "F31",
+    "F32"
+   ],
+   "standpipe": true,
+   "pressurized": true,
+   "roof_access": true,
+   "camera_every": 5
+  },
+  {
+   "stair_id": "B",
+   "name": "Stair B (east)",
+   "zone_side": "E",
+   "rect_m": [
+    26.0,
+    12.0,
+    29.0,
+    18.0
+   ],
+   "serves": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20",
+    "F21",
+    "F22",
+    "F23",
+    "F24",
+    "F25",
+    "F26",
+    "F27",
+    "F28",
+    "F29",
+    "F30",
+    "F31",
+    "F32"
+   ],
+   "standpipe": true,
+   "pressurized": true,
+   "roof_access": true,
+   "camera_every": 5
+  }
+ ],
+ "elevators": [
+  {
+   "elevator_id": "FSAE-1",
+   "kind": "fire_service_access",
+   "name": "fire service access elevator 1",
+   "serves": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20",
+    "F21",
+    "F22",
+    "F23",
+    "F24",
+    "F25",
+    "F26",
+    "F27",
+    "F28",
+    "F29",
+    "F30",
+    "F31",
+    "F32"
+   ]
+  },
+  {
+   "elevator_id": "FSAE-2",
+   "kind": "fire_service_access",
+   "name": "fire service access elevator 2",
+   "serves": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16",
+    "F17",
+    "F18",
+    "F19",
+    "F20",
+    "F21",
+    "F22",
+    "F23",
+    "F24",
+    "F25",
+    "F26",
+    "F27",
+    "F28",
+    "F29",
+    "F30",
+    "F31",
+    "F32"
+   ]
+  },
+  {
+   "elevator_id": "LOW",
+   "kind": "passenger",
+   "name": "low-rise passenger bank",
+   "serves": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16"
+   ]
+  },
+  {
+   "elevator_id": "HIGH",
+   "kind": "passenger",
+   "name": "high-rise passenger bank",
+   "serves": [
+    "F01",
+    "F17",
+    "F18",
+    "F19",
+    "F20",
+    "F21",
+    "F22",
+    "F23",
+    "F24",
+    "F25",
+    "F26",
+    "F27",
+    "F28",
+    "F29",
+    "F30",
+    "F31",
+    "F32"
+   ]
+  }
+ ],
+ "fcc_zone": "F01-CORE",
+ "floor_control_valves": {
+  "F01": "A",
+  "F02": "A",
+  "F03": "A",
+  "F04": "A",
+  "F05": "A",
+  "F06": "A",
+  "F07": "A",
+  "F08": "A",
+  "F09": "A",
+  "F10": "A",
+  "F11": "A",
+  "F12": "A",
+  "F13": "A",
+  "F14": "A",
+  "F15": "A",
+  "F16": "A",
+  "F17": "A",
+  "F18": "A",
+  "F19": "A",
+  "F20": "A",
+  "F21": "A",
+  "F22": "A",
+  "F23": "A",
+  "F24": "A",
+  "F25": "A",
+  "F26": "A",
+  "F27": "A",
+  "F28": "A",
+  "F29": "A",
+  "F30": "A",
+  "F31": "A",
+  "F32": "A"
+ },
+ "ess": [
+  {
+   "ess_id": "ESS-1",
+   "zone_id": "F01-ELEC",
+   "chemistry": "lithium-ion (SYNTHETIC)",
+   "synthetic": true
+  }
+ ],
+ "occupants": {
+  "F01": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F02": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F03": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F04": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F05": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F06": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F07": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F08": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F09": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F10": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F11": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F12": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F13": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F14": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F15": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F16": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F17": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F18": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F19": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F20": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F21": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F22": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F23": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F24": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F25": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F26": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F27": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F28": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F29": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F30": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F31": {
+   "design_load": 86,
+   "surveyed": null
+  },
+  "F32": {
+   "design_load": 86,
+   "surveyed": null
+  }
+ },
+ "assistance": [
+  {
+   "floor_id": "F18",
+   "count": 1,
+   "note": "SYNTHETIC entry 1: self-identified as needing help",
+   "synthetic": true
+  },
+  {
+   "floor_id": "F20",
+   "count": 1,
+   "note": "SYNTHETIC entry 2: self-identified as needing help",
+   "synthetic": true
+  },
+  {
+   "floor_id": "F27",
+   "count": 1,
+   "note": "SYNTHETIC entry 3: self-identified as needing help",
+   "synthetic": true
+  }
+ ],
+ "impairments": [
+  {
+   "system": "sprinkler",
+   "floor_ids": [
+    "F23"
+   ],
+   "since": "2026-09-20",
+   "note": "SYNTHETIC: floor control valve at F23 closed for tenant fit-out; fire watch assigned",
+   "synthetic": true
+  }
+ ],
+ "roof_landing": "roof: emergency helicopter landing facility or approved equivalency (SYNTHETIC; LAFD Requirement No. 10)",
+ "height_checks": {
+  "highest_occupied_floor": "F32",
+  "elevation_m": 124.0,
+  "elevation_ft": 406.8,
+  "triggered": {
+   "smokeproof_stairs": true,
+   "fire_service_access_elevators": true,
+   "additional_stair": false
+  },
+  "basis": "IBC_HEIGHT_TRIGGERS_FT: [PUBLIC, secondary] https://www.buildingcode.blog/uploads/1/2/9/9/129929641/building_code_blog_-_high_rise_cheatsheet.pdf"
+ },
+ "notes": [
+  "SYNTHETIC fire layer derived from the synthetic tower geometry; not a real building and no code compliance is claimed.",
+  "Stair enclosures are 12.0 m apart at their nearest points (check value 30 ft = 9.14 m; STAIR_MIN_SEP_FT: [PUBLIC, secondary] https://www.buildingcode.blog/uploads/1/2/9/9/129929641/building_code_blog_-_high_rise_cheatsheet.pdf).",
+  "No occupant evacuation elevators in this tower; where they exist (IBC 3008) they are usable only until Phase I recall (https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.1825.pdf)."
+ ]
+}

@@ -4,6 +4,16 @@ Format follows Keep a Changelog. Two sections per release: **Docs** (planning an
 
 ## [Unreleased]
 
+### Product (2026-09-26, afternoon)
+- Local website `app/site.py` (Streamlit `st.navigation`, bound to 127.0.0.1): home page whose every number is read from `eval/*` at runtime, seven module pages under `app/site_pages/`, and the existing building console as a page. `tests/test_site_nav.py`.
+- Numeric AI (`cascade.numeric`): NumericAgent with seasonal-naive, HGB + split-conformal, robust-z / IsolationForest / supervised HGB, and Chronos-2 / Chronos-Bolt-small precomputed at pinned Hugging Face revisions; REAL BDG2 backtest on 20 office meters; LEAD aggregate anomaly eval; R11.
+- Exterior facade screening (`cascade.facade`): ResNet-18 crack tile classifier trained on the RTX 4060, exported to ONNX, served on CPU; heatmap, top tiles, optional Claude grader with the facade rubric. Interior walls (`cascade.interior`): SonReb strength estimator with core calibration and intervals on REAL NDT databases; field-readings template; R12.
+- Common-area energy (`cascade.building.energy`): code-bounded switching rules, presence models on REAL ROBOD, garage load forecast on REAL BDG2, replay simulator, LA tariff and 12-month calendar, SEMI-SYNTHETIC tower year; R13.
+- LA rain exposure (`cascade.building.rainexposure`, `rainmodel`): ISO 15927-3 per-facade indices and rain roses from 20 water years of REAL ASOS data at 12 stations, circular statistics, per-storm wetting model with temporal and leave-one-station-out tests; R14.
+- Fire plan (`cascade.building.fire`, `firesense`): deterministic plan card on the synthetic tower, three code-drawn SVGs (flowchart, section, swimlane), REAL EN54 verifier held out on the unseen Industrial Hall (did not transfer; shown); R15.
+- Clog Watch (`cascade.building.clog`): WNTR riser simulation with REAL HSB demand, nightly active flow test vs passive monitoring, REAL Bellinge 2020 blockage case, risk-based check scheduler; R16.
+- Decision D-015 records the model, licence and safety choices.
+
 ### Docs (2026-09-25, afternoon)
 - Scope widened to multi-sensor structural health after the team whiteboard (2026-09-25 16:22): `docs/decisions.md` D-014 (Proposed) with the per-person map, options, consequences and revisit trigger; D-001 and D-002 marked "superseded in part by D-014" and kept.
 - `docs/problem_statement.md` v1.1: scope paragraph and hypotheses (H7 to H10) cover thermal heatmaps, sonar, seismic readings and lidar as inputs and SW+HW as the product; new numbers tagged [PUBLIC: url], [PUBLIC, secondary: url] or [Assumption] from R10; honesty box lists what stays imagery-only in the demo; every v1.0 sourced number kept.

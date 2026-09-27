@@ -1,0 +1,8 @@
+reading_id,building_id,floor,wall_id,face,substrate,x_m,y_m,method,scale,value,dry_reference_value,rn_median,n_impacts,path_mm,transit_us,test_type,core_fc_mpa,design_fc_mpa,notes
+T-1,TEST,F01,W-1,N,concrete,1.0,1.0,rebound,rn,,,40,12,,,,,30,SYNTHETIC-FOR-TEST values (not measurements)
+T-2,TEST,F01,W-1,N,concrete,1.0,1.0,upv,m_per_s,,,,,200,50,direct,,30,SYNTHETIC-FOR-TEST
+T-3,TEST,F01,W-2,S,gypsum,,,pinless_meter,relative_0_100,40,20,,,,,,,,SYNTHETIC-FOR-TEST
+T-4,TEST,F01,,,other,,,rh_probe,pct_rh,45,,,,,,,,,SYNTHETIC-FOR-TEST
+T-5,TEST,F01,,,other,,,rh_probe,pct_rh,72,,,,,,,,,SYNTHETIC-FOR-TEST
+T-6,TEST,F01,W-3,E,wood,,,pin_meter,pct_mc_wood,25,,,,,,,,,SYNTHETIC-FOR-TEST
+T-7,TEST,F01,W-4,E,concrete,,,rebound,rn,,,,,,,,,,SYNTHETIC-FOR-TEST invalid: no rebound value

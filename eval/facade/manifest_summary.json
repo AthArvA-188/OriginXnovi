@@ -1,0 +1,106 @@
+{
+  "generated": "2026-09-26T13:59:42",
+  "rules": {
+    "sdnet": "group = source photo (filename prefix before '-'); groups shuffled seed 0; 60/20/20 train/val/test",
+    "ozgenel": "all tiles train only (no source ids)",
+    "bfdd": "OOD test only; 224px windows stride 224 edge-flush at native resolution; crack if >= 20 px of label value 1, no-crack if 0, drop 1-19; group = flight (counter reset or > 600s gap)",
+    "bfdd_value_map": "value 1 = Crack is INFERRED (class order on the landing page, thin shapes, red overlay check); not documented in the archive"
+  },
+  "counts": {
+    "bfdd/ood_test": {
+      "n": 7454,
+      "crack": 6485,
+      "no_crack": 969,
+      "groups": 10
+    },
+    "ozgenel/train": {
+      "n": 40000,
+      "crack": 20000,
+      "no_crack": 20000,
+      "groups": 1
+    },
+    "sdnet_walls/test": {
+      "n": 3529,
+      "crack": 787,
+      "no_crack": 2742,
+      "groups": 14
+    },
+    "sdnet_walls/train": {
+      "n": 11087,
+      "crack": 2218,
+      "no_crack": 8869,
+      "groups": 44
+    },
+    "sdnet_walls/val": {
+      "n": 3522,
+      "crack": 846,
+      "no_crack": 2676,
+      "groups": 14
+    }
+  },
+  "groups": {
+    "sdnet_test": [
+      "sdnet_7073",
+      "sdnet_7074",
+      "sdnet_7077",
+      "sdnet_7085",
+      "sdnet_7089",
+      "sdnet_7099",
+      "sdnet_7104",
+      "sdnet_7112",
+      "sdnet_7113",
+      "sdnet_7114",
+      "sdnet_7122",
+      "sdnet_7126",
+      "sdnet_7136",
+      "sdnet_7139"
+    ],
+    "sdnet_val": [
+      "sdnet_7071",
+      "sdnet_7079",
+      "sdnet_7080",
+      "sdnet_7086",
+      "sdnet_7088",
+      "sdnet_7092",
+      "sdnet_7096",
+      "sdnet_7103",
+      "sdnet_7111",
+      "sdnet_7124",
+      "sdnet_7131",
+      "sdnet_7135",
+      "sdnet_7137",
+      "sdnet_7140"
+    ],
+    "bfdd_flights": {
+      "bfdd_0624_f00": 94,
+      "bfdd_0624_f01": 219,
+      "bfdd_0625_f02": 111,
+      "bfdd_0625_f03": 56,
+      "bfdd_0625_f04": 14,
+      "bfdd_0625_f05": 76,
+      "bfdd_0626_f06": 117,
+      "bfdd_0626_f07": 107,
+      "bfdd_0628_f08": 24,
+      "bfdd_0628_f09": 20
+    }
+  },
+  "bfdd_label_check": {
+    "montage": "eval/facade/bfdd_label_check.jpg",
+    "images_sampled_for_stats": 65,
+    "value_presence": {
+      "1": 65,
+      "2": 14,
+      "3": 34,
+      "4": 44,
+      "5": 40
+    },
+    "median_max_thickness_px": {
+      "1": 4.47213595499958,
+      "2": 32.7172105398876,
+      "3": 25.990774704799854,
+      "4": 17.190483161234482,
+      "5": 42.007562479386394
+    }
+  },
+  "bfdd_frames_with_labels": 838
+}

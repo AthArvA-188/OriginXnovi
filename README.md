@@ -18,6 +18,22 @@ Documents: `docs/problem_statement.md`, `docs/PRD.md` (section 5A for modalities
 `docs/decisions.md`, `docs/implementation_plan.md`, `docs/progress.md`. Research notes in
 `docs/research/` (R10 covers the sensor scope).
 
+## Pavilion Cerebro local site (smart buildings)
+
+The smart-building product (`docs/decisions.md` D-015) runs as a local Streamlit site; nothing is deployed.
+
+```powershell
+conda activate origin_hack
+pip install onnxruntime                    # once: serves the facade crack model on CPU
+streamlit run app/site.py --server.address 127.0.0.1
+```
+
+Pages: Home (every number read from `eval/*`), Exterior inspection, Interior walls, Common-area energy,
+Clog Watch (pipes), Numeric AI, Rain exposure (LA), Fire plan, and the Building console. The site reads
+only committed, precomputed results (`eval/<module>/`, `models/<module>/`). Retraining and precompute use a
+second env, `E:\conda_envs\cerebro_ml` (Python 3.12, CUDA torch, Chronos, WNTR); each research note
+`docs/research/11_*` to `16_*` has a "How to rerun" section. Team findings: `docs/FINDINGS_2026-09-26.md`.
+
 ## Asset classes and modalities
 
 | Modality | Asset classes and rubric | Status |

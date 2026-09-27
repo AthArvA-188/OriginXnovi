@@ -1,0 +1,109 @@
+{
+ "generated_by": "scripts/clog_riser_sim.py",
+ "seed": 2026,
+ "label": "SIMULATED (synthetic riser, REAL HSB demand)",
+ "weeks": {
+  "train": [
+   "2020-01-13",
+   "2020-01-27",
+   "2020-02-17",
+   "2020-03-02",
+   "2020-05-04",
+   "2020-05-11",
+   "2020-06-01",
+   "2020-09-21",
+   "2020-10-12",
+   "2020-10-19",
+   "2020-11-23",
+   "2020-12-07",
+   "2021-01-18",
+   "2021-02-01",
+   "2021-09-27",
+   "2021-10-25"
+  ],
+  "test": [
+   "2022-03-21",
+   "2022-04-25",
+   "2022-05-02",
+   "2022-05-09",
+   "2022-05-16",
+   "2022-08-22",
+   "2022-10-24",
+   "2023-01-23"
+  ]
+ },
+ "commissioning_weeks": {
+  "train": "2020-01-06",
+  "test": "2021-11-15"
+ },
+ "hsb_good_weeks": {
+  "train_pool": 47,
+  "test_pool": 24
+ },
+ "n_sims": 1203,
+ "engine_counts": {
+  "EPANET": 1202,
+  "WNTRSimulator": 1
+ },
+ "sims_with_nonconverged_steps": 0,
+ "median_seconds_per_week": 0.403,
+ "wall_seconds": 206.1,
+ "k_range": [
+  1.0,
+  300.0
+ ],
+ "k_bands": {
+  "mild": [
+   1,
+   10
+  ],
+  "moderate": [
+   10,
+   50
+  ],
+  "severe": [
+   50,
+   300
+  ]
+ },
+ "aged_C": 110.0,
+ "la_demand_scale": 2.5,
+ "engine_check": {
+  "week": "2020-01-13",
+  "cases": [
+   {
+    "clog_pipe": null,
+    "K": 0.0,
+    "epanet_engine": "EPANET",
+    "epanet_s": 0.388,
+    "wntrsim_s": 2.92,
+    "max_abs_diff_m": 0.00015
+   },
+   {
+    "clog_pipe": "P04",
+    "K": 300.0,
+    "epanet_engine": "EPANET",
+    "epanet_s": 0.634,
+    "wntrsim_s": 35.83,
+    "max_abs_diff_m": 0.00734
+   },
+   {
+    "clog_pipe": "STR_L",
+    "K": 300.0,
+    "epanet_engine": "EPANET",
+    "epanet_s": 0.319,
+    "wntrsim_s": 31.96,
+    "max_abs_diff_m": 0.00735
+   },
+   {
+    "clog_pipe": "P30",
+    "K": 30.0,
+    "epanet_engine": "EPANET",
+    "epanet_s": 1.142,
+    "wntrsim_s": 4.12,
+    "max_abs_diff_m": 0.00066
+   }
+  ],
+  "note": "Pressure difference between EPANET (unbalanced=CONTINUE 10) and WNTR's own solver, all sensors, all 1,008 steps."
+ }
+}

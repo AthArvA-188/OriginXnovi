@@ -1,0 +1,413 @@
+{
+ "created_utc": "2026-09-26T22:31:58Z",
+ "sources": [
+  {
+   "n": 1,
+   "title": "amazon/chronos-2 model card",
+   "url": "https://huggingface.co/amazon/chronos-2",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 120M params, univariate/multivariate/covariates, quantiles, context 8192/horizon 1024, CPU+GPU, predict_df example",
+   "moved_from": null
+  },
+  {
+   "n": 2,
+   "title": "amazon-science/chronos-forecasting GitHub README",
+   "url": "https://github.com/amazon-science/chronos-forecasting",
+   "accessed": "2026-09-26",
+   "supports": "Model table with ids and sizes (chronos-2 120M, chronos-2-small 28M, bolt tiny/mini/small/base), Apache-2.0, predict_df with future_df",
+   "moved_from": null
+  },
+  {
+   "n": 3,
+   "title": "chronos-forecasting on PyPI (and JSON API)",
+   "url": "https://pypi.org/pypi/chronos-forecasting/json",
+   "accessed": "2026-09-26",
+   "supports": "v2.3.2 (2026-09-08), Requires-Python >=3.10, deps torch<3,>=2.2, transformers<6,>=4.41, pandas<4, py3-none-any wheel",
+   "moved_from": null
+  },
+  {
+   "n": 4,
+   "title": "Chronos-2: From Univariate to Universal Forecasting (arXiv 2510.15821)",
+   "url": "https://arxiv.org/abs/2510.15821",
+   "accessed": "2026-09-26",
+   "supports": "Group attention, covariate-informed zero-shot, SOTA claim on fev-bench/GIFT-Eval/Chronos Bench II, energy and retail case studies",
+   "moved_from": null
+  },
+  {
+   "n": 5,
+   "title": "amazon/chronos-bolt-small model card",
+   "url": "https://huggingface.co/amazon/chronos-bolt-small",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 48M params, quantile output, CPU/CUDA/MPS, zero-shot",
+   "moved_from": null
+  },
+  {
+   "n": 6,
+   "title": "amazon/chronos-bolt-tiny model card",
+   "url": "https://huggingface.co/amazon/chronos-bolt-tiny",
+   "accessed": "2026-09-26",
+   "supports": "Chronos-Bolt size table 9M/21M/48M/205M, Apache-2.0",
+   "moved_from": null
+  },
+  {
+   "n": 7,
+   "title": "autogluon/chronos-2-small model card",
+   "url": "https://huggingface.co/autogluon/chronos-2-small",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 27.9M params small Chronos-2 variant",
+   "moved_from": null
+  },
+  {
+   "n": 8,
+   "title": "google/timesfm-2.5-200m-pytorch model card",
+   "url": "https://huggingface.co/google/timesfm-2.5-200m-pytorch",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 200M params, context 1024, horizon 256, continuous quantile head, example code",
+   "moved_from": null
+  },
+  {
+   "n": 9,
+   "title": "timesfm on PyPI (README) and GitHub",
+   "url": "https://pypi.org/project/timesfm/",
+   "accessed": "2026-09-26",
+   "supports": "v3.0.2; timesfm[torch] extra; 2.5 code under src/timesfm; TimesFM 3.0 weights under timesfm-non-commercial-license-v1.0, non-production; weights up to 2.5 Apache-2.0",
+   "moved_from": null
+  },
+  {
+   "n": 10,
+   "title": "Salesforce/moirai-2.0-R-small model card",
+   "url": "https://huggingface.co/Salesforce/moirai-2.0-R-small",
+   "accessed": "2026-09-26",
+   "supports": "cc-by-nc-4.0, 11.4M params, 'This release is for research purposes only'",
+   "moved_from": null
+  },
+  {
+   "n": 11,
+   "title": "uni2ts PyPI JSON",
+   "url": "https://pypi.org/pypi/uni2ts/json",
+   "accessed": "2026-09-26",
+   "supports": "v2.0.0 pins numpy~=1.26.0, torch<2.5,>=2.1, gluonts~=0.14.3",
+   "moved_from": null
+  },
+  {
+   "n": 12,
+   "title": "ibm-granite/granite-timeseries-ttm-r2 model card",
+   "url": "https://huggingface.co/ibm-granite/granite-timeseries-ttm-r2",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 805K+ params, CPU-capable, minimum context 512/1024, minutely/hourly only (r2.1 adds daily/weekly), zero-shot and fine-tune",
+   "moved_from": null
+  },
+  {
+   "n": 13,
+   "title": "ibm-granite/granite-timeseries-tspulse-r1 model card",
+   "url": "https://huggingface.co/ibm-granite/granite-timeseries-tspulse-r1",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, ~1M params, GPU-free, anomaly detection/imputation/classification/search, AD needs ~1536-2048 points, TSB-AD +20% claim",
+   "moved_from": null
+  },
+  {
+   "n": 14,
+   "title": "granite-tsfm TSPulse anomaly detection notebook",
+   "url": "https://github.com/ibm-granite/granite-tsfm/blob/main/notebooks/hfdemo/tspulse_anomaly_detection.ipynb",
+   "accessed": "2026-09-26",
+   "supports": "API: TSPulseForReconstruction, TimeSeriesAnomalyDetectionPipeline, AnomalyScoreMethods.TIME_RECONSTRUCTION/FREQUENCY_RECONSTRUCTION/PREDICTIVE",
+   "moved_from": null
+  },
+  {
+   "n": 15,
+   "title": "granite-tsfm PyPI JSON",
+   "url": "https://pypi.org/pypi/granite-tsfm/json",
+   "accessed": "2026-09-26",
+   "supports": "v0.3.9 Requires-Python <3.14,>=3.11; deps scikit-learn<1.8, torch<2.12,>=2.10, transformers[torch]<6",
+   "moved_from": null
+  },
+  {
+   "n": 16,
+   "title": "AutonLab/MOMENT-1-large model card",
+   "url": "https://huggingface.co/AutonLab/MOMENT-1-large",
+   "accessed": "2026-09-26",
+   "supports": "MIT, 0.3B params, tasks forecasting/classification/anomaly/imputation/embedding, Python 3.11 recommended",
+   "moved_from": null
+  },
+  {
+   "n": 17,
+   "title": "momentfm PyPI JSON",
+   "url": "https://pypi.org/pypi/momentfm/json",
+   "accessed": "2026-09-26",
+   "supports": "v0.1.4 pins numpy==1.25.2, transformers==4.33.3, torch~=2.0, huggingface-hub==0.24.0",
+   "moved_from": null
+  },
+  {
+   "n": 18,
+   "title": "Datadog/Toto-Open-Base-1.0 model card",
+   "url": "https://huggingface.co/Datadog/Toto-Open-Base-1.0",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 151M params, observability-metric training data, multivariate, Student-T mixture output, BOOM/GIFT-Eval claims",
+   "moved_from": null
+  },
+  {
+   "n": 19,
+   "title": "toto-ts PyPI JSON",
+   "url": "https://pypi.org/pypi/toto-ts/json",
+   "accessed": "2026-09-26",
+   "supports": "v0.2.0 pins torch==2.7.0, numpy==1.26.4, transformers==4.52.1, gluonts[torch]==0.16.2 and many exact pins",
+   "moved_from": null
+  },
+  {
+   "n": 20,
+   "title": "time-series-foundation-models/Lag-Llama model card",
+   "url": "https://huggingface.co/time-series-foundation-models/Lag-Llama",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 2.45M params, probabilistic, 'performs best when finetuned', context from 32",
+   "moved_from": null
+  },
+  {
+   "n": 21,
+   "title": "Lag-Llama requirements.txt",
+   "url": "https://github.com/time-series-foundation-models/lag-llama/blob/main/requirements.txt",
+   "accessed": "2026-09-26",
+   "supports": "gluonts[torch]<=0.14.4, torch>=2.0.0, wandb",
+   "moved_from": null
+  },
+  {
+   "n": 22,
+   "title": "thuml/sundial-base-128m model card",
+   "url": "https://huggingface.co/thuml/sundial-base-128m",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 128M params, trust_remote_code, transformers==4.40.1 recommended, generative samples, context up to 2880",
+   "moved_from": null
+  },
+  {
+   "n": 23,
+   "title": "PriorLabs/TabPFN GitHub README",
+   "url": "https://github.com/PriorLabs/TabPFN",
+   "accessed": "2026-09-26",
+   "supports": "TabPFN-3.5 default; 2.5/2.6/3/3.5 weights non-commercial; TabPFN-2 Prior Labs License (Apache 2.0 + attribution); licence acceptance via login/TABPFN_TOKEN; CPU limits; ModelVersion.V2 usage",
+   "moved_from": null
+  },
+  {
+   "n": 24,
+   "title": "Prior-Labs/TabPFN-v2-reg model card",
+   "url": "https://huggingface.co/Prior-Labs/TabPFN-v2-reg",
+   "accessed": "2026-09-26",
+   "supports": "Prior Labs License (Apache 2.0 with additional attribution requirement); CPU with GPU optional",
+   "moved_from": null
+  },
+  {
+   "n": 25,
+   "title": "soda-inria/tabicl GitHub README and LICENSE",
+   "url": "https://github.com/soda-inria/tabicl",
+   "accessed": "2026-09-26",
+   "supports": "TabICLv2 default, TabICLClassifier and TabICLRegressor, 300-100K rows optimal, BSD 3-Clause licence file",
+   "moved_from": null
+  },
+  {
+   "n": 26,
+   "title": "jingang/TabICL Hugging Face page",
+   "url": "https://huggingface.co/jingang/TabICL",
+   "accessed": "2026-09-26",
+   "supports": "licence tag bsd-3-clause; TabICL and TabICLv2 papers",
+   "moved_from": null
+  },
+  {
+   "n": 27,
+   "title": "NX-AI/TiRex model card",
+   "url": "https://huggingface.co/NX-AI/TiRex",
+   "accessed": "2026-09-26",
+   "supports": "nx-ai-community-license, 35M params, tirex-ts package, tested on Linux/macOS only",
+   "moved_from": null
+  },
+  {
+   "n": 28,
+   "title": "NX-AI/tirex LICENSE",
+   "url": "https://github.com/NX-AI/tirex/blob/main/LICENSE",
+   "accessed": "2026-09-26",
+   "supports": "NXAI Community License based on Llama 3 licence with Additional Commercial Terms for large enterprises",
+   "moved_from": null
+  },
+  {
+   "n": 29,
+   "title": "ibm-granite/granite-timeseries-flowstate-r1 model card",
+   "url": "https://huggingface.co/ibm-granite/granite-timeseries-flowstate-r1",
+   "accessed": "2026-09-26",
+   "supports": "Apache-2.0, 9.07M params (18.5M for v1.1 per update note), sampling-rate invariant zero-shot forecaster, GIFT-Eval MASE claim",
+   "moved_from": null
+  },
+  {
+   "n": 30,
+   "title": "NREL/BuildingsBench GitHub",
+   "url": "https://github.com/NatLabRockies/BuildingsBench",
+   "accessed": "2026-09-26",
+   "supports": "BSD-3-Clause, Buildings-900K synthetic pretraining, checkpoints on OEDI S3, persistence baselines NRMSE",
+   "moved_from": "https://github.com/NREL/BuildingsBench"
+  },
+  {
+   "n": 31,
+   "title": "BuildingsBench paper (arXiv 2307.00142)",
+   "url": "https://arxiv.org/abs/2307.00142",
+   "accessed": "2026-09-26",
+   "supports": "'Synthetically pretrained models generalize surprisingly well to real commercial buildings'; fine-tuning helps most targets",
+   "moved_from": null
+  },
+  {
+   "n": 32,
+   "title": "microsoft/LightGBM LICENSE",
+   "url": "https://github.com/lightgbm-org/LightGBM/blob/master/LICENSE",
+   "accessed": "2026-09-26",
+   "supports": "MIT licence; PyPI lightgbm 4.7.0 has win_amd64 wheel",
+   "moved_from": "https://github.com/microsoft/LightGBM/blob/master/LICENSE"
+  },
+  {
+   "n": 33,
+   "title": "scikit-learn IsolationForest docs (1.9.1)",
+   "url": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html",
+   "accessed": "2026-09-26",
+   "supports": "API (fit, score_samples, decision_function), params, Liu/Ting/Zhou 2008 reference",
+   "moved_from": null
+  },
+  {
+   "n": 34,
+   "title": "scikit-learn HistGradientBoostingRegressor docs",
+   "url": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.HistGradientBoostingRegressor.html",
+   "accessed": "2026-09-26",
+   "supports": "loss='quantile', native NaN support, 'inspired by LightGBM'",
+   "moved_from": null
+  },
+  {
+   "n": 35,
+   "title": "buds-lab/building-data-genome-project-2 GitHub",
+   "url": "https://github.com/buds-lab/building-data-genome-project-2",
+   "accessed": "2026-09-26",
+   "supports": "3,053 meters, 1,636 buildings, 19 sites, hourly 2016-2017, file layout (meters/cleaned, weather, metadata); files served via Git LFS media URLs",
+   "moved_from": null
+  },
+  {
+   "n": 36,
+   "title": "BDG2 LICENSE file",
+   "url": "https://github.com/buds-lab/building-data-genome-project-2/blob/master/LICENSE",
+   "accessed": "2026-09-26",
+   "supports": "Header reads 'Attribution-ShareAlike 4.0 Unported' but the body is the CC BY-SA 3.0 Unported legal code; GitHub reports NOASSERTION",
+   "moved_from": null
+  },
+  {
+   "n": 37,
+   "title": "samy101/lead-dataset GitHub",
+   "url": "https://github.com/samy101/lead-dataset",
+   "accessed": "2026-09-26",
+   "supports": "LEAD1.0 annotated GEPIII meters; data/lead1.0-small.zip 10,027,589 bytes; GitHub API licence null (no licence stated)",
+   "moved_from": null
+  },
+  {
+   "n": 38,
+   "title": "LEAD1.0 paper (arXiv 2203.17256)",
+   "url": "https://arxiv.org/abs/2203.17256",
+   "accessed": "2026-09-26",
+   "supports": "1,413 annotated smart-meter series over one year; eight AD methods benchmarked",
+   "moved_from": null
+  },
+  {
+   "n": 39,
+   "title": "UCI Occupancy Detection dataset",
+   "url": "https://archive.ics.uci.edu/dataset/357/occupancy+detection",
+   "accessed": "2026-09-26",
+   "supports": "CC BY 4.0, 20,560 instances, temperature/humidity/light/CO2/humidity ratio, per-minute, DOI 10.24432/C5X01N",
+   "moved_from": null
+  },
+  {
+   "n": 40,
+   "title": "LBNL Fault Detection and Diagnostics Datasets (OEDI 5763)",
+   "url": "https://data.openei.org/submissions/5763",
+   "accessed": "2026-09-26",
+   "supports": "CC BY 4.0, DOI 10.25984/1881324, seven HVAC system types, simulation/lab/field",
+   "moved_from": null
+  },
+  {
+   "n": 41,
+   "title": "LBNL FDD file server index",
+   "url": "https://fdddata.lbl.gov/data/",
+   "accessed": "2026-09-26",
+   "supports": "All listed folders are named Simulated_LBNL_FDD_Data_Sets_* (RTU, SDAHU, DDAHU, FCU, FPU, chiller, boiler)",
+   "moved_from": null
+  },
+  {
+   "n": 42,
+   "title": "Streamlit Community Cloud: manage your app (resource limits)",
+   "url": "https://docs.streamlit.io/deploy/streamlit-community-cloud/manage-your-app",
+   "accessed": "2026-09-26",
+   "supports": "CPU 0.078-2 cores, memory 690 MB-2.7 GB, storage up to 50 GB (as of Feb 2024)",
+   "moved_from": null
+  },
+  {
+   "n": 43,
+   "title": "PyTorch wheel index cu126 / cpu",
+   "url": "https://download.pytorch.org/whl/cu126/torch/",
+   "accessed": "2026-09-26",
+   "supports": "torch-2.14.0+cu126-cp313-win_amd64 exists (Content-Length 2,602,775,157); cpu wheel torch-2.14.0+cpu-cp313 is 123,995,955 bytes",
+   "moved_from": null
+  },
+  {
+   "n": 44,
+   "title": "torch PyPI JSON",
+   "url": "https://pypi.org/pypi/torch/json",
+   "accessed": "2026-09-26",
+   "supports": "torch 2.14.0 (2026-09-02) has cp310-cp314 win_amd64 wheels",
+   "moved_from": null
+  },
+  {
+   "n": 45,
+   "title": "transformers 5.17.0 PyPI JSON",
+   "url": "https://pypi.org/pypi/transformers/5.17.0/json",
+   "accessed": "2026-09-26",
+   "supports": "requires huggingface-hub<2.0,>=1.5.0 (conflicts with origin_hack's huggingface_hub 2.0.0)",
+   "moved_from": null
+  },
+  {
+   "n": 46,
+   "title": "Hugging Face Hub API model_info (revision SHAs, licence tags)",
+   "url": "https://huggingface.co/api/models/amazon/chronos-2",
+   "accessed": "2026-09-26",
+   "supports": "amazon/chronos-2 sha 29ec3766d36d6f73f0696f85560a422f50e8498c; chronos-bolt-small sha 772f3d25d38aec6d914c8949dab4462e2d46f5d8; licence tags per model; none gated",
+   "moved_from": null
+  },
+  {
+   "n": 47,
+   "title": "Kaggle LEAD competition (energy-anomaly-detection) rules",
+   "url": "https://www.kaggle.com/competitions/energy-anomaly-detection/rules",
+   "accessed": "2026-09-26",
+   "supports": "UNVERIFIED: could not open (fetch blocked); data terms unknown",
+   "moved_from": null
+  },
+  {
+   "n": 48,
+   "title": "BDG2 paper, Scientific Data 7, 368 (2020)",
+   "url": "https://doi.org/10.1038/s41597-020-00712-x",
+   "accessed": "2026-09-26",
+   "supports": "Citation for BDG2 (cited via the repo README; paper itself not opened)",
+   "moved_from": null
+  },
+  {
+   "n": 49,
+   "title": "tabpfn PyPI JSON",
+   "url": "https://pypi.org/pypi/tabpfn/json",
+   "accessed": "2026-09-26",
+   "supports": "v9.0.0 Apache-2.0 package; deps torch>=2.5, lightgbm>=4.4, skrub, matplotlib",
+   "moved_from": null
+  },
+  {
+   "n": 50,
+   "title": "numpy 1.26.4 and 1.25.2 release files (PyPI JSON)",
+   "url": "https://pypi.org/pypi/numpy/1.26.4/json",
+   "accessed": "2026-09-26",
+   "supports": "numpy 1.26.4 win wheels only up to cp312; 1.25.2 only up to cp311, so pins in uni2ts/toto-ts/momentfm block Python 3.13",
+   "moved_from": null
+  },
+  {
+   "n": 51,
+   "title": "Salesforce/GiftEvalPretrain dataset (folder listing)",
+   "url": "https://huggingface.co/datasets/Salesforce/GiftEvalPretrain",
+   "accessed": "2026-09-26",
+   "supports": "contains bdg-2_bear, bdg-2_fox, bdg-2_panther, bdg-2_rat, bull, cockatoo and hog folders (BDG2 sites excluded from our test pool)",
+   "moved_from": null
+  }
+ ]
+}

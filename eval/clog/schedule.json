@@ -1,0 +1,481 @@
+{
+ "as_of": "2026-09-26",
+ "label": "Proposed schedule (advisory; every row requires human approval)",
+ "register_label": "SYNTHETIC demo asset register; strainer and drain-down readings SIMULATED",
+ "rows": [
+  {
+   "asset_id": "SB-B",
+   "asset": "Stack B base cleanout (serves F2-F16)",
+   "kind": "stack_base",
+   "last_check": "2026-02-10",
+   "next_check": "2026-05-12",
+   "days_from_as_of": -137,
+   "status": "overdue",
+   "reason": "Base 365 d / risk x4.00 = 91 d (consequence x1.36 (15 floors drain or feed through it); history x2 (1 backup(s) in 12 months); nightly drain-down test ratio 1.99 (watch band))",
+   "performed_by": "Drain contractor (CCTV camera, jetting if needed)",
+   "rule_keys": [
+    "CAMERA_BASE_INTERVAL",
+    "PERFORMANCE_HISTORY",
+    "DRAIN_RATIO_BANDS"
+   ],
+   "rule_tags": [
+    "team-proposed",
+    "PUBLIC",
+    "team-proposed"
+   ],
+   "rule_urls": [
+    "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SIMULATED drain-down test (partial clog, orifice opening 0.2)"
+  },
+  {
+   "asset_id": "GT-1",
+   "asset": "Grease trap under ground-floor bar sink",
+   "kind": "grease_trap",
+   "last_check": "2026-09-25",
+   "next_check": "2026-09-27",
+   "days_from_as_of": 1,
+   "status": "due within 7 days",
+   "reason": "Grease traps are cleaned and visually inspected daily.",
+   "performed_by": "Kitchen staff (daily clean and visual inspection)",
+   "rule_keys": [
+    "GREASE_TRAP_DAILY"
+   ],
+   "rule_tags": [
+    "PUBLIC"
+   ],
+   "rule_urls": [
+    "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SYNTHETIC"
+  },
+  {
+   "asset_id": "BD-1",
+   "asset": "Building drain main cleanout",
+   "kind": "building_drain",
+   "last_check": "2026-03-15",
+   "next_check": "2026-09-27",
+   "days_from_as_of": 1,
+   "status": "due within 7 days",
+   "reason": "Backup on 2026-09-25: camera inspection within 48 hours.",
+   "performed_by": "Drain contractor (CCTV camera, jetting if needed)",
+   "rule_keys": [
+    "CAMERA_BASE_INTERVAL",
+    "PERFORMANCE_HISTORY",
+    "CCTV_48H_AFTER_OVERFLOW"
+   ],
+   "rule_tags": [
+    "team-proposed",
+    "PUBLIC",
+    "team-proposed"
+   ],
+   "rule_urls": [
+    "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf",
+    "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SYNTHETIC backup ticket"
+  },
+  {
+   "asset_id": "STR-M",
+   "asset": "Strainer at mid-zone PRV station (F12)",
+   "kind": "prv_strainer",
+   "last_check": "2026-06-15",
+   "next_check": "2026-10-03",
+   "days_from_as_of": 7,
+   "status": "due within 7 days",
+   "reason": "Nightly flow test alarmed on 4 of 7 nights on this strainer, meeting the work-order rule of at least 2 alarms in 3 consecutive nights (extra head loss about 1.08 m at 4 L/s): inspect within 7 days.",
+   "performed_by": "Building engineer (isolate the PRV station, open and clean the strainer)",
+   "rule_keys": [
+    "UPC_608_2_PRV_80PSI",
+    "STRAINER_BASE_INTERVAL",
+    "PERSISTENCE_2_OF_3"
+   ],
+   "rule_tags": [
+    "PUBLIC",
+    "team-proposed",
+    "team-proposed"
+   ],
+   "rule_urls": [
+    "https://up.codes/s/excessive-water-pressure"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SIMULATED nightly-test readings (test scenario 511, true K 34)"
+  },
+  {
+   "asset_id": "GI-1",
+   "asset": "Grease interceptor, ground-floor restaurant (FSE permit on file)",
+   "kind": "grease_interceptor",
+   "last_check": "2026-08-26",
+   "next_check": "2026-10-06",
+   "days_from_as_of": 10,
+   "status": "due within 30 days",
+   "reason": "FOG + solids 19% rising 3.3 points/week; projected to reach 25% on 2026-10-09; pump out 3 days before.",
+   "performed_by": "Licensed grease hauler, logged in the FSE cleaning logbook",
+   "rule_keys": [
+    "FOG_25PCT",
+    "FOG_PROGRAM"
+   ],
+   "rule_tags": [
+    "PUBLIC",
+    "PUBLIC"
+   ],
+   "rule_urls": [
+    "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf",
+    "https://sanitation.lacity.gov/programs/fats-oils-and-grease-fog"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SYNTHETIC"
+  },
+  {
+   "asset_id": "SB-A",
+   "asset": "Stack A base cleanout (serves F2-F32)",
+   "kind": "stack_base",
+   "last_check": "2026-06-01",
+   "next_check": "2026-10-09",
+   "days_from_as_of": 13,
+   "status": "due within 30 days",
+   "reason": "Base 365 d / risk x2.82 = 130 d (consequence x2.82 (31 floors drain or feed through it))",
+   "performed_by": "Drain contractor (CCTV camera, jetting if needed)",
+   "rule_keys": [
+    "CAMERA_BASE_INTERVAL",
+    "PERFORMANCE_HISTORY",
+    "DRAIN_RATIO_BANDS"
+   ],
+   "rule_tags": [
+    "team-proposed",
+    "PUBLIC",
+    "team-proposed"
+   ],
+   "rule_urls": [
+    "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SIMULATED drain-down test (clean drain, opening 1.0)"
+  },
+  {
+   "asset_id": "BF-1",
+   "asset": "Reduced-pressure backflow assembly, domestic water service",
+   "kind": "backflow",
+   "last_check": "2025-10-20",
+   "next_check": "2026-10-20",
+   "days_from_as_of": 24,
+   "status": "due within 30 days",
+   "reason": "Annual test: last tested 2025-10-20; regulatory maximum 365 days.",
+   "performed_by": "Certified Backflow Prevention Assembly Tester licensed by LA County Department of Public Health",
+   "rule_keys": [
+    "BACKFLOW_ANNUAL"
+   ],
+   "rule_tags": [
+    "PUBLIC"
+   ],
+   "rule_urls": [
+    "https://www.ladwp.com/sites/default/files/2025-04/LADWP%20Rule%2016-D%20REVISED%20July_15_2015.pdf"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SYNTHETIC"
+  },
+  {
+   "asset_id": "STR-L",
+   "asset": "Strainer at low-zone PRV station (F1)",
+   "kind": "prv_strainer",
+   "last_check": "2026-05-01",
+   "next_check": "2026-10-28",
+   "days_from_as_of": 32,
+   "status": "scheduled",
+   "reason": "No persistent nightly-test alarm (alarmed on 0 of 7 nights); base interval 180 days from 2026-05-01.",
+   "performed_by": "Building engineer (isolate the PRV station, open and clean the strainer)",
+   "rule_keys": [
+    "UPC_608_2_PRV_80PSI",
+    "STRAINER_BASE_INTERVAL",
+    "PERSISTENCE_2_OF_3"
+   ],
+   "rule_tags": [
+    "PUBLIC",
+    "team-proposed",
+    "team-proposed"
+   ],
+   "rule_urls": [
+    "https://up.codes/s/excessive-water-pressure"
+   ],
+   "requires_human_approval": true,
+   "input_provenance": "SIMULATED nightly-test readings (test scenario 482, true K 0)"
+  }
+ ],
+ "register": [
+  {
+   "asset_id": "BF-1",
+   "kind": "backflow",
+   "name": "Reduced-pressure backflow assembly, domestic water service",
+   "last_check": "2025-10-20",
+   "floors_served": 0,
+   "backups_12m": 0,
+   "last_backup": null,
+   "fse_permit": false,
+   "fog_readings": [],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": null,
+   "nightly_nights": null,
+   "extra_headloss_m": null,
+   "drain_down_ratio": null,
+   "drain_down_censored": false,
+   "provenance": "SYNTHETIC"
+  },
+  {
+   "asset_id": "GT-1",
+   "kind": "grease_trap",
+   "name": "Grease trap under ground-floor bar sink",
+   "last_check": "2026-09-25",
+   "floors_served": 0,
+   "backups_12m": 0,
+   "last_backup": null,
+   "fse_permit": true,
+   "fog_readings": [],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": null,
+   "nightly_nights": null,
+   "extra_headloss_m": null,
+   "drain_down_ratio": null,
+   "drain_down_censored": false,
+   "provenance": "SYNTHETIC"
+  },
+  {
+   "asset_id": "GI-1",
+   "kind": "grease_interceptor",
+   "name": "Grease interceptor, ground-floor restaurant (FSE permit on file)",
+   "last_check": "2026-08-26",
+   "floors_served": 0,
+   "backups_12m": 0,
+   "last_backup": null,
+   "fse_permit": true,
+   "fog_readings": [
+    [
+     "2026-08-29",
+     6.0
+    ],
+    [
+     "2026-09-05",
+     9.0
+    ],
+    [
+     "2026-09-12",
+     13.0
+    ],
+    [
+     "2026-09-19",
+     16.0
+    ],
+    [
+     "2026-09-26",
+     19.0
+    ]
+   ],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": null,
+   "nightly_nights": null,
+   "extra_headloss_m": null,
+   "drain_down_ratio": null,
+   "drain_down_censored": false,
+   "provenance": "SYNTHETIC"
+  },
+  {
+   "asset_id": "STR-L",
+   "kind": "prv_strainer",
+   "name": "Strainer at low-zone PRV station (F1)",
+   "last_check": "2026-05-01",
+   "floors_served": 0,
+   "backups_12m": 0,
+   "last_backup": null,
+   "fse_permit": false,
+   "fog_readings": [],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": 0,
+   "nightly_nights": 7,
+   "extra_headloss_m": 0.19311520042203567,
+   "drain_down_ratio": null,
+   "drain_down_censored": false,
+   "provenance": "SIMULATED nightly-test readings (test scenario 482, true K 0)"
+  },
+  {
+   "asset_id": "STR-M",
+   "kind": "prv_strainer",
+   "name": "Strainer at mid-zone PRV station (F12)",
+   "last_check": "2026-06-15",
+   "floors_served": 0,
+   "backups_12m": 0,
+   "last_backup": null,
+   "fse_permit": false,
+   "fog_readings": [],
+   "nightly_alarm_persistent": true,
+   "nightly_alarm_nights": 4,
+   "nightly_nights": 7,
+   "extra_headloss_m": 1.0801584286185613,
+   "drain_down_ratio": null,
+   "drain_down_censored": false,
+   "provenance": "SIMULATED nightly-test readings (test scenario 511, true K 34)"
+  },
+  {
+   "asset_id": "SB-A",
+   "kind": "stack_base",
+   "name": "Stack A base cleanout (serves F2-F32)",
+   "last_check": "2026-06-01",
+   "floors_served": 31,
+   "backups_12m": 0,
+   "last_backup": null,
+   "fse_permit": false,
+   "fog_readings": [],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": null,
+   "nightly_nights": null,
+   "extra_headloss_m": null,
+   "drain_down_ratio": 0.9776536312849162,
+   "drain_down_censored": false,
+   "provenance": "SIMULATED drain-down test (clean drain, opening 1.0)"
+  },
+  {
+   "asset_id": "SB-B",
+   "kind": "stack_base",
+   "name": "Stack B base cleanout (serves F2-F16)",
+   "last_check": "2026-02-10",
+   "floors_served": 15,
+   "backups_12m": 1,
+   "last_backup": null,
+   "fse_permit": false,
+   "fog_readings": [],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": null,
+   "nightly_nights": null,
+   "extra_headloss_m": null,
+   "drain_down_ratio": 1.988826815642458,
+   "drain_down_censored": false,
+   "provenance": "SIMULATED drain-down test (partial clog, orifice opening 0.2)"
+  },
+  {
+   "asset_id": "BD-1",
+   "kind": "building_drain",
+   "name": "Building drain main cleanout",
+   "last_check": "2026-03-15",
+   "floors_served": 32,
+   "backups_12m": 1,
+   "last_backup": "2026-09-25",
+   "fse_permit": false,
+   "fog_readings": [],
+   "nightly_alarm_persistent": false,
+   "nightly_alarm_nights": null,
+   "nightly_nights": null,
+   "extra_headloss_m": null,
+   "drain_down_ratio": null,
+   "drain_down_censored": false,
+   "provenance": "SYNTHETIC backup ticket"
+  }
+ ],
+ "rules": {
+  "BACKFLOW_ANNUAL": {
+   "value": 365,
+   "unit": "days",
+   "tag": "PUBLIC",
+   "meaning": "Backflow prevention assemblies inspected and tested at least annually, by a certified Backflow Prevention Assembly Tester licensed by the Los Angeles County Department of Public Health; test records kept at least three years.",
+   "quote": "All approved backflow assemblies shall be inspected and tested annually or more frequently if determined to be necessary by this Department.",
+   "source": "LADWP Rule 16-D, sections 9.1-9.2",
+   "url": "https://www.ladwp.com/sites/default/files/2025-04/LADWP%20Rule%2016-D%20REVISED%20July_15_2015.pdf"
+  },
+  "CAMERA_BASE_INTERVAL": {
+   "value": 365,
+   "unit": "days",
+   "tag": "team-proposed",
+   "meaning": "Default camera (CCTV) interval for stack bases and the building drain. No authoritative fixed interval for building drains was found; shortened by risk and after backups, mirroring LASAN's performance-history approach.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "CCTV_48H_AFTER_OVERFLOW": {
+   "value": 48,
+   "unit": "hours",
+   "tag": "team-proposed",
+   "meaning": "Camera-inspect a drain within about 48 hours after any backup or overflow. This is LASAN's practice for CITY sewer pipes, adopted here as a team-proposed rule for building drains; no building-drain rule was found.",
+   "quote": "usually within 48 hours after the initial occurrence of an overflow",
+   "source": "LA Sanitation SSMP v3.0 (city sewer practice)",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "DRAIN_RATIO_BANDS": {
+   "value": {
+    "watch": 1.2,
+    "urgent": 2.0
+   },
+   "unit": "drain-down time / commissioning value",
+   "tag": "team-proposed",
+   "meaning": "Drain-down ratio 1.2 or more: schedule camera inspection; 2.0 or more, or no drain-down within the test window: urgent work order.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "FOG_25PCT": {
+   "value": 25,
+   "unit": "% of total liquid depth",
+   "tag": "PUBLIC",
+   "meaning": "Grease interceptors of food service establishments (FSEs) cleaned often enough that combined FOG and solids never exceed 25% of total liquid depth, with a cleaning logbook. Applies only if the tower has an FSE under a LASAN Industrial Wastewater Permit.",
+   "quote": "Grease interceptors shall be cleaned at a frequency such that the combined FOG and solids accumulation does not exceed 25% of the total liquid depth of the grease interceptor.",
+   "source": "LA Sanitation Sewer System Management Plan v3.0 (25 Jan 2019), section 7.5.3",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "FOG_PROGRAM": {
+   "value": null,
+   "unit": "",
+   "tag": "PUBLIC",
+   "meaning": "LAMC 64.30: food service establishments need an Industrial Wastewater Permit, best management practices and an approved grease removal device; cooling grease hardens in pipes and causes spills.",
+   "quote": "",
+   "source": "LA Sanitation and Environment, Fats, Oils and Grease (FOG) program page",
+   "url": "https://sanitation.lacity.gov/programs/fats-oils-and-grease-fog"
+  },
+  "GREASE_TRAP_DAILY": {
+   "value": 1,
+   "unit": "days",
+   "tag": "PUBLIC",
+   "meaning": "Grease TRAPS (small under-sink or hydromechanical units, as distinct from interceptors) cleaned and visually inspected daily.",
+   "quote": "Grease traps shall be cleaned on a daily basis.",
+   "source": "LA Sanitation Sewer System Management Plan v3.0, section 7.5.3",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "PERFORMANCE_HISTORY": {
+   "value": null,
+   "unit": "",
+   "tag": "PUBLIC",
+   "meaning": "LASAN sets each city sewer's cleaning frequency primarily by its performance history and previous cleaning findings; we mirror this by shortening intervals after backups.",
+   "quote": "determine primarily by its performance history and previous cleaning findings",
+   "source": "LA Sanitation SSMP v3.0",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "PERSISTENCE_2_OF_3": {
+   "value": [
+    2,
+    3
+   ],
+   "unit": "nights",
+   "tag": "team-proposed",
+   "meaning": "A clog work order is proposed only when 2 of any 3 consecutive nightly tests alarm.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "STRAINER_BASE_INTERVAL": {
+   "value": 180,
+   "unit": "days",
+   "tag": "team-proposed",
+   "meaning": "Default strainer inspection interval at PRV stations where a strainer is fitted; brought forward to 7 days when the nightly flow test alarms on the strainer location on 2 of 3 nights. In our model a clean strainer's head loss at test flow is below the noise of two gauge-pressure sensors, so the check is 'alarm vs no alarm', not a ratio to commissioning.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "UPC_608_2_PRV_80PSI": {
+   "value": 56.2,
+   "unit": "m static head (80 psi)",
+   "tag": "PUBLIC",
+   "meaning": "Static pressure above 80 psi needs an approved pressure regulator preceded by an adequate strainer, reducing static pressure to 80 psi or less. EXCEPTION: regulators of 1-1/2 in (40 mm) or larger do not require a strainer, so a strainer at a riser-size zone PRV is a design choice, not a code mandate. Where one is fitted, its differential pressure at test flow is the most direct check. Verified only in the UPC-based Hawaii 2021 text; California Plumbing Code equivalence is unverified.",
+   "quote": "Pressure regulator(s) equal to or exceeding 1 1/2 inches (40 mm) shall not require a strainer.",
+   "source": "Section 608.2 Excessive Water Pressure (Hawaii Plumbing Code 2021, UPC-based, UpCodes)",
+   "url": "https://up.codes/s/excessive-water-pressure"
+  }
+ }
+}

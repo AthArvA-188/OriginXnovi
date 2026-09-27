@@ -1,0 +1,107 @@
+{
+  "version": "2026-09-26",
+  "disclaimer": "Design bounds cited from public sources for a decision-support demo. NOT a compliance tool: it does not certify Title 24, ASHRAE 90.1, NFPA 101, CBC or CFC compliance. A lighting designer sets final setback floors after a photometric check; the AHJ resolves code conflicts.",
+  "tags": {
+    "PUBLIC": "value read from the cited public page on the access date",
+    "PUBLIC, secondary": "value read from a secondary source (trade article or code-book site), primary text not opened",
+    "team-proposed, validate": "setting chosen by the team inside the cited bounds; needs validation",
+    "Assumption": "engineering assumption with no public source"
+  },
+  "sources": {
+    "T24_130_1": {"title": "Energy Code Ace: 2022 Title 24 Part 6 Section 130.1 mandatory indoor lighting controls", "url": "https://energycodeace.com/content/section-1301-mandatory-indoor-lighting-controls-nonresident", "accessed": "2026-09-26"},
+    "T24_2025": {"title": "inside.lighting: California Tightens Title 24 Lighting Code Again (2025-08-26)", "url": "https://inside.lighting/news/25-08/california-tightens-title-24-lighting-code-again", "accessed": "2026-09-26"},
+    "T24_120_2": {"title": "Energy Code Ace: 2022 Section 120.2 required controls for space-conditioning systems", "url": "https://energycodeace.com/content/section-1202-required-controls-for-space-conditioning-syste", "accessed": "2026-09-26"},
+    "T24_120_6C": {"title": "CEC Enclosed Parking Garages Fact Sheet (2022 Energy Code)", "url": "https://www.energy.ca.gov/sites/default/files/2023-09/2022_CEC-Enclosed_Parking_Garages_ADA.pdf", "accessed": "2026-09-26"},
+    "T24_110_12": {"title": "CEC Demand Responsive Lighting Control certification (OpenADR 2.0b)", "url": "https://www.energy.ca.gov/rules-and-regulations/building-energy-efficiency/manufacturer-certification-building-equipment/dr-controls-lighting", "accessed": "2026-09-26"},
+    "ASHRAE_90_1_2019": {"title": "PNNL-SA-153216 ANSI/ASHRAE/IES 90.1-2019 lighting training (DOE BECP, May 2020)", "url": "https://www.oregon.gov/bcd/codes-stand/Documents/90.1-2019-Lighting-training.pdf", "accessed": "2026-09-26"},
+    "NFPA101_CSE": {"title": "CSE Magazine: Ten things to know about emergency illumination (Schonour, 2017), secondary for NFPA 101", "url": "https://www.csemag.com/articles/ten-things-to-know-about-emergency-illumination/", "accessed": "2026-09-26"},
+    "CFC_1008": {"title": "GoCodebook: California Fire Code 1008 egress illumination (2025 ed.)", "url": "https://gocodebook.com/us/california/california-fire-code/means-of-egress/signs-illumination-and-path-marking/egress-illumination-and-emergency-lighting", "accessed": "2026-09-26"},
+    "UL924": {"title": "Functional Devices: shunt/bypass UL 924 emergency lighting relays (vendor)", "url": "https://blog.functionaldevices.com/product-guidance/shunt-bypass-ul-924-emergency-lighting-relays", "accessed": "2026-09-26"}
+  },
+  "life_safety": [
+    {"key": "EGRESS_FLOOR_FC", "value": 1.0, "unit": "fc", "meaning": "means of egress illuminated at >= 1 fc (11 lux) at the walking surface whenever the building space it serves is occupied", "tag": "PUBLIC, secondary", "source": "CFC_1008", "cite": "CFC/CBC 1008.2, 1008.2.1; NFPA 101 7.8.1.3"},
+    {"key": "STAIR_IN_USE_FC", "value": 10.0, "unit": "fc", "meaning": "stairways need >= 10 fc during conditions of stair use (new stairs)", "tag": "PUBLIC, secondary", "source": "CFC_1008", "cite": "CFC 1008.2.1; NFPA 101 7.8.1.3 (via CSE Magazine)"},
+    {"key": "EGRESS_MOTION_HOLD_MIN", "value": 15, "unit": "min", "meaning": "motion switches allowed in egress only if fail-safe (lights on when the sensor fails), timer >= 15 min, and activated by any occupant movement", "tag": "PUBLIC, secondary", "source": "NFPA101_CSE", "cite": "NFPA 101 7.8.1.2.2"},
+    {"key": "SENSOR_FAULT_ACTION", "value": "full_on", "unit": "", "meaning": "a motion-sensor fault, stale data or controller loss sends the zone to full output and raises an alarm (fail-safe)", "tag": "PUBLIC, secondary", "source": "NFPA101_CSE", "cite": "NFPA 101 7.8.1.2.2 fail-safe; pattern mirrors T24 120.6(c) CO-sensor failure reset"},
+    {"key": "EMERGENCY_DURATION_MIN", "value": 90, "unit": "min", "meaning": "emergency lighting lasts >= 90 min, initial average 1 fc, minimum 0.1 fc (some existing buildings: 60 min, CFC 1104.5.1)", "tag": "PUBLIC, secondary", "source": "CFC_1008", "cite": "CFC 1008.3.1, 1008.3.2"},
+    {"key": "UL924_BYPASS", "value": "outside_ai_control", "unit": "", "meaning": "UL 924 bypass/shunt relays force emergency lights on at loss of normal power whatever the controls do; Cerebro never writes to emergency, exit-sign or egress-floor circuits", "tag": "PUBLIC, secondary", "source": "UL924", "cite": "UL 924 (vendor explanation)"},
+    {"key": "EGRESS_CONTINUOUS_W_FT2", "value": 0.1, "unit": "W/ft2", "meaning": "up to 0.1 W/ft2 may stay on continuously in areas designated as means of egress; egress lighting must still meet CBC 1008 in partial-off mode", "tag": "PUBLIC", "source": "T24_130_1", "cite": "Title 24 130.1(c)1 Exception 3"}
+  ],
+  "zone_types": {
+    "corridor": {
+      "label": "Corridor / lift lobby", "egress": true, "occupied_level": 1.0, "vacant_level": 0.5, "vacant_level_bounds": [0.0, 0.5],
+      "hold_min": 15, "max_off_delay_min": 20, "min_in_use_fc": 1.0, "dr_trim_allowed": false, "ml_may": ["extend_hold", "early_on"],
+      "tag": "team-proposed, validate",
+      "basis": [
+        {"cite": "Title 24 130.1(c)6C: corridors and stairwells reduce lighting power by >= 50% when vacant; sensors cover every egress path", "source": "T24_130_1", "tag": "PUBLIC"},
+        {"cite": "2025 Title 24 (effective 2026-01-01) keeps the 50% corridor/stairwell rule", "source": "T24_2025", "tag": "PUBLIC, secondary"},
+        {"cite": "NFPA 101 7.8.1.2.2: >= 15 min fail-safe timer in egress", "source": "NFPA101_CSE", "tag": "PUBLIC, secondary"},
+        {"cite": "vacant level 0.5 = the shallowest compliant setback; deeper only after a photometric check keeps >= 1 fc", "source": null, "tag": "team-proposed, validate"}
+      ]
+    },
+    "stairwell": {
+      "label": "Stairwell", "egress": true, "occupied_level": 1.0, "vacant_level": 0.5, "vacant_level_bounds": [0.0, 0.5],
+      "hold_min": 15, "max_off_delay_min": 20, "min_in_use_fc": 10.0, "dr_trim_allowed": false, "ml_may": ["extend_hold", "early_on"],
+      "tag": "team-proposed, validate",
+      "basis": [
+        {"cite": "Title 24 130.1(c)6C: stairwells reduce by >= 50% when vacant", "source": "T24_130_1", "tag": "PUBLIC"},
+        {"cite": "CFC 1008.2.1 / NFPA 101 7.8.1.3: >= 10 fc during stair use; >= 1 fc egress floor at all other occupied times", "source": "CFC_1008", "tag": "PUBLIC, secondary"},
+        {"cite": "NFPA 101 7.8.1.2.2: >= 15 min fail-safe timer", "source": "NFPA101_CSE", "tag": "PUBLIC, secondary"}
+      ]
+    },
+    "lobby": {
+      "label": "Ground lobby", "egress": true, "occupied_level": 1.0, "vacant_level": 0.5, "vacant_level_bounds": [0.0, 0.5],
+      "hold_min": 15, "max_off_delay_min": 20, "min_in_use_fc": 1.0, "dr_trim_allowed": false, "ml_may": ["extend_hold", "early_on"],
+      "tag": "team-proposed, validate",
+      "basis": [
+        {"cite": "treated like a corridor: the lobby is part of the exit path (exit discharge) so the 1 fc floor and 15 min fail-safe hold apply", "source": "CFC_1008", "tag": "team-proposed, validate"},
+        {"cite": "ASHRAE 90.1-2019 9.4.1.1(g) partial-off >= 50% within 20 min", "source": "ASHRAE_90_1_2019", "tag": "PUBLIC"}
+      ]
+    },
+    "garage": {
+      "label": "Parking garage level", "egress": true, "occupied_level": 1.0, "vacant_level": 0.3, "vacant_level_bounds": [0.2, 0.5],
+      "hold_min": 15, "max_off_delay_min": null, "min_in_use_fc": 1.0, "dr_trim_allowed": false, "ml_may": ["extend_hold", "early_on"],
+      "tag": "team-proposed, validate",
+      "basis": [
+        {"cite": "Title 24 130.1(c)7B: a control step between 20% and 50% of design lighting power, zones of <= 500 W; 130.1(c)7 sets no off-delay", "source": "T24_130_1", "tag": "PUBLIC"},
+        {"cite": "ASHRAE 90.1-2019 9.4.1.2: >= 50% reduction after 10 min without activity, zones <= 3,600 ft2 (conflicts with the NFPA 15 min egress timer where 90.1 governs; the AHJ resolves it). In LA, Title 24 governs, so the 15 min fail-safe hold is kept", "source": "ASHRAE_90_1_2019", "tag": "PUBLIC"},
+        {"cite": "vacant level 0.3 chosen inside the 0.2-0.5 step", "source": null, "tag": "team-proposed, validate"}
+      ]
+    },
+    "restroom": {
+      "label": "Common restroom", "egress": false, "occupied_level": 1.0, "vacant_level": 0.0, "vacant_level_bounds": [0.0, 0.0],
+      "hold_min": 15, "max_off_delay_min": 20, "min_in_use_fc": 0.0, "dr_trim_allowed": true, "ml_may": ["extend_hold", "early_on"],
+      "tag": "PUBLIC",
+      "basis": [
+        {"cite": "Title 24 130.1(c)5: restrooms turn fully off within 20 min of vacancy (not egress-designated here)", "source": "T24_130_1", "tag": "PUBLIC"},
+        {"cite": "hold 15 min: inside the 20 min maximum", "source": null, "tag": "team-proposed, validate"}
+      ]
+    },
+    "amenity": {
+      "label": "Amenity room (gym, lounge, conference)", "egress": false, "occupied_level": 1.0, "vacant_level": 0.0, "vacant_level_bounds": [0.0, 0.0],
+      "hold_min": 15, "max_off_delay_min": 20, "min_in_use_fc": 0.0, "dr_trim_allowed": true, "ml_may": ["extend_hold", "early_on"],
+      "tag": "team-proposed, validate",
+      "basis": [
+        {"cite": "Title 24 130.1(c)5 full-off rule (classrooms, conference and multipurpose rooms, small offices, restrooms) applied to amenity rooms", "source": "T24_130_1", "tag": "team-proposed, validate"}
+      ]
+    }
+  },
+  "demand_response": {
+    "min_reduction_frac": 0.15, "applies_if_general_lighting_w_at_least": 4000, "egress_excluded": true, "signal": "OpenADR 2.0b",
+    "tag": "PUBLIC, secondary",
+    "cite": "2025 Title 24: demand-responsive lighting >= 15% reduction for >= 4,000 W general lighting; DR controls certified to OpenADR 2.0b (110.12(a)1B). Egress zones are never trimmed (team rule).",
+    "sources": ["T24_2025", "T24_110_12"]
+  },
+  "hvac_standby": {
+    "cooling_raise_F": 2.0, "heating_lower_F": 2.0, "multi_zone_ddc_F": 0.5, "within_min": 5,
+    "ventilation_condition": "ventilation may stay off only while the space temperature is between the active heating and cooling setpoints",
+    "applicability": "spaces with occupant-sensor ventilation control under 120.1(d)5; not a blanket rule for corridors or lobbies",
+    "tag": "PUBLIC", "cite": "Title 24 120.2(e)3 occupied-standby", "source": "T24_120_2"
+  },
+  "garage_ventilation": {
+    "applies_at_cfm_at_least": 10000, "max_flow_frac": 0.5, "max_fan_power_frac_at_half_flow": 0.3, "co_sensor_per_ft2": 5000, "co_setpoint_ppm_max": 25,
+    "failure_action": "return to design ventilation and raise an alarm (15 ppm divergence rules)",
+    "tag": "PUBLIC", "cite": "Title 24 120.6(c)", "source": "T24_120_6C"
+  },
+  "never_write": ["emergency lighting circuits", "exit signs", "egress-floor (night-light) circuits", "UL 924 relays", "fire alarm / smoke control", "garage CO ventilation override"]
+}

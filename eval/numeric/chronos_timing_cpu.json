@@ -1,0 +1,29 @@
+{
+ "amazon/chronos-2": {
+  "revision": "29ec3766d36d6f73f0696f85560a422f50e8498c",
+  "device": "cpu",
+  "torch_threads": 4,
+  "batch": 16,
+  "n_forecasts": 1080,
+  "horizon": 24,
+  "context": 1024,
+  "load_seconds": 1.36,
+  "predict_seconds": 205.37,
+  "max_abs_q50_diff_vs_stored_kWh": 0.00030517578125,
+  "median_abs_q50_kWh": 71.09003448486328
+ },
+ "amazon/chronos-bolt-small": {
+  "revision": "772f3d25d38aec6d914c8949dab4462e2d46f5d8",
+  "device": "cpu",
+  "torch_threads": 4,
+  "batch": 16,
+  "n_forecasts": 1080,
+  "horizon": 24,
+  "context": 1024,
+  "load_seconds": 0.87,
+  "predict_seconds": 35.98,
+  "max_abs_q50_diff_vs_stored_kWh": 9.1552734375e-05,
+  "median_abs_q50_kWh": 71.43966674804688
+ },
+ "_note": "measured on a shared laptop with other jobs running; created 2026-09-26T21:22:51+00:00"
+}

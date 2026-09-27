@@ -1,0 +1,2519 @@
+{
+ "year": 2027,
+ "label": "REAL (NOAA normals) + computed (NOAA GML) + REANALYSIS 2025 temperature",
+ "stations": {
+  "USW00093134": "LOS ANGELES DWTN USC CAMPUS, CA US",
+  "USW00023174": "LOS ANGELES INTL AP, CA US"
+ },
+ "station_names_from_api": [
+  "LOS ANGELES DWTN USC CAMPUS, CA US",
+  "LOS ANGELES INTL AP, CA US"
+ ],
+ "annual_normals": [
+  {
+   "STATION": "USW00093134",
+   "NAME": "LOS ANGELES DWTN USC CAMPUS, CA US",
+   "ANN-CLDD-NORMAL": 1295.7,
+   "ANN-HTDD-NORMAL": 1005.1
+  },
+  {
+   "STATION": "USW00023174",
+   "NAME": "LOS ANGELES INTL AP, CA US",
+   "ANN-CLDD-NORMAL": 720.4,
+   "ANN-HTDD-NORMAL": 1213.5
+  }
+ ],
+ "annual_cdd_sum_usc": 1295.6,
+ "annual_cdd_sum_lax": 720.4,
+ "rows": [
+  {
+   "year": 2027,
+   "month": 1,
+   "name": "Jan",
+   "cdd65_usc": 7.8,
+   "hdd65_usc": 210.9,
+   "tavg_f_usc": 58.4,
+   "cdd65_lax": 5.8,
+   "hdd65_lax": 227.4,
+   "day_length_h": 10.11,
+   "sunrise_local": "06:58 PST",
+   "sunset_local": "17:05 PST",
+   "sunrise_hour": 6.966666666666667,
+   "sunset_hour": 17.083333333333332,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [
+    {
+     "date": "2027-01-01",
+     "name": "New Year's Day"
+    },
+    {
+     "date": "2027-01-18",
+     "name": "Birthday of Martin Luther King, Jr."
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 12.580510752688172,
+   "reanalysis_2025_tmax_c": 25.6,
+   "actions": [
+    "Heating month (HDD65 210.9): lobby morning warm-up; check door heaters and vestibules",
+    "Short days (10.1 h, sunset 17:05 PST): garage and perimeter lights come on earlier; keep sensor setbacks, not full-off, on egress",
+    "2027-01-01 New Year's Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)",
+    "2027-01-18 Birthday of Martin Luther King, Jr.: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 11
+  },
+  {
+   "year": 2027,
+   "month": 2,
+   "name": "Feb",
+   "cdd65_usc": 11.6,
+   "hdd65_usc": 179.6,
+   "tavg_f_usc": 59.0,
+   "cdd65_lax": 7.1,
+   "hdd65_lax": 207.3,
+   "day_length_h": 10.95,
+   "sunrise_local": "06:38 PST",
+   "sunset_local": "17:35 PST",
+   "sunrise_hour": 6.633333333333333,
+   "sunset_hour": 17.583333333333332,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [
+    {
+     "date": "2027-02-15",
+     "name": "Washington's Birthday"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 13.864136904761907,
+   "reanalysis_2025_tmax_c": 26.2,
+   "actions": [
+    "Heating month (HDD65 179.6): lobby morning warm-up; check door heaters and vestibules",
+    "2027-02-15 Washington's Birthday: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 10
+  },
+  {
+   "year": 2027,
+   "month": 3,
+   "name": "Mar",
+   "cdd65_usc": 21.8,
+   "hdd65_usc": 141.2,
+   "tavg_f_usc": 61.1,
+   "cdd65_lax": 8.5,
+   "hdd65_lax": 189.8,
+   "day_length_h": 11.91,
+   "sunrise_local": "07:05 PDT",
+   "sunset_local": "19:00 PDT",
+   "sunrise_hour": 7.083333333333333,
+   "sunset_hour": 19.0,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [],
+   "dst": [
+    {
+     "date": "2027-03-14",
+     "change": "starts (clocks forward)"
+    }
+   ],
+   "reanalysis_2025_tmean_c": 13.908209959623148,
+   "reanalysis_2025_tmax_c": 32.8,
+   "actions": [
+    "DST starts (clocks forward) on 2027-03-14: re-anchor garage/perimeter lighting and any clock-based schedule to local time"
+   ],
+   "cdd_rank_usc": 9
+  },
+  {
+   "year": 2027,
+   "month": 4,
+   "name": "Apr",
+   "cdd65_usc": 44.7,
+   "hdd65_usc": 86.7,
+   "tavg_f_usc": 63.6,
+   "cdd65_lax": 17.0,
+   "hdd65_lax": 132.5,
+   "day_length_h": 13.0,
+   "sunrise_local": "06:23 PDT",
+   "sunset_local": "19:23 PDT",
+   "sunrise_hour": 6.383333333333334,
+   "sunset_hour": 19.383333333333333,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 16.557083333333335,
+   "reanalysis_2025_tmax_c": 30.9,
+   "actions": [
+    "Commissioning month: audit sensor coverage and hold times on every egress path (sensor coverage, time delay and commissioning drive garage results)"
+   ],
+   "cdd_rank_usc": 7
+  },
+  {
+   "year": 2027,
+   "month": 5,
+   "name": "May",
+   "cdd65_usc": 66.9,
+   "hdd65_usc": 39.0,
+   "tavg_f_usc": 65.9,
+   "cdd65_lax": 24.5,
+   "hdd65_lax": 69.5,
+   "day_length_h": 13.91,
+   "sunrise_local": "05:51 PDT",
+   "sunset_local": "19:46 PDT",
+   "sunrise_hour": 5.85,
+   "sunset_hour": 19.766666666666666,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [
+    {
+     "date": "2027-05-31",
+     "name": "Memorial Day"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 19.967741935483872,
+   "reanalysis_2025_tmax_c": 39.6,
+   "actions": [
+    "Enrol / confirm LADWP DR participation before the season starts (06-15); rehearse the playbook",
+    "2027-05-31 Memorial Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 6
+  },
+  {
+   "year": 2027,
+   "month": 6,
+   "name": "Jun",
+   "cdd65_usc": 133.5,
+   "hdd65_usc": 4.5,
+   "tavg_f_usc": 69.3,
+   "cdd65_lax": 56.5,
+   "hdd65_lax": 13.0,
+   "day_length_h": 14.41,
+   "sunrise_local": "05:40 PDT",
+   "sunset_local": "20:05 PDT",
+   "sunrise_hour": 5.666666666666667,
+   "sunset_hour": 20.083333333333332,
+   "ladwp_season": "high",
+   "sce_season": "summer",
+   "ladwp_dr_days": 16,
+   "holidays": [
+    {
+     "date": "2027-06-18",
+     "name": "Juneteenth National Independence Day"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 20.99861111111111,
+   "reanalysis_2025_tmax_c": 34.3,
+   "actions": [
+    "LADWP high season: cap common-area kW on weekdays 13:00-17:00 (high-peak demand $10.00/kW)",
+    "LADWP DR season (16 days this month): keep the DR playbook ready - trim non-egress lighting >= 15%, never egress",
+    "Watch 16:00-21:00 (SCE on-peak; CAISO Flex Alert window 16:00-21:00): propose switching off non-essential decorative and amenity lighting",
+    "2027-06-18 Juneteenth National Independence Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 5
+  },
+  {
+   "year": 2027,
+   "month": 7,
+   "name": "Jul",
+   "cdd65_usc": 258.8,
+   "hdd65_usc": 0.0,
+   "tavg_f_usc": 73.3,
+   "cdd65_lax": 142.5,
+   "hdd65_lax": 1.5,
+   "day_length_h": 14.23,
+   "sunrise_local": "05:51 PDT",
+   "sunset_local": "20:05 PDT",
+   "sunrise_hour": 5.85,
+   "sunset_hour": 20.083333333333332,
+   "ladwp_season": "high",
+   "sce_season": "summer",
+   "ladwp_dr_days": 31,
+   "holidays": [
+    {
+     "date": "2027-07-05",
+     "name": "Independence Day"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 21.94448924731183,
+   "reanalysis_2025_tmax_c": 34.4,
+   "actions": [
+    "LADWP high season: cap common-area kW on weekdays 13:00-17:00 (high-peak demand $10.00/kW)",
+    "LADWP DR season (31 days this month): keep the DR playbook ready - trim non-egress lighting >= 15%, never egress",
+    "Watch 16:00-21:00 (SCE on-peak; CAISO Flex Alert window 16:00-21:00): propose switching off non-essential decorative and amenity lighting",
+    "Top-3 cooling month at USC (CDD65 258.8): propose lobby pre-cooling before 13:00 and occupied-standby setpoints in amenity rooms",
+    "2027-07-05 Independence Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 2
+  },
+  {
+   "year": 2027,
+   "month": 8,
+   "name": "Aug",
+   "cdd65_usc": 300.7,
+   "hdd65_usc": 0.0,
+   "tavg_f_usc": 74.7,
+   "cdd65_lax": 179.2,
+   "hdd65_lax": 1.0,
+   "day_length_h": 13.46,
+   "sunrise_local": "06:13 PDT",
+   "sunset_local": "19:41 PDT",
+   "sunrise_hour": 6.216666666666667,
+   "sunset_hour": 19.683333333333334,
+   "ladwp_season": "high",
+   "sce_season": "summer",
+   "ladwp_dr_days": 31,
+   "holidays": [],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 24.549193548387095,
+   "reanalysis_2025_tmax_c": 38.8,
+   "actions": [
+    "LADWP high season: cap common-area kW on weekdays 13:00-17:00 (high-peak demand $10.00/kW)",
+    "LADWP DR season (31 days this month): keep the DR playbook ready - trim non-egress lighting >= 15%, never egress",
+    "Watch 16:00-21:00 (SCE on-peak; CAISO Flex Alert window 16:00-21:00): propose switching off non-essential decorative and amenity lighting",
+    "Top-3 cooling month at USC (CDD65 300.7): propose lobby pre-cooling before 13:00 and occupied-standby setpoints in amenity rooms"
+   ],
+   "cdd_rank_usc": 1
+  },
+  {
+   "year": 2027,
+   "month": 9,
+   "name": "Sep",
+   "cdd65_usc": 258.6,
+   "hdd65_usc": 0.6,
+   "tavg_f_usc": 73.6,
+   "cdd65_lax": 155.4,
+   "hdd65_lax": 2.4,
+   "day_length_h": 12.44,
+   "sunrise_local": "06:35 PDT",
+   "sunset_local": "19:01 PDT",
+   "sunrise_hour": 6.583333333333333,
+   "sunset_hour": 19.016666666666666,
+   "ladwp_season": "high",
+   "sce_season": "summer",
+   "ladwp_dr_days": 30,
+   "holidays": [
+    {
+     "date": "2027-09-06",
+     "name": "Labor Day"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 23.485833333333332,
+   "reanalysis_2025_tmax_c": 36.1,
+   "actions": [
+    "LADWP high season: cap common-area kW on weekdays 13:00-17:00 (high-peak demand $10.00/kW)",
+    "LADWP DR season (30 days this month): keep the DR playbook ready - trim non-egress lighting >= 15%, never egress",
+    "Watch 16:00-21:00 (SCE on-peak; CAISO Flex Alert window 16:00-21:00): propose switching off non-essential decorative and amenity lighting",
+    "Top-3 cooling month at USC (CDD65 258.6): propose lobby pre-cooling before 13:00 and occupied-standby setpoints in amenity rooms",
+    "2027-09-06 Labor Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 3
+  },
+  {
+   "year": 2027,
+   "month": 10,
+   "name": "Oct",
+   "cdd65_usc": 146.7,
+   "hdd65_usc": 15.0,
+   "tavg_f_usc": 69.3,
+   "cdd65_lax": 91.1,
+   "hdd65_lax": 26.0,
+   "day_length_h": 11.39,
+   "sunrise_local": "06:56 PDT",
+   "sunset_local": "18:20 PDT",
+   "sunrise_hour": 6.933333333333334,
+   "sunset_hour": 18.333333333333332,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 15,
+   "holidays": [
+    {
+     "date": "2027-10-11",
+     "name": "Columbus Day"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 19.335349462365592,
+   "reanalysis_2025_tmax_c": 34.7,
+   "actions": [
+    "LADWP DR season (15 days this month): keep the DR playbook ready - trim non-egress lighting >= 15%, never egress",
+    "2027-10-11 Columbus Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 4
+  },
+  {
+   "year": 2027,
+   "month": 11,
+   "name": "Nov",
+   "cdd65_usc": 40.3,
+   "hdd65_usc": 100.2,
+   "tavg_f_usc": 63.0,
+   "cdd65_lax": 30.2,
+   "hdd65_lax": 111.2,
+   "day_length_h": 10.42,
+   "sunrise_local": "06:25 PST",
+   "sunset_local": "16:50 PST",
+   "sunrise_hour": 6.416666666666667,
+   "sunset_hour": 16.833333333333332,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [
+    {
+     "date": "2027-11-11",
+     "name": "Veterans Day"
+    },
+    {
+     "date": "2027-11-25",
+     "name": "Thanksgiving Day"
+    }
+   ],
+   "dst": [
+    {
+     "date": "2027-11-07",
+     "change": "ends (clocks back)"
+    }
+   ],
+   "reanalysis_2025_tmean_c": 15.963245492371707,
+   "reanalysis_2025_tmax_c": 32.8,
+   "actions": [
+    "DST ends (clocks back) on 2027-11-07: re-anchor garage/perimeter lighting and any clock-based schedule to local time",
+    "Short days (10.4 h, sunset 16:50 PST): garage and perimeter lights come on earlier; keep sensor setbacks, not full-off, on egress",
+    "2027-11-11 Veterans Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)",
+    "2027-11-25 Thanksgiving Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 8
+  },
+  {
+   "year": 2027,
+   "month": 12,
+   "name": "Dec",
+   "cdd65_usc": 4.2,
+   "hdd65_usc": 227.3,
+   "tavg_f_usc": 57.8,
+   "cdd65_lax": 2.6,
+   "hdd65_lax": 232.0,
+   "day_length_h": 9.9,
+   "sunrise_local": "06:50 PST",
+   "sunset_local": "16:45 PST",
+   "sunrise_hour": 6.833333333333333,
+   "sunset_hour": 16.75,
+   "ladwp_season": "low",
+   "sce_season": "winter",
+   "ladwp_dr_days": 0,
+   "holidays": [
+    {
+     "date": "2027-12-24",
+     "name": "Christmas Day"
+    },
+    {
+     "date": "2027-12-31",
+     "name": "New Year's Day"
+    }
+   ],
+   "dst": [],
+   "reanalysis_2025_tmean_c": 14.130913978494624,
+   "reanalysis_2025_tmax_c": 25.1,
+   "actions": [
+    "Heating month (HDD65 227.3): lobby morning warm-up; check door heaters and vestibules",
+    "Short days (9.9 h, sunset 16:45 PST): garage and perimeter lights come on earlier; keep sensor setbacks, not full-off, on egress",
+    "2027-12-24 Christmas Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)",
+    "2027-12-31 New Year's Day: holiday setback for amenity rooms (egress floors unchanged; priced as a normal weekday because the LADWP TOU page does not list holidays as Base)"
+   ],
+   "cdd_rank_usc": 12
+  }
+ ],
+ "modes": [
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 6,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jan",
+   "month_num": 1,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 6,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Feb",
+   "month_num": 2,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 6,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Mar",
+   "month_num": 3,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 6,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Apr",
+   "month_num": 4,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 6,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "May",
+   "month_num": 5,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 6,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 13,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 14,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 15,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 16,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 17,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 18,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 19,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 20,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jun",
+   "month_num": 6,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 6,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 13,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 14,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 15,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 16,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 17,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 18,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 19,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 20,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Jul",
+   "month_num": 7,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 6,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 13,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 14,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 15,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 16,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 17,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 18,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 19,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 20,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Aug",
+   "month_num": 8,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 6,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 13,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 14,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 15,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 16,
+   "mode": "Peak cap + DR ready",
+   "ladwp_usd_kwh_weekday": 0.06322
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 17,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 18,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 19,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.05595
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 20,
+   "mode": "Evening grid-stress watch",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Sep",
+   "month_num": 9,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03522
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 6,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Oct",
+   "month_num": 10,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 6,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Nov",
+   "month_num": 11,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 0,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 1,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 2,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 3,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 4,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 5,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 6,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 7,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 8,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 9,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 10,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 11,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 12,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 13,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 14,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 15,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 16,
+   "mode": "Daylight off-peak",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 17,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 18,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 19,
+   "mode": "Price shoulder (LADWP low peak)",
+   "ladwp_usd_kwh_weekday": 0.05688
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 20,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 21,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 22,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  },
+  {
+   "month": "Dec",
+   "month_num": 12,
+   "hour": 23,
+   "mode": "Dark: sensor setback, egress >= 1 fc",
+   "ladwp_usd_kwh_weekday": 0.03895
+  }
+ ],
+ "plan": [
+  {
+   "season": "Winter (Dec-Feb)",
+   "months": [
+    12,
+    1,
+    2
+   ],
+   "why": "Shortest days (9.9 h); most heating (HDD65 618 at USC)",
+   "do": [
+    "Schedule garage and perimeter lighting from sunset, not a fixed clock time",
+    "Holiday setbacks in amenity rooms; egress floors never change",
+    "Lobby morning warm-up only on working days"
+   ]
+  },
+  {
+   "season": "Spring (Mar-May)",
+   "months": [
+    3,
+    4,
+    5
+   ],
+   "why": "DST starts in March; mild weather is the window to fix controls before summer",
+   "do": [
+    "Re-anchor every clock-based schedule after the DST change",
+    "April: commissioning audit of motion-sensor coverage and hold times on all egress paths (NFPA 101 fail-safe, >= 15 min)",
+    "May: enrol in LADWP DR before 06-15 (needs >= 100 kW building-wide; common-area lighting is only a contribution)"
+   ]
+  },
+  {
+   "season": "Summer (Jun-Sep)",
+   "months": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "why": "LADWP high season; 952 of 1296 annual CDD65 at USC fall in Jun-Sep",
+   "do": [
+    "Weekdays 13:00-17:00: cap common-area kW (high-peak demand $10.00/kW vs $4.75/kW in winter)",
+    "Approve lobby pre-cooling proposals before 13:00 on hot days",
+    "DR events (13:00-21:00, max 20 a season): trim restroom and amenity lighting >= 15%; never egress",
+    "Flex Alert days (16:00-21:00): switch off decorative and non-essential amenity lighting"
+   ]
+  },
+  {
+   "season": "Autumn (Oct-Nov)",
+   "months": [
+    10,
+    11
+   ],
+   "why": "Heat events can continue; LADWP DR season ends 10-15; DST ends in November",
+   "do": [
+    "Keep DR readiness until mid-October",
+    "Re-anchor schedules after DST ends; garage lights come on earlier",
+    "Review the year: sensor faults found, proposals approved/rejected, kWh vs last year"
+   ]
+  }
+ ],
+ "solar": {
+  "lat": 34.0511,
+  "lon": -118.2353,
+  "method": "NOAA GML general solar position equations, zenith 90.833 deg, 15th of each month",
+  "jun21_day_length_h": 14.426414359706254,
+  "dec21_day_length_h": 9.882818565074983
+ }
+}

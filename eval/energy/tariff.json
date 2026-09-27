@@ -1,0 +1,363 @@
+{
+ "ladwp_a2b": {
+  "name": "LADWP A-2 Rate B (TOU), base charges",
+  "accessed": "2026-09-26",
+  "urls": [
+   "https://www.ladwp.com/account/understanding-your-rates/commercial-electric-rates",
+   "https://www.ladwp.com/account/customer-service/electric-rates/standard-commercial-industrial-rates"
+  ],
+  "high_season_months": [
+   6,
+   7,
+   8,
+   9
+  ],
+  "periods_weekday": {
+   "high_peak": [
+    [
+     13,
+     17
+    ]
+   ],
+   "low_peak": [
+    [
+     10,
+     13
+    ],
+    [
+     17,
+     20
+    ]
+   ]
+  },
+  "weekend_period": "base",
+  "holidays_as_base": false,
+  "energy_usd_per_kwh": {
+   "high": {
+    "high_peak": 0.06322,
+    "low_peak": 0.05595,
+    "base": 0.03522
+   },
+   "low": {
+    "high_peak": 0.05688,
+    "low_peak": 0.05688,
+    "base": 0.03895
+   }
+  },
+  "demand_usd_per_kw": {
+   "high": {
+    "high_peak": 10.0,
+    "low_peak": 3.75
+   },
+   "low": {
+    "high_peak": 4.75,
+    "low_peak": null
+   }
+  },
+  "facilities_usd_per_kw": 5.36,
+  "service_usd_per_month": 20.0,
+  "notes": [
+   "low-season low-peak demand charge is not listed in our source; treated as 0",
+   "adjustment factors excluded (applicability to A-2 unverified): https://www.ladwp.com/account/customer-service/electric-rates/commercial-adjustment-billing-factors",
+   "demand is estimated as the maximum 15-min mean kW of the simulated common-area load (coincident-peak estimate)"
+  ]
+ },
+ "sce_tou": {
+  "name": "SCE business TOU windows (no prices)",
+  "accessed": "2026-09-26",
+  "urls": [
+   "https://www.sce.com/business/rates-financing/rate-plans/business-time-of-use-rate-plans",
+   "https://www.sce.com/sites/default/files/custom-files/Summary%20of%20Available%20Residential%20and%20Nonresidential%20Rate%20Options.pdf"
+  ],
+  "summer": "Jun 1 - Sep 30",
+  "summer_months": [
+   6,
+   7,
+   8,
+   9
+  ],
+  "on_peak_weekday": [
+   16,
+   21
+  ],
+  "cpp": "12 events a year, weekdays 16:00-21:00"
+ },
+ "ladwp_dr": {
+  "name": "LADWP commercial Demand Response (2025 season terms)",
+  "accessed": "2026-09-26",
+  "urls": [
+   "https://www.ladwp.com/commercial-services/programs-and-rebates-commercial/demand-response-program"
+  ],
+  "season": [
+   "06-15",
+   "10-15"
+  ],
+  "window": [
+   13,
+   21
+  ],
+  "event_hours": 4,
+  "max_events": 20,
+  "min_curtail_kw": 100,
+  "pay_usd_per_kw_month": {
+   "day_ahead": 10.0,
+   "two_hour": 15.0
+  },
+  "pay_usd_per_kwh": 0.25
+ },
+ "flex_alert": {
+  "name": "CAISO Flex Alert (voluntary)",
+  "urls": [
+   "https://www.flexalert.org/what-is-flex-alert"
+  ],
+  "window": [
+   16,
+   21
+  ],
+  "action": "turn off unnecessary lights",
+  "accessed": "2026-09-26"
+ },
+ "hour_table": [
+  {
+   "hour": 0,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 1,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 2,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 3,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 4,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 5,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 6,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 7,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 8,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 9,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 10,
+   "ladwp_summer_period": "low_peak",
+   "ladwp_summer_usd_kwh": 0.05595,
+   "ladwp_winter_period": "low_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 11,
+   "ladwp_summer_period": "low_peak",
+   "ladwp_summer_usd_kwh": 0.05595,
+   "ladwp_winter_period": "low_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 12,
+   "ladwp_summer_period": "low_peak",
+   "ladwp_summer_usd_kwh": 0.05595,
+   "ladwp_winter_period": "low_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 13,
+   "ladwp_summer_period": "high_peak",
+   "ladwp_summer_usd_kwh": 0.06322,
+   "ladwp_winter_period": "high_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": true,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 14,
+   "ladwp_summer_period": "high_peak",
+   "ladwp_summer_usd_kwh": 0.06322,
+   "ladwp_winter_period": "high_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": true,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 15,
+   "ladwp_summer_period": "high_peak",
+   "ladwp_summer_usd_kwh": 0.06322,
+   "ladwp_winter_period": "high_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": true,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 16,
+   "ladwp_summer_period": "high_peak",
+   "ladwp_summer_usd_kwh": 0.06322,
+   "ladwp_winter_period": "high_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": true,
+   "ladwp_dr_window": true,
+   "flex_alert_window": true
+  },
+  {
+   "hour": 17,
+   "ladwp_summer_period": "low_peak",
+   "ladwp_summer_usd_kwh": 0.05595,
+   "ladwp_winter_period": "low_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": true,
+   "ladwp_dr_window": true,
+   "flex_alert_window": true
+  },
+  {
+   "hour": 18,
+   "ladwp_summer_period": "low_peak",
+   "ladwp_summer_usd_kwh": 0.05595,
+   "ladwp_winter_period": "low_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": true,
+   "ladwp_dr_window": true,
+   "flex_alert_window": true
+  },
+  {
+   "hour": 19,
+   "ladwp_summer_period": "low_peak",
+   "ladwp_summer_usd_kwh": 0.05595,
+   "ladwp_winter_period": "low_peak",
+   "ladwp_winter_usd_kwh": 0.05688,
+   "sce_summer_on_peak": true,
+   "ladwp_dr_window": true,
+   "flex_alert_window": true
+  },
+  {
+   "hour": 20,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": true,
+   "ladwp_dr_window": true,
+   "flex_alert_window": true
+  },
+  {
+   "hour": 21,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 22,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  },
+  {
+   "hour": 23,
+   "ladwp_summer_period": "base",
+   "ladwp_summer_usd_kwh": 0.03522,
+   "ladwp_winter_period": "base",
+   "ladwp_winter_usd_kwh": 0.03895,
+   "sce_summer_on_peak": false,
+   "ladwp_dr_window": false,
+   "flex_alert_window": false
+  }
+ ],
+ "label": "TARIFF APPROXIMATION"
+}

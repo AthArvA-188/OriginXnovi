@@ -265,3 +265,24 @@ The words "Reconstruction" and "16%" also appear with no readable context; neith
 8. D-001 and D-002 are superseded in part: their wedge, dataset and rubric choices stand; their imagery-only framing does not. D-003 to D-013 are unchanged.
 
 **Revisit trigger.** If by the Saturday 12:00 cut-line review (D-009) the seismic or the sonar path has no rubric with sourced rows or no passing test, that path drops to a roadmap slide and the deck says so. If the team states a different per-person split or product shape at the next sync, this record is amended with the date, not rewritten.
+
+---
+
+## D-015. Smart-building modules and a local website
+
+**Status:** Accepted. **Date:** 2026-09-26. **Source:** the team lead's pivot to smart buildings (2026-09-25 ~22:00 PT) and six asks on 2026-09-26: numeric models from Hugging Face, exterior facade and interior wall models, common-area energy switching, LA rain direction, fire de-escalation, pipe clogging; "do not deploy, make a local site only".
+
+**Decision.**
+
+1. **Local site only.** `app/site.py` (Streamlit `st.navigation`) groups the module pages and the existing building console. It runs on `127.0.0.1` from committed, precomputed results; nothing is deployed.
+2. **Numeric model.** `amazon/chronos-2` (Apache-2.0, pinned revision) is the primary numeric model, run offline in the `cerebro_ml` env and served as precomputed parquet; scikit-learn HGB with a split-conformal band is the live CPU fallback. Moirai 2, TabPFN default weights, TimesFM 3.0 and TiRex are avoided for their licences. LEAD1.0 (no licence) is shown as aggregate metrics only. BDG2 sites present in `Salesforce/GiftEvalPretrain` are excluded from the test set.
+3. **Facade.** Our own ResNet-18 tile classifier (ONNX, CPU) is a screening heatmap for the inspector, never a FISP/QEWI finding; the Claude grader's accuracy on facades is unmeasured and the page says so.
+4. **Interior walls.** Strength from rebound hammer + UPV uses the SonReb power law with per-building core calibration (the HGB challenger lost on held-out studies); moisture stays rule-graded, not ML.
+5. **Energy.** ML may only extend an active motion-sensor hold; it never switches common-area lighting off and never touches emergency, exit-sign or egress circuits. Every setting change is a proposal a named person approves.
+6. **Rain.** Facade exposure uses the ISO 15927-3 driving-rain method on real ASOS data; the repo's rain x wind x cos proxy stays the default until the ISO option is wired in.
+7. **Fire.** AI is read-only decision support: it never controls, silences, delays or overrides the fire alarm, sprinklers, smoke control, elevators, stair locks or HVAC, never chooses evacuation scope and never delays the 911 call. The early-fire verifier did not transfer to an unseen room and is shown as a negative result.
+8. **Pipes.** The supply-riser clog check is a short nightly flow test that Cerebro proposes, a facilities person approves and the BMS runs, on domestic cold water only (never fire, sprinkler or standpipe lines).
+
+**Rationale.** Each choice follows the measured, held-out results in `eval/<module>/` and the research notes R11 to R16 (`docs/research/11_*` to `16_*`); where a model lost to a baseline, the baseline is used and the loss is shown.
+
+**Consequences.** Six new packages (`cascade.numeric`, `cascade.facade`, `cascade.interior`, `cascade.building.energy`, `cascade.building.clog`, `cascade.building.fire`/`firesense`/`rainexposure`/`rainmodel`), their pages under `app/site_pages/`, and tests. Training and precompute need `E:\conda_envs\cerebro_ml` (torch, Chronos, WNTR); the site needs only the `origin_hack` env plus `onnxruntime`.

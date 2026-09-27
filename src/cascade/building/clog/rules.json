@@ -1,0 +1,238 @@
+{
+ "about": "Rule and threshold table for the pipe-clog module (key clog). Kept inside this package on purpose: rubric JSONs in src/cascade/rubrics are fingerprinted by drift.py. Tags: PUBLIC = quoted from a public rule or paper (URL given); team-proposed = our design choice, validate before use; Assumption = modelling assumption with no source.",
+ "accessed": "2026-09-26",
+ "rules": {
+  "BACKFLOW_ANNUAL": {
+   "value": 365,
+   "unit": "days",
+   "tag": "PUBLIC",
+   "meaning": "Backflow prevention assemblies inspected and tested at least annually, by a certified Backflow Prevention Assembly Tester licensed by the Los Angeles County Department of Public Health; test records kept at least three years.",
+   "quote": "All approved backflow assemblies shall be inspected and tested annually or more frequently if determined to be necessary by this Department.",
+   "source": "LADWP Rule 16-D, sections 9.1-9.2",
+   "url": "https://www.ladwp.com/sites/default/files/2025-04/LADWP%20Rule%2016-D%20REVISED%20July_15_2015.pdf"
+  },
+  "FOG_25PCT": {
+   "value": 25,
+   "unit": "% of total liquid depth",
+   "tag": "PUBLIC",
+   "meaning": "Grease interceptors of food service establishments (FSEs) cleaned often enough that combined FOG and solids never exceed 25% of total liquid depth, with a cleaning logbook. Applies only if the tower has an FSE under a LASAN Industrial Wastewater Permit.",
+   "quote": "Grease interceptors shall be cleaned at a frequency such that the combined FOG and solids accumulation does not exceed 25% of the total liquid depth of the grease interceptor.",
+   "source": "LA Sanitation Sewer System Management Plan v3.0 (25 Jan 2019), section 7.5.3",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "GREASE_TRAP_DAILY": {
+   "value": 1,
+   "unit": "days",
+   "tag": "PUBLIC",
+   "meaning": "Grease TRAPS (small under-sink or hydromechanical units, as distinct from interceptors) cleaned and visually inspected daily.",
+   "quote": "Grease traps shall be cleaned on a daily basis.",
+   "source": "LA Sanitation Sewer System Management Plan v3.0, section 7.5.3",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "FOG_PROGRAM": {
+   "value": null,
+   "unit": "",
+   "tag": "PUBLIC",
+   "meaning": "LAMC 64.30: food service establishments need an Industrial Wastewater Permit, best management practices and an approved grease removal device; cooling grease hardens in pipes and causes spills.",
+   "quote": "",
+   "source": "LA Sanitation and Environment, Fats, Oils and Grease (FOG) program page",
+   "url": "https://sanitation.lacity.gov/programs/fats-oils-and-grease-fog"
+  },
+  "CCTV_48H_AFTER_OVERFLOW": {
+   "value": 48,
+   "unit": "hours",
+   "tag": "team-proposed",
+   "meaning": "Camera-inspect a drain within about 48 hours after any backup or overflow. This is LASAN's practice for CITY sewer pipes, adopted here as a team-proposed rule for building drains; no building-drain rule was found.",
+   "quote": "usually within 48 hours after the initial occurrence of an overflow",
+   "source": "LA Sanitation SSMP v3.0 (city sewer practice)",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "PERFORMANCE_HISTORY": {
+   "value": null,
+   "unit": "",
+   "tag": "PUBLIC",
+   "meaning": "LASAN sets each city sewer's cleaning frequency primarily by its performance history and previous cleaning findings; we mirror this by shortening intervals after backups.",
+   "quote": "determine primarily by its performance history and previous cleaning findings",
+   "source": "LA Sanitation SSMP v3.0",
+   "url": "https://planning.lacity.gov/eir/Sunset_Wilcox/deir/deir_reference_docs/water-supply/LASAN%20-%20Sewer%20System%20Management%20Plan%20Hyperion%20Sanitary%20Sewer%20System,%20January%202019.pdf"
+  },
+  "UPC_608_2_PRV_80PSI": {
+   "value": 56.2,
+   "unit": "m static head (80 psi)",
+   "tag": "PUBLIC",
+   "meaning": "Static pressure above 80 psi needs an approved pressure regulator preceded by an adequate strainer, reducing static pressure to 80 psi or less. EXCEPTION: regulators of 1-1/2 in (40 mm) or larger do not require a strainer, so a strainer at a riser-size zone PRV is a design choice, not a code mandate. Where one is fitted, its differential pressure at test flow is the most direct check. Verified only in the UPC-based Hawaii 2021 text; California Plumbing Code equivalence is unverified.",
+   "quote": "Pressure regulator(s) equal to or exceeding 1 1/2 inches (40 mm) shall not require a strainer.",
+   "source": "Section 608.2 Excessive Water Pressure (Hawaii Plumbing Code 2021, UPC-based, UpCodes)",
+   "url": "https://up.codes/s/excessive-water-pressure"
+  },
+  "DN100_STACK_MAX_LPS": {
+   "value": 4.0,
+   "unit": "L/s",
+   "tag": "PUBLIC",
+   "meaning": "Maximum drainage flow for a DN100 stack is 4.0 L/s with square branch entries and 5.2 L/s with swept entries (EN 12056-2 / DIN 1986-100, as summarised by Lansing 2023). A test draw sent to a DN100 stack must stay at or below 4.0 L/s; above that it must go to a break tank or cistern.",
+   "quote": "The maximum drainage flow permitted for a DN 100 (4 inch) stack is 4.0 L/s (63 gpm) ... If swept branch connection fittings are used, the maximum drainage flow is increased to 5.2 L/s",
+   "source": "Lansing 2023, CIB W062 symposium, section 3.2 (Germany)",
+   "url": "https://www.irbnet.de/daten/iconda/CIB_DC39171.pdf"
+  },
+  "ACTIVE_TEST_LPS": {
+   "value": [
+    4.0,
+    2.5
+   ],
+   "unit": "L/s",
+   "tag": "team-proposed",
+   "meaning": "Nightly active flow test: one motorised test-draw valve at the top of each pressure zone opens for one short step at a known flow (4.0 L/s, and 2.5 L/s as the stack-safe variant). Cerebro only PROPOSES the schedule; a facilities person approves the standing schedule; the BMS runs it with a BMS-side low-pressure abort. Domestic cold water only, never fire, sprinkler or standpipe piping.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "ACTIVE_TEST_SECONDS": {
+   "value": [
+    60,
+    120
+   ],
+   "unit": "s",
+   "tag": "team-proposed",
+   "meaning": "Proposed hold time of each test draw, logged at 1 s and averaged once the flow has settled (research verifier's recommendation, to limit the water used per night). The simulation does NOT model this window: EPANET solves the settled flow at one 10-minute step, and the transient after the valve opens is not simulated. The pressure-noise assumption applies to the averaged reading.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "PRESSURE_NOISE_M": {
+   "value": 0.15,
+   "unit": "m (sd per reading)",
+   "tag": "Assumption",
+   "meaning": "Pressure transducer noise per reading (10-min or test-window mean). No datasheet checked.",
+   "quote": "",
+   "source": "assumption",
+   "url": ""
+  },
+  "FLOW_NOISE": {
+   "value": {
+    "rel": 0.01,
+    "abs_velocity_ms": 0.0046
+   },
+   "unit": "",
+   "tag": "PUBLIC",
+   "meaning": "Clamp-on transit-time flow meter accuracy: +-1.0% of reading from 0.5 to 12 m/s and +-0.0046 m/s below 0.5 m/s. Modelled as sd = max(1% of Q, 0.0046 m/s x pipe area).",
+   "quote": "+-1.0% of reading from 1.5 to 40 ft/sec (0.5 to 12.0 m/sec) and +-0.015 ft/sec (+-0.0046 m/sec) for velocity below 1.5 ft/sec",
+   "source": "AW-Lake CUTT clamp-on ultrasonic flow meter page",
+   "url": "https://aw-lake.com/product/clamp-on-ultrasonic-flow-meter/"
+  },
+  "K_BANDS": {
+   "value": {
+    "mild": [
+     1,
+     10
+    ],
+    "moderate": [
+     10,
+     50
+    ],
+    "severe": [
+     50,
+     300
+    ]
+   },
+   "unit": "minor-loss coefficient K",
+   "tag": "Assumption",
+   "meaning": "Clog severity classes are contiguous bands of the extra minor-loss coefficient K (drawn log-uniform from 1 to 300). The mapping from K to a physical blockage (percent area, scale, debris) is unsourced.",
+   "quote": "",
+   "source": "assumption",
+   "url": ""
+  },
+  "MINOR_LOSS": {
+   "value": null,
+   "unit": "",
+   "tag": "PUBLIC",
+   "meaning": "EPANET models minor losses as h = K v^2 / 2g and pipe friction by Hazen-Williams (C 130-140 for new cast iron).",
+   "quote": "",
+   "source": "EPANET 2.2 manual, chapter 3",
+   "url": "https://epanet-manual.readthedocs.io/en/latest/3_network_model.html"
+  },
+  "FALSE_ALARM_TARGET": {
+   "value": 0.05,
+   "unit": "alarms per clean test night",
+   "tag": "team-proposed",
+   "meaning": "Alarm thresholds are set on OUT-OF-FOLD predictions for clean training nights at their 95th percentile, never on the held-out test weeks.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "PERSISTENCE_2_OF_3": {
+   "value": [
+    2,
+    3
+   ],
+   "unit": "nights",
+   "tag": "team-proposed",
+   "meaning": "A clog work order is proposed only when 2 of any 3 consecutive nightly tests alarm.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "PAIRED_DOWN_DROP": {
+   "value": 0.7,
+   "unit": "ratio to trailing 7-day median",
+   "tag": "team-proposed",
+   "meaning": "Paired drain rule: upstream level above its predicted normal AND downstream level below 70% of its trailing 7-day median.",
+   "quote": "",
+   "source": "team design (research pilot)",
+   "url": ""
+  },
+  "LEVEL_NOISE_M": {
+   "value": {
+    "sd": 0.005,
+    "step": 0.01
+   },
+   "unit": "m",
+   "tag": "Assumption",
+   "meaning": "Drain level sensor noise (sd 0.5 cm) and 1 cm logging step; the 1 cm step mirrors the Bellinge iFix note that level is stored only on changes over 1 cm.",
+   "quote": "to save space data is stored only if the value difference is more than 1 cm for level sensors",
+   "source": "Bellinge 2_Sensordata_v2.pdf",
+   "url": "https://ndownloader.figshare.com/files/30592500"
+  },
+  "DRAIN_TEST": {
+   "value": {
+    "lps": 2.5,
+    "seconds": 60
+   },
+   "unit": "",
+   "tag": "team-proposed",
+   "meaning": "Known-volume nightly drain-down test: 150 L discharged into the stack at 2.5 L/s (below the 4.0 L/s DN100 stack limit), level logged at the cleanout; drain-down time compared with the commissioning value.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "DRAIN_RATIO_BANDS": {
+   "value": {
+    "watch": 1.2,
+    "urgent": 2.0
+   },
+   "unit": "drain-down time / commissioning value",
+   "tag": "team-proposed",
+   "meaning": "Drain-down ratio 1.2 or more: schedule camera inspection; 2.0 or more, or no drain-down within the test window: urgent work order.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "CAMERA_BASE_INTERVAL": {
+   "value": 365,
+   "unit": "days",
+   "tag": "team-proposed",
+   "meaning": "Default camera (CCTV) interval for stack bases and the building drain. No authoritative fixed interval for building drains was found; shortened by risk and after backups, mirroring LASAN's performance-history approach.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  },
+  "STRAINER_BASE_INTERVAL": {
+   "value": 180,
+   "unit": "days",
+   "tag": "team-proposed",
+   "meaning": "Default strainer inspection interval at PRV stations where a strainer is fitted; brought forward to 7 days when the nightly flow test alarms on the strainer location on 2 of 3 nights. In our model a clean strainer's head loss at test flow is below the noise of two gauge-pressure sensors, so the check is 'alarm vs no alarm', not a ratio to commissioning.",
+   "quote": "",
+   "source": "team design",
+   "url": ""
+  }
+ }
+}

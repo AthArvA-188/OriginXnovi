@@ -1,0 +1,175 @@
+{
+ "label": "REAL (BDG2) zero-shot",
+ "model": "amazon/chronos-bolt-small",
+ "licence": "Apache-2.0",
+ "context_h": 512,
+ "device": "cuda",
+ "runtime_s": 51.1,
+ "median_cvrmse_chronos": 0.07449864035170675,
+ "median_cvrmse_hgb_no_weather": 0.09060678318388915,
+ "chronos_beats_hgb": 18,
+ "chronos_beats_best_naive": 19,
+ "n_meters": 20,
+ "meters": [
+  {
+   "meter": "Bear_parking_Bruce",
+   "n_test_h": 8494,
+   "cvrmse_chronos": 0.054180130514601466,
+   "cvrmse_hgb_no_weather": 0.06790132277706525,
+   "nmbe_chronos": 0.002687672607055931,
+   "best_naive": 0.07543585588851687
+  },
+  {
+   "meter": "Bear_parking_Gordon",
+   "n_test_h": 8651,
+   "cvrmse_chronos": 0.00982935274026618,
+   "cvrmse_hgb_no_weather": 0.014017822545146183,
+   "nmbe_chronos": 0.0006089197505872427,
+   "best_naive": 0.016908033379294102
+  },
+  {
+   "meter": "Fox_parking_Felipa",
+   "n_test_h": 8632,
+   "cvrmse_chronos": 0.07312001133427003,
+   "cvrmse_hgb_no_weather": 0.07692278683949927,
+   "nmbe_chronos": -0.002299683631442,
+   "best_naive": 0.08121545753588602
+  },
+  {
+   "meter": "Fox_parking_Lynelle",
+   "n_test_h": 8757,
+   "cvrmse_chronos": 0.08483030161328245,
+   "cvrmse_hgb_no_weather": 0.08894997981958208,
+   "nmbe_chronos": -0.00013152731825900434,
+   "best_naive": 0.10396151303859814
+  },
+  {
+   "meter": "Fox_parking_Tommie",
+   "n_test_h": 8754,
+   "cvrmse_chronos": 0.034001160645474635,
+   "cvrmse_hgb_no_weather": 0.07784126309787973,
+   "nmbe_chronos": -0.00022782550815881838,
+   "best_naive": 0.043834786349894614
+  },
+  {
+   "meter": "Hog_parking_Antoinette",
+   "n_test_h": 8760,
+   "cvrmse_chronos": 0.1544449738130215,
+   "cvrmse_hgb_no_weather": 0.1669872888254587,
+   "nmbe_chronos": 0.014016018329348316,
+   "best_naive": 0.22259771860441982
+  },
+  {
+   "meter": "Hog_parking_Bernardo",
+   "n_test_h": 8760,
+   "cvrmse_chronos": 0.0921519619885515,
+   "cvrmse_hgb_no_weather": 0.11406894300741535,
+   "nmbe_chronos": 0.0026470481552503186,
+   "best_naive": 0.13644834871776773
+  },
+  {
+   "meter": "Hog_parking_Cliff",
+   "n_test_h": 8723,
+   "cvrmse_chronos": 0.13768840847313107,
+   "cvrmse_hgb_no_weather": 0.13497533226273403,
+   "nmbe_chronos": 0.0010430072738029392,
+   "best_naive": 0.17716077425314458
+  },
+  {
+   "meter": "Hog_parking_Jean",
+   "n_test_h": 8760,
+   "cvrmse_chronos": 0.161719278080814,
+   "cvrmse_hgb_no_weather": 0.2530992461385173,
+   "nmbe_chronos": 0.0033601422587040755,
+   "best_naive": 0.22901766341421587
+  },
+  {
+   "meter": "Hog_parking_Jeana",
+   "n_test_h": 8760,
+   "cvrmse_chronos": 0.2170476428131851,
+   "cvrmse_hgb_no_weather": 0.2617167456549996,
+   "nmbe_chronos": 0.024634914324558048,
+   "best_naive": 0.3108497199128994
+  },
+  {
+   "meter": "Hog_parking_Marcus",
+   "n_test_h": 8760,
+   "cvrmse_chronos": 0.07077110931628537,
+   "cvrmse_hgb_no_weather": 0.10251155121573052,
+   "nmbe_chronos": 0.001936464418038759,
+   "best_naive": 0.12667377361217988
+  },
+  {
+   "meter": "Hog_parking_Shannon",
+   "n_test_h": 8760,
+   "cvrmse_chronos": 0.1677343831514871,
+   "cvrmse_hgb_no_weather": 0.2412184252478374,
+   "nmbe_chronos": 0.010137302971337563,
+   "best_naive": 0.2270513083687604
+  },
+  {
+   "meter": "Panther_parking_Adela",
+   "n_test_h": 8727,
+   "cvrmse_chronos": 0.06831426030121285,
+   "cvrmse_hgb_no_weather": 0.07377359313709414,
+   "nmbe_chronos": 0.003665504353269661,
+   "best_naive": 0.07443619962534977
+  },
+  {
+   "meter": "Panther_parking_Alaina",
+   "n_test_h": 8724,
+   "cvrmse_chronos": 0.04720691146908308,
+   "cvrmse_hgb_no_weather": 0.045111752481537704,
+   "nmbe_chronos": 0.002152933055558132,
+   "best_naive": 0.048107427962454576
+  },
+  {
+   "meter": "Panther_parking_Asia",
+   "n_test_h": 8727,
+   "cvrmse_chronos": 0.06708145896010283,
+   "cvrmse_hgb_no_weather": 0.07042816303636572,
+   "nmbe_chronos": 0.0019982901471524237,
+   "best_naive": 0.07867434793329496
+  },
+  {
+   "meter": "Panther_parking_Charlene",
+   "n_test_h": 8724,
+   "cvrmse_chronos": 0.07312021736327443,
+   "cvrmse_hgb_no_weather": 0.07522330149192007,
+   "nmbe_chronos": 0.004449307024171069,
+   "best_naive": 0.08719612587047347
+  },
+  {
+   "meter": "Panther_parking_Lorriane",
+   "n_test_h": 8727,
+   "cvrmse_chronos": 0.12372937783511542,
+   "cvrmse_hgb_no_weather": 0.13350991306643858,
+   "nmbe_chronos": 0.008049636041639259,
+   "best_naive": 0.14916227999017054
+  },
+  {
+   "meter": "Panther_parking_Mellissa",
+   "n_test_h": 8727,
+   "cvrmse_chronos": 0.07587706334013909,
+   "cvrmse_hgb_no_weather": 0.09226358654819622,
+   "nmbe_chronos": 0.0014255400739730053,
+   "best_naive": 0.08889373372462231
+  },
+  {
+   "meter": "Panther_parking_Stanley",
+   "n_test_h": 8724,
+   "cvrmse_chronos": 0.0325537037403824,
+   "cvrmse_hgb_no_weather": 0.039820655214112266,
+   "nmbe_chronos": -0.0002862745681281519,
+   "best_naive": 0.0325127144230209
+  },
+  {
+   "meter": "Rat_parking_Ronnie",
+   "n_test_h": 8607,
+   "cvrmse_chronos": 0.2898174317071626,
+   "cvrmse_hgb_no_weather": 0.3676287628530393,
+   "nmbe_chronos": 0.02756096556211325,
+   "best_naive": 0.3810622862176338
+  }
+ ]
+}

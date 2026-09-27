@@ -1,0 +1,583 @@
+{
+ "_about": "Fire de-escalation planner rule table (Pavilion Cerebro, key 'fire'). Every threshold carries a public URL or the tag 'team-proposed, validate'. Kept inside cascade.building (not in cascade/rubrics) so drift fingerprints are unaffected. Sources accessed 2026-09-26 by the research and verify agents; corrections from the verifier applied.",
+ "version": 1,
+ "accessed": "2026-09-26",
+ "thresholds": [
+  {
+   "key": "FIRE_ALERT_ABOVE",
+   "value": 1,
+   "unit": "floors",
+   "tag": "PUBLIC",
+   "meaning": "voice alarm reaches at least the floor above the alarming floor",
+   "url": "https://up.codes/s/emergency-voice-alarm-communication-systems",
+   "note": "IBC 2021 907.5.2.2: 'at least the alarming floor, the floor above and the floor below'; LAFD high-rise sequence policy footnote a says the same for new high-rises"
+  },
+  {
+   "key": "FIRE_ALERT_BELOW",
+   "value": 1,
+   "unit": "floors",
+   "tag": "PUBLIC",
+   "meaning": "voice alarm reaches at least the floor below the alarming floor",
+   "url": "https://up.codes/s/emergency-voice-alarm-communication-systems",
+   "note": "IBC 2021 907.5.2.2"
+  },
+  {
+   "key": "FIRE_STAGING_BELOW",
+   "value": 2,
+   "unit": "floors",
+   "tag": "PUBLIC, secondary",
+   "meaning": "fire department staging at least this many floors below the fire floor",
+   "url": "https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "note": "Sacramento Regional Fire guideline (reviewed 08/21/22): 'Staging a minimum of two floors below'. California regional guideline, not an LAFD SOP"
+  },
+  {
+   "key": "FIRE_EQUIP_BELOW",
+   "value": 1,
+   "unit": "floors",
+   "tag": "PUBLIC, secondary",
+   "meaning": "hose line connects to the standpipe in the attack stair this many floors below the fire",
+   "url": "https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "note": "Sacramento guideline: 'Equipment should be placed outside fire attack stairwell one floor below'; IBC 905.4 puts a hose connection at every floor landing"
+  },
+  {
+   "key": "FIRE_LIFT_EXIT_BELOW",
+   "value": 2,
+   "unit": "floors",
+   "tag": "PUBLIC, secondary",
+   "meaning": "crews leave the fire service elevator at least this many floors below the fire",
+   "url": "https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "note": "Sacramento guideline: 'crews exit a minimum of two floors below'; Phase II is fire department only"
+  },
+  {
+   "key": "FIRE_LIFT_MIN_FIRE_FLOOR",
+   "value": 7,
+   "unit": "floor level",
+   "tag": "PUBLIC, secondary",
+   "meaning": "fire department elevator use expected only when the fire floor is at or above this level",
+   "url": "https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "note": "Sacramento guideline: 'Elevator use is authorized for fires above the sixth floor'; below that the card says stairs expected"
+  },
+  {
+   "key": "FIRE_RELOCATE_MIN_BELOW",
+   "value": 3,
+   "unit": "floors",
+   "tag": "team-proposed, validate",
+   "meaning": "highest relocation floor is at least this many floors below the fire floor (below the staging floor)",
+   "url": "https://www.nist.gov/system/files/documents/el/fire_research/TN1664.pdf",
+   "note": "NIST TN 1664 reports an 'evacuate down three floors' message in a real high-rise fire; not a code rule. The building's approved Emergency Plan overrides this"
+  },
+  {
+   "key": "FIRE_RELOCATE_FLOORS",
+   "value": 3,
+   "unit": "floors",
+   "tag": "team-proposed, validate",
+   "meaning": "number of relocation floors offered to occupants of the alert floors",
+   "url": null,
+   "note": "sized so the design load of three alert floors fits; validate with the Emergency Plan relocation areas"
+  },
+  {
+   "key": "FIRE_SMOKE_WATCH_ABOVE",
+   "value": [
+    2,
+    5
+   ],
+   "unit": "floors above fire",
+   "tag": "team-proposed, validate",
+   "meaning": "floors above the alert zone whose shaft and core readings are watched for smoke spread",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir89-4035.pdf",
+   "note": "NISTIR 89-4035: stairwells and elevator shafts frequently become smoke-logged (stack effect). The band width is our choice"
+  },
+  {
+   "key": "FIRE_SPREAD_ABOVE",
+   "value": 2,
+   "unit": "floors",
+   "tag": "team-proposed, validate",
+   "meaning": "an alarm this many floors or more above the fire floor is treated as possible upward spread (escalation trigger E2)",
+   "url": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm",
+   "note": "First Interstate 1988 spread upward from floor 12 to floor 16"
+  },
+  {
+   "key": "OCC_LOAD_SQFT_PER_PERSON",
+   "value": 150,
+   "unit": "sq ft gross per person",
+   "tag": "PUBLIC, secondary",
+   "meaning": "IBC business occupant load factor used for the design occupant load (a code design figure, not a headcount)",
+   "url": "https://www.houstonpermittingcenter.org/media/9311/download?inline=",
+   "note": "Jensen Hughes memo, 2023-12-01: IBC 2018+ business load factor changed from 100 to 150 sq ft per person"
+  },
+  {
+   "key": "STAIR_MIN_SEP_FT",
+   "value": 30,
+   "unit": "ft",
+   "tag": "PUBLIC, secondary",
+   "meaning": "high-rise exit stair enclosures at least 30 ft apart (or 1/4 of the diagonal), measured between the nearest points of the enclosures",
+   "url": "https://www.buildingcode.blog/uploads/1/2/9/9/129929641/building_code_blog_-_high_rise_cheatsheet.pdf",
+   "note": "IBC 403.5.1 summary; scissor stairs count as one stairway. The synthetic layout is checked against this but no IBC compliance is claimed"
+  },
+  {
+   "key": "STAIR_PRESS_PA",
+   "value": [
+    25,
+    87
+   ],
+   "unit": "Pa",
+   "tag": "PUBLIC",
+   "meaning": "stair pressurization range (0.10-0.35 in. water) that the listed smoke-control system maintains",
+   "url": "https://up.codes/s/stairway-and-ramp-pressurization-alternative",
+   "note": "IBC 2021 909.20.5"
+  },
+  {
+   "key": "STAIR_CAMERA_EVERY",
+   "value": 5,
+   "unit": "floors",
+   "tag": "PUBLIC",
+   "meaning": "stair cameras on every 5th floor landing, viewable from the fire control room",
+   "url": "https://lafd.org/sites/default/files/pdf_files/EHLF-Reg10.pdf",
+   "note": "LAFD Requirement No. 10, Option 2 EHLF Equivalency only. Not a general high-rise requirement"
+  },
+  {
+   "key": "IBC_HEIGHT_TRIGGERS_FT",
+   "value": {
+    "smokeproof_stairs": 75,
+    "fire_service_access_elevators": 120,
+    "additional_stair": 420
+   },
+   "unit": "ft",
+   "tag": "PUBLIC, secondary",
+   "meaning": "IBC 403 height triggers (highest occupied floor above fire department access)",
+   "url": "https://www.buildingcode.blog/uploads/1/2/9/9/129929641/building_code_blog_-_high_rise_cheatsheet.pdf",
+   "note": "secondary summary of IBC 2021 section 403"
+  },
+  {
+   "key": "ESS_NEAR_FLOORS",
+   "value": 2,
+   "unit": "floors",
+   "tag": "team-proposed, validate",
+   "meaning": "an energy storage (battery) room within this many floors of the fire is flagged 'near'",
+   "url": "https://fsri.org/research-update/report-four-firefighters-injured-lithium-ion-battery-energy-storage-system",
+   "note": "UL FSRI Surprise AZ 2019 report recommends remote gas monitoring; the distance is our choice"
+  },
+  {
+   "key": "WATER_WATCH_MAX_HOPS",
+   "value": 6,
+   "unit": "hops",
+   "tag": "team-proposed, validate",
+   "meaning": "hop limit on the water graph when predicting where firefighting water migrates",
+   "url": null,
+   "note": "path score cut uses the existing REACH_MIN threshold of cascade.building.rules"
+  }
+ ],
+ "automatic_sequence": [
+  {
+   "id": "A1",
+   "item": "Voice alarm on the alarm floor, the floor above and the floor below",
+   "condition": "any listed initiating device",
+   "src": [
+    1,
+    6
+   ]
+  },
+  {
+   "id": "A2",
+   "item": "Elevator Phase I recall",
+   "condition": "ONLY IF an elevator lobby or hoistway detector activates (LAFD matrix row 'Recall All Elevators', footnote g); manual pull, area smoke, duct detector and waterflow do not recall elevators",
+   "src": [
+    1
+   ]
+  },
+  {
+   "id": "A3",
+   "item": "Smoke control and stair pressurization start",
+   "condition": "per the building's approved smoke-control matrix",
+   "src": [
+    1,
+    8
+   ]
+  },
+  {
+   "id": "A4",
+   "item": "Air handlers shut down and dampers close",
+   "condition": "per the approved matrix",
+   "src": [
+    1
+   ]
+  },
+  {
+   "id": "A5",
+   "item": "Held doors release and stair doors unlock",
+   "condition": "per the approved matrix",
+   "src": [
+    1
+   ]
+  },
+  {
+   "id": "A6",
+   "item": "Annunciation at the fire control room and the 24-hour remote station",
+   "condition": "any listed initiating device",
+   "src": [
+    1
+   ]
+  }
+ ],
+ "decisions": [
+  {
+   "id": "D0",
+   "owner": "FSD",
+   "phase": 1,
+   "question": "AI early alert with no listed alarm: check by camera; if staff must look, they go by stair, never by elevator. Fire seen: pull the alarm and call 911.",
+   "src": [
+    32
+   ]
+  },
+  {
+   "id": "D1",
+   "owner": "FSD",
+   "phase": 1,
+   "question": "Call 911 (or designate someone). The AI never delays or replaces this call.",
+   "src": [
+    3
+   ]
+  },
+  {
+   "id": "D2",
+   "owner": "FSD",
+   "phase": 2,
+   "question": "Approve the protect strategy (alert and relocation floors, evacuation stair) and read one consistent voice message live.",
+   "src": [
+    3,
+    5,
+    14
+   ]
+  },
+  {
+   "id": "D3",
+   "owner": "IC",
+   "phase": 3,
+   "question": "Fire department incident commander takes command; building systems move only on IC orders; IC designates the attack and evacuation stairs.",
+   "src": [
+    5,
+    10,
+    31
+   ]
+  },
+  {
+   "id": "D4",
+   "owner": "IC",
+   "phase": 4,
+   "question": "Widen the alert zone or order a total evacuation when an escalation trigger fires.",
+   "src": [
+    5
+   ]
+  },
+  {
+   "id": "D5",
+   "owner": "IC",
+   "phase": 5,
+   "question": "Authorize resets, fire watch where systems are impaired, and re-occupancy.",
+   "src": [
+    3,
+    5
+   ]
+  }
+ ],
+ "triggers": [
+  {
+   "id": "E1",
+   "text": "An alarm or waterflow signal on a floor outside the alert set: add that floor and the floors next to it.",
+   "src": [
+    6
+   ]
+  },
+  {
+   "id": "E2",
+   "text": "An alarm on the fire floor +2 or higher: possible upward spread [team-proposed, validate].",
+   "src": [
+    32
+   ]
+  },
+  {
+   "id": "E3",
+   "text": "Smoke reported in the evacuation stair: FSD and IC choose another stair.",
+   "src": [
+    15
+   ]
+  },
+  {
+   "id": "E4",
+   "text": "An open system impairment on any alert or relocation floor.",
+   "src": [
+    32,
+    33
+   ]
+  },
+  {
+   "id": "E5",
+   "text": "An alarm in the battery (ESS) room: nobody opens the door; remote gas readings only.",
+   "src": [
+    34
+   ]
+  },
+  {
+   "id": "E6",
+   "text": "A person who needs help on an alert floor is not accounted for.",
+   "src": [
+    3
+   ]
+  }
+ ],
+ "phases": [
+  {
+   "n": 0,
+   "name": "Prepare",
+   "trigger": "continuous",
+   "ai": "plan card per floor and zone, impairment list, drill tracking",
+   "built": "plan card per floor and zone and impairment list: built on the SYNTHETIC tower; drill tracking: not built",
+   "human": "FSD keeps the plan; LAFD approves the Emergency Plan"
+  },
+  {
+   "n": 1,
+   "name": "Verify",
+   "trigger": "listed alarm, or an AI early alert (not an alarm)",
+   "ai": "camera frames and sensor-based fire/nuisance label near the device",
+   "built": "camera: not built (Part C out of scope); sensor label: built and tested, but it did not transfer to a new room (see results)",
+   "human": "D0/D1: FSD checks and calls 911"
+  },
+  {
+   "n": 2,
+   "name": "Protect",
+   "trigger": "alarm confirmed or unresolved",
+   "ai": "draft plan card and one message template",
+   "built": "plan card: built; message template: not built",
+   "human": "D2: FSD approves and reads the message live"
+  },
+  {
+   "n": 3,
+   "name": "Hand over",
+   "trigger": "fire department arrives",
+   "ai": "one-page briefing (stairs, standpipe landing, elevators, panels, risers, hazards)",
+   "built": "built: the plan card download (Markdown or JSON)",
+   "human": "D3: IC takes command"
+  },
+  {
+   "n": 4,
+   "name": "Contain",
+   "trigger": "fire department operations",
+   "ai": "read-only awareness: alarm spread, shaft readings, water below",
+   "built": "alarm spread (trigger E1/E2) and water below (SIMULATED water graph): built in the planner; live shaft readings: not built (the card lists which sensors to read)",
+   "human": "D4: IC widens the zone or evacuates fully"
+  },
+  {
+   "n": 5,
+   "name": "Recover",
+   "trigger": "IC declares knockdown",
+   "ai": "reset checklist, salvage list for floors below",
+   "built": "salvage list (water watch): built; reset checklist: not built",
+   "human": "D5: IC authorizes resets and re-occupancy"
+  },
+  {
+   "n": 6,
+   "name": "Learn",
+   "trigger": "after the incident",
+   "ai": "automatic timeline, plan card updates",
+   "built": "automatic timeline: not built; plan card updates: rerun scripts/fire_build_plans.py",
+   "human": "FSD and LAFD review"
+  }
+ ],
+ "ai_never": [
+  "silence, reset or delay any alarm, or delay the 911 call",
+  "command or override the firefighter's smoke control panel, sprinklers, fire pumps, elevator recall or Phase II, stair locks or HVAC",
+  "choose the evacuation scope (the FSD, then the fire department incident commander, decides)",
+  "send anyone toward the fire or up in an elevator to check an alarm",
+  "treat a 'nuisance-like' score as a reason to downgrade a code alarm"
+ ],
+ "ai_never_src": [
+  10,
+  38,
+  3,
+  5,
+  32
+ ],
+ "first_interstate": [
+  {
+   "text": "The fire started on floor 12 of the 62-story First Interstate Bank tower in Los Angeles (May 1988) and burned floors 12 to 16, spreading upward.",
+   "src": [
+    32
+   ],
+   "design_rule": "plan for upward spread: the card watches floors above the alert zone and fires trigger E2"
+  },
+  {
+   "text": "The sprinkler system was about 90 percent installed but not in service, and the standpipe had been shut off (drained down to floor 58 per the LAFD archive summary).",
+   "src": [
+    32,
+    33
+   ],
+   "design_rule": "show open system impairments at the top of the card (trigger E4)"
+  },
+  {
+   "text": "A maintenance worker took a service elevator to floor 12 to check the alarm and died.",
+   "src": [
+    32
+   ],
+   "design_rule": "check alarms remotely (cameras, sensors); if staff must go, by stair, never by elevator (decision D0)"
+  },
+  {
+   "text": "About 50 people were above the fire; five were rescued from the roof by helicopter.",
+   "src": [
+    33
+   ],
+   "design_rule": "list the roof landing and people needing help on the card"
+  }
+ ],
+ "sources": [
+  {
+   "n": 1,
+   "title": "LAFD Policy for Fire Life Safety Sequence in High Rise Buildings (page marked Rev 6/26)",
+   "url": "https://lafd.org/fire-prevention/fire-development-services/policy-fire-life-safety-sequence-high-rise-buildings",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 3,
+   "title": "LA Ordinance 180,648 amending LAMC 57.33.19 (high-rise emergency planning and evacuation), 2009",
+   "url": "https://cityclerk.lacity.org/onlinedocs/2008/08-2476_ord_180648.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 5,
+   "title": "NFPA Guidelines to Developing Emergency Action Plans for All-Hazard Emergencies in High-Rise Office Buildings (2014)",
+   "url": "https://content.nfpa.org/-/media/project/storefront/catalog/files/building-and-life-safety/highrise/emergencyactionplanhighrise.pdf?rev=9f5900973b264cc486ed9efa8643eb30",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 6,
+   "title": "IBC 2021 907.5.2.2 emergency voice/alarm communication (UpCodes, Illinois adoption)",
+   "url": "https://up.codes/s/emergency-voice-alarm-communication-systems",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 7,
+   "title": "High-Rise Building Requirements Cheatsheet (IBC 2021), The Building Code Blog",
+   "url": "https://www.buildingcode.blog/uploads/1/2/9/9/129929641/building_code_blog_-_high_rise_cheatsheet.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 8,
+   "title": "IBC 2021 909.20.5 stairway pressurization alternative (UpCodes)",
+   "url": "https://up.codes/s/stairway-and-ramp-pressurization-alternative",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 9,
+   "title": "IBC 2021 911.1.6 fire command center required features (UpCodes)",
+   "url": "https://up.codes/s/required-features",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 10,
+   "title": "IBC 2021 909.16 fire fighter's smoke control panel (UpCodes)",
+   "url": "https://up.codes/s/fire-fighter-s-smoke-control-panel",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 11,
+   "title": "IBC 2021 905.4 Class I standpipe hose connection locations (UpCodes)",
+   "url": "https://up.codes/s/location-of-class-i-standpipe-hose-connections",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 12,
+   "title": "IBC 903.4.3 floor control valves (UpCodes)",
+   "url": "https://up.codes/s/floor-control-valves",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 13,
+   "title": "NIST TN 1825: The Use of Elevators for Evacuation in Fire Emergencies in International Buildings (2014)",
+   "url": "https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.1825.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 14,
+   "title": "NIST TN 1664: Occupant Behavior in a High-rise Office Building Fire (Kuligowski, Hoskins, 2010)",
+   "url": "https://www.nist.gov/system/files/documents/el/fire_research/TN1664.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 15,
+   "title": "NISTIR 89-4035: Considerations of Stack Effect in Building Fires (Klote, 1989)",
+   "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/IR/nistir89-4035.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 2,
+   "title": "LAFD Requirement No. 10: Emergency Helicopter Landing Facilities (rev. 11/17/2014)",
+   "url": "https://lafd.org/sites/default/files/pdf_files/EHLF-Reg10.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 31,
+   "title": "Sacramento Regional Fire guideline: High Rise Fire (reviewed 08/21/22; California regional, not LAFD)",
+   "url": "https://srfecc.ca.gov/files/bf8df60b1/High+Rise+Operations.pdf",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 32,
+   "title": "LAFD Historical Archive (lafire.com): Executive Summary, First Interstate Bank Building Fire (archive site, not an official LAFD page)",
+   "url": "https://lafire.com/famous_fires/1988-0504_1stInterstateFire/ExSummary/LAFD-ExecutiveSummary.htm",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 33,
+   "title": "NIST: Interstate Bank Building Fire, Los Angeles 1988",
+   "url": "https://www.nist.gov/el/interstate-bank-building-fire-los-angeles-1988",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 34,
+   "title": "UL FSRI: Four Firefighters Injured in Lithium-Ion Battery Energy Storage System Explosion (Arizona, 2019)",
+   "url": "https://fsri.org/research-update/report-four-firefighters-injured-lithium-ion-battery-energy-storage-system",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 35,
+   "title": "NIST AI Risk Management Framework",
+   "url": "https://www.nist.gov/itl/ai-risk-management-framework",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 37,
+   "title": "Jensen Hughes memo to Houston Permitting Center: IBC Occupant Load Factors (2023-12-01)",
+   "url": "https://www.houstonpermittingcenter.org/media/9311/download?inline=",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 38,
+   "title": "Intertek: UL 864 Control Units and Accessories for Fire Alarm Systems",
+   "url": "https://www.intertek.com/standards-updates/ul-864-control-and-accessories-for-fire-alarm-systems/",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 24,
+   "title": "V, Pascal (2023). Indoor Fire Dataset with Distributed Multi-Sensor Nodes (EN54 Test Room), Mendeley Data, V1, doi:10.17632/npk2zcm85h.1. Otto von Guericke Universitat Magdeburg. CC BY 4.0. A version 2 (doi .2, 2025-06-20) with revised labels exists; this build uses the V1 file.",
+   "url": "https://data.mendeley.com/datasets/npk2zcm85h/1",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 25,
+   "title": "V, Pascal (2024). Indoor Fire Dataset with Distributed Multi-Sensor Nodes (Industrial Hall), Mendeley Data, V1, doi:10.17632/yghykzm4km.1. Otto von Guericke Universitat Magdeburg. CC BY 4.0.",
+   "url": "https://data.mendeley.com/datasets/yghykzm4km/1",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 26,
+   "title": "Vorwerk et al. 2024, Classification in Early Fire Detection Using Multi-Sensor Nodes - A Transfer Learning Approach, Sensors 24(5):1428 (related work only; not the source of the Mendeley files)",
+   "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10934981/",
+   "accessed": "2026-09-26"
+  },
+  {
+   "n": 40,
+   "title": "Creative Commons Attribution 4.0 International licence",
+   "url": "https://creativecommons.org/licenses/by/4.0/",
+   "accessed": "2026-09-26"
+  }
+ ]
+}

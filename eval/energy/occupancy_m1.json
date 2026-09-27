@@ -1,0 +1,663 @@
+{
+ "label": "REAL (ROBOD, CC BY 4.0)",
+ "features": [
+  "indoor_co2 [ppm]",
+  "co2_d15",
+  "co2_d30",
+  "sound_pressure_level [dba]",
+  "spl_max30",
+  "voc [ppb]",
+  "indoor_relative_humidity [%]",
+  "air_temperature [Celsius]",
+  "wifi_connected_devices [number]",
+  "hsin",
+  "hcos",
+  "dow",
+  "wkend"
+ ],
+ "excluded_as_leakage": [
+  "lighting_energy [kWh]",
+  "illuminance [lux]",
+  "plug_load_energy [kWh]",
+  "ceiling_fan_energy [kWh]",
+  "chilled_water_energy [kWh]",
+  "ahu_fan_energy [kWh]",
+  "occupant_count [number]"
+ ],
+ "threshold": 0.5,
+ "hgb": {
+  "random_state": 0,
+  "max_iter": 300
+ },
+ "room_names": {
+  "1": "Lecture room",
+  "2": "Lecture room",
+  "3": "Office space",
+  "4": "Office space",
+  "5": "Library space"
+ },
+ "day_blocked": {
+  "1": {
+   "split": "day-blocked: train days < 2021-12-13 (20 d), test days >= 2021-12-13 (9 d)",
+   "n_train": 5760,
+   "models": {
+    "majority": {
+     "n": 2592,
+     "n_pos": 55,
+     "prevalence": 0.021219135802469136,
+     "acc": 0.9787808641975309,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 2592,
+     "n_pos": 55,
+     "prevalence": 0.021219135802469136,
+     "acc": 0.5783179012345679,
+     "f1": 0.03700440528634361,
+     "bal_acc": 0.48219801483498764,
+     "false_vacancy_rate": 0.6181818181818182,
+     "false_occupied_rate": 0.41742215214820655,
+     "auc": 0.5684989429175475
+    },
+    "schedule_168": {
+     "n": 2592,
+     "n_pos": 55,
+     "prevalence": 0.021219135802469136,
+     "acc": 0.6469907407407407,
+     "f1": 0.06537282941777324,
+     "bal_acc": 0.6151109040742466,
+     "false_vacancy_rate": 0.41818181818181815,
+     "false_occupied_rate": 0.3515963736696886,
+     "auc": 0.6018239151467374
+    },
+    "m1_hgb": {
+     "n": 2592,
+     "n_pos": 55,
+     "prevalence": 0.021219135802469136,
+     "acc": 0.6431327160493827,
+     "f1": 0.07221664994984955,
+     "bal_acc": 0.64871537607052,
+     "false_vacancy_rate": 0.34545454545454546,
+     "false_occupied_rate": 0.3571147024044147,
+     "auc": 0.7335220553982872
+    },
+    "m1_hgb_no_wifi": {
+     "n": 2592,
+     "n_pos": 55,
+     "prevalence": 0.021219135802469136,
+     "acc": 0.5621141975308642,
+     "f1": 0.05652535328345802,
+     "bal_acc": 0.5895402587164511,
+     "false_vacancy_rate": 0.38181818181818183,
+     "false_occupied_rate": 0.43910130074891607,
+     "auc": 0.6038484967929194
+    }
+   },
+   "vs_best_baseline": {
+    "model": "m1_hgb",
+    "baseline": "schedule_168",
+    "f1_diff": 0.006843820532076314,
+    "ci95": [
+     -0.011654895226623113,
+     0.07465404286948138
+    ],
+    "n_boot": 1000,
+    "n_days": 9,
+    "unit": "test days",
+    "verdict": "no clear difference"
+   }
+  },
+  "2": {
+   "split": "day-blocked: train days < 2021-12-13 (20 d), test days >= 2021-12-13 (9 d)",
+   "n_train": 5760,
+   "models": {
+    "majority": {
+     "n": 2592,
+     "n_pos": 555,
+     "prevalence": 0.21412037037037038,
+     "acc": 0.7858796296296297,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 2592,
+     "n_pos": 555,
+     "prevalence": 0.21412037037037038,
+     "acc": 0.6793981481481481,
+     "f1": 0.45579567779960706,
+     "bal_acc": 0.6603470923058552,
+     "false_vacancy_rate": 0.372972972972973,
+     "false_occupied_rate": 0.30633284241531666,
+     "auc": 0.7771325080603431
+    },
+    "schedule_168": {
+     "n": 2592,
+     "n_pos": 555,
+     "prevalence": 0.21412037037037038,
+     "acc": 0.6956018518518519,
+     "f1": 0.4912959381044487,
+     "bal_acc": 0.6922859531106953,
+     "false_vacancy_rate": 0.31351351351351353,
+     "false_occupied_rate": 0.3019145802650957,
+     "auc": 0.7359856174289163
+    },
+    "m1_hgb": {
+     "n": 2592,
+     "n_pos": 555,
+     "prevalence": 0.21412037037037038,
+     "acc": 0.7716049382716049,
+     "f1": 0.5801418439716312,
+     "bal_acc": 0.758993750746328,
+     "false_vacancy_rate": 0.26306306306306304,
+     "false_occupied_rate": 0.2189494354442808,
+     "auc": 0.8464912629861082
+    },
+    "m1_hgb_no_wifi": {
+     "n": 2592,
+     "n_pos": 555,
+     "prevalence": 0.21412037037037038,
+     "acc": 0.7442129629629629,
+     "f1": 0.40431266846361186,
+     "bal_acc": 0.6209648529236158,
+     "false_vacancy_rate": 0.5945945945945946,
+     "false_occupied_rate": 0.1634756995581738,
+     "auc": 0.7436877230691663
+    }
+   },
+   "vs_best_baseline": {
+    "model": "m1_hgb",
+    "baseline": "schedule_168",
+    "f1_diff": 0.08884590586718244,
+    "ci95": [
+     0.018089539484138502,
+     0.15609787473177983
+    ],
+    "n_boot": 1000,
+    "n_days": 9,
+    "unit": "test days",
+    "verdict": "model better"
+   }
+  },
+  "3": {
+   "split": "day-blocked: train days < 2021-12-13 (20 d), test days >= 2021-12-13 (9 d)",
+   "n_train": 5760,
+   "models": {
+    "majority": {
+     "n": 2592,
+     "n_pos": 789,
+     "prevalence": 0.30439814814814814,
+     "acc": 0.6956018518518519,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 2592,
+     "n_pos": 789,
+     "prevalence": 0.30439814814814814,
+     "acc": 0.8422067901234568,
+     "f1": 0.7931208902377339,
+     "bal_acc": 0.8847959357977515,
+     "false_vacancy_rate": 0.0063371356147021544,
+     "false_occupied_rate": 0.22407099278979478,
+     "auc": 0.9468597964102922
+    },
+    "schedule_168": {
+     "n": 2592,
+     "n_pos": 789,
+     "prevalence": 0.30439814814814814,
+     "acc": 0.8422067901234568,
+     "f1": 0.7905785970302099,
+     "bal_acc": 0.8805191600817395,
+     "false_vacancy_rate": 0.021546261089987327,
+     "false_occupied_rate": 0.21741541874653356,
+     "auc": 0.923480932708266
+    },
+    "m1_hgb": {
+     "n": 2592,
+     "n_pos": 789,
+     "prevalence": 0.30439814814814814,
+     "acc": 0.8564814814814815,
+     "f1": 0.802547770700637,
+     "bal_acc": 0.885077469110418,
+     "false_vacancy_rate": 0.04182509505703422,
+     "false_occupied_rate": 0.18801996672212978,
+     "auc": 0.9521168422998705
+    },
+    "m1_hgb_no_wifi": {
+     "n": 2592,
+     "n_pos": 789,
+     "prevalence": 0.30439814814814814,
+     "acc": 0.8491512345679012,
+     "f1": 0.7964601769911505,
+     "bal_acc": 0.8830160547798451,
+     "false_vacancy_rate": 0.030418250950570342,
+     "false_occupied_rate": 0.20354963948973934,
+     "auc": 0.9538875849081273
+    }
+   },
+   "vs_best_baseline": {
+    "model": "m1_hgb",
+    "baseline": "schedule_48",
+    "f1_diff": 0.009426880462903076,
+    "ci95": [
+     -0.012998807429555637,
+     0.028325407404017434
+    ],
+    "n_boot": 1000,
+    "n_days": 9,
+    "unit": "test days",
+    "verdict": "no clear difference"
+   }
+  },
+  "4": {
+   "split": "day-blocked: train days < 2021-11-12 (32 d), test days >= 2021-11-12 (15 d)",
+   "n_train": 9216,
+   "models": {
+    "majority": {
+     "n": 4320,
+     "n_pos": 2522,
+     "prevalence": 0.5837962962962963,
+     "acc": 0.5837962962962963,
+     "f1": 0.7372113417129494,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 0.0,
+     "false_occupied_rate": 1.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 4320,
+     "n_pos": 2522,
+     "prevalence": 0.5837962962962963,
+     "acc": 0.874537037037037,
+     "f1": 0.899666790077749,
+     "bal_acc": 0.8566214641521683,
+     "false_vacancy_rate": 0.03647898493259318,
+     "false_occupied_rate": 0.25027808676307006,
+     "auc": 0.9237063121505171
+    },
+    "schedule_168": {
+     "n": 4320,
+     "n_pos": 2522,
+     "prevalence": 0.5837962962962963,
+     "acc": 0.888425925925926,
+     "f1": 0.9101751770406261,
+     "bal_acc": 0.8723486930142664,
+     "false_vacancy_rate": 0.0317208564631245,
+     "false_occupied_rate": 0.2235817575083426,
+     "auc": 0.9192922085425783
+    },
+    "m1_hgb": {
+     "n": 4320,
+     "n_pos": 2522,
+     "prevalence": 0.5837962962962963,
+     "acc": 0.8905092592592593,
+     "f1": 0.9112736822359783,
+     "bal_acc": 0.8758892822141793,
+     "false_vacancy_rate": 0.03687549563838224,
+     "false_occupied_rate": 0.21134593993325917,
+     "auc": 0.9241731715299137
+    },
+    "m1_hgb_no_wifi": {
+     "n": 4320,
+     "n_pos": 2522,
+     "prevalence": 0.5837962962962963,
+     "acc": 0.8891203703703704,
+     "f1": 0.9101144680052543,
+     "bal_acc": 0.874540087276461,
+     "false_vacancy_rate": 0.038461538461538464,
+     "false_occupied_rate": 0.21245828698553948,
+     "auc": 0.9220062559597897
+    }
+   },
+   "vs_best_baseline": {
+    "model": "m1_hgb",
+    "baseline": "schedule_168",
+    "f1_diff": 0.0010985051953521507,
+    "ci95": [
+     -0.01113425690920054,
+     0.013458230809139467
+    ],
+    "n_boot": 1000,
+    "n_days": 15,
+    "unit": "test days",
+    "verdict": "no clear difference"
+   }
+  },
+  "5": {
+   "split": "day-blocked: train days < 2021-11-12 (32 d), test days >= 2021-11-12 (15 d)",
+   "n_train": 9216,
+   "models": {
+    "majority": {
+     "n": 4320,
+     "n_pos": 1535,
+     "prevalence": 0.35532407407407407,
+     "acc": 0.6446759259259259,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 4320,
+     "n_pos": 1535,
+     "prevalence": 0.35532407407407407,
+     "acc": 0.8451388888888889,
+     "f1": 0.8189445196211096,
+     "bal_acc": 0.8766758869934912,
+     "false_vacancy_rate": 0.014332247557003257,
+     "false_occupied_rate": 0.23231597845601437,
+     "auc": 0.9449078649582745
+    },
+    "schedule_168": {
+     "n": 4320,
+     "n_pos": 1535,
+     "prevalence": 0.35532407407407407,
+     "acc": 0.8451388888888889,
+     "f1": 0.8189445196211096,
+     "bal_acc": 0.8766758869934912,
+     "false_vacancy_rate": 0.014332247557003257,
+     "false_occupied_rate": 0.23231597845601437,
+     "auc": 0.8999770758893326
+    },
+    "m1_hgb": {
+     "n": 4320,
+     "n_pos": 1535,
+     "prevalence": 0.35532407407407407,
+     "acc": 0.8590277777777777,
+     "f1": 0.8181546730367274,
+     "bal_acc": 0.866541324803069,
+     "false_vacancy_rate": 0.10749185667752444,
+     "false_occupied_rate": 0.15942549371633752,
+     "auc": 0.9061564102714051
+    },
+    "m1_hgb_no_wifi": {
+     "n": 4320,
+     "n_pos": 1535,
+     "prevalence": 0.35532407407407407,
+     "acc": 0.830787037037037,
+     "f1": 0.7726283048211509,
+     "bal_acc": 0.8259247130100176,
+     "false_vacancy_rate": 0.19087947882736156,
+     "false_occupied_rate": 0.15727109515260324,
+     "auc": 0.9059463505634534
+    }
+   },
+   "vs_best_baseline": {
+    "model": "m1_hgb",
+    "baseline": "schedule_48",
+    "f1_diff": -0.0007898465843821922,
+    "ci95": [
+     -0.043169420906618086,
+     0.033362377724991746
+    ],
+    "n_boot": 1000,
+    "n_days": 15,
+    "unit": "test days",
+    "verdict": "no clear difference"
+   }
+  }
+ },
+ "leave_one_room_out": {
+  "1": {
+   "split": "leave-one-room-out: train rooms [2, 3, 4, 5], test room 1 (all days)",
+   "n_train": 43776,
+   "models": {
+    "majority": {
+     "n": 8352,
+     "n_pos": 1760,
+     "prevalence": 0.210727969348659,
+     "acc": 0.789272030651341,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 8352,
+     "n_pos": 1760,
+     "prevalence": 0.210727969348659,
+     "acc": 0.6496647509578544,
+     "f1": 0.5070754716981132,
+     "bal_acc": 0.72496276478376,
+     "false_vacancy_rate": 0.14488636363636365,
+     "false_occupied_rate": 0.4051881067961165,
+     "auc": 0.7782639425198588
+    },
+    "schedule_168": {
+     "n": 8352,
+     "n_pos": 1760,
+     "prevalence": 0.210727969348659,
+     "acc": 0.6527777777777778,
+     "f1": 0.5054570259208732,
+     "bal_acc": 0.7221453000882613,
+     "false_vacancy_rate": 0.15795454545454546,
+     "false_occupied_rate": 0.39775485436893204,
+     "auc": 0.7865534325353045
+    },
+    "m1_hgb": {
+     "n": 8352,
+     "n_pos": 1760,
+     "prevalence": 0.210727969348659,
+     "acc": 0.8487787356321839,
+     "f1": 0.6492640933074146,
+     "bal_acc": 0.781131398940865,
+     "false_vacancy_rate": 0.33579545454545456,
+     "false_occupied_rate": 0.10194174757281553,
+     "auc": 0.8921150981906444
+    }
+   }
+  },
+  "2": {
+   "split": "leave-one-room-out: train rooms [1, 3, 4, 5], test room 2 (all days)",
+   "n_train": 43776,
+   "models": {
+    "majority": {
+     "n": 8352,
+     "n_pos": 2374,
+     "prevalence": 0.28424329501915707,
+     "acc": 0.7157567049808429,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 8352,
+     "n_pos": 2374,
+     "prevalence": 0.28424329501915707,
+     "acc": 0.7420977011494253,
+     "f1": 0.6711450381679389,
+     "bal_acc": 0.7974918142709733,
+     "false_vacancy_rate": 0.07413647851727043,
+     "false_occupied_rate": 0.33087989294078285,
+     "auc": 0.8619091400284616
+    },
+    "schedule_168": {
+     "n": 8352,
+     "n_pos": 2374,
+     "prevalence": 0.28424329501915707,
+     "acc": 0.7454501915708812,
+     "f1": 0.6718122877431306,
+     "bal_acc": 0.797040285032764,
+     "false_vacancy_rate": 0.08340353833192923,
+     "false_occupied_rate": 0.3225158916025427,
+     "auc": 0.8632294825480568
+    },
+    "m1_hgb": {
+     "n": 8352,
+     "n_pos": 2374,
+     "prevalence": 0.28424329501915707,
+     "acc": 0.8474616858237548,
+     "f1": 0.7101910828025477,
+     "bal_acc": 0.7902119622553125,
+     "false_vacancy_rate": 0.34245998315080034,
+     "false_occupied_rate": 0.07711609233857478,
+     "auc": 0.9071985513859722
+    }
+   }
+  },
+  "3": {
+   "split": "leave-one-room-out: train rooms [1, 2, 4, 5], test room 3 (all days)",
+   "n_train": 43776,
+   "models": {
+    "majority": {
+     "n": 8352,
+     "n_pos": 3333,
+     "prevalence": 0.399066091954023,
+     "acc": 0.600933908045977,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 8352,
+     "n_pos": 3333,
+     "prevalence": 0.399066091954023,
+     "acc": 0.84375,
+     "f1": 0.8262085497403117,
+     "bal_acc": 0.8583531096684086,
+     "false_vacancy_rate": 0.06930693069306931,
+     "false_occupied_rate": 0.21398684997011358,
+     "auc": 0.9375814748241111
+    },
+    "schedule_168": {
+     "n": 8352,
+     "n_pos": 3333,
+     "prevalence": 0.399066091954023,
+     "acc": 0.836566091954023,
+     "f1": 0.8196591359492668,
+     "bal_acc": 0.8523758233563943,
+     "false_vacancy_rate": 0.06930693069306931,
+     "false_occupied_rate": 0.22594142259414227,
+     "auc": 0.9088822510463836
+    },
+    "m1_hgb": {
+     "n": 8352,
+     "n_pos": 3333,
+     "prevalence": 0.399066091954023,
+     "acc": 0.8413553639846744,
+     "f1": 0.7775726036595602,
+     "bal_acc": 0.8167513404060072,
+     "false_vacancy_rate": 0.3051305130513051,
+     "false_occupied_rate": 0.061366806136680614,
+     "auc": 0.9430831307876754
+    }
+   }
+  },
+  "4": {
+   "split": "leave-one-room-out: train rooms [1, 2, 3, 5], test room 4 (all days)",
+   "n_train": 38592,
+   "models": {
+    "majority": {
+     "n": 13536,
+     "n_pos": 8813,
+     "prevalence": 0.6510786052009456,
+     "acc": 0.3489213947990544,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 13536,
+     "n_pos": 8813,
+     "prevalence": 0.6510786052009456,
+     "acc": 0.7395833333333334,
+     "f1": 0.7561059987545838,
+     "bal_acc": 0.791364370657277,
+     "false_vacancy_rate": 0.3800068081243617,
+     "false_occupied_rate": 0.03726445056108406,
+     "auc": 0.9155021505845731
+    },
+    "schedule_168": {
+     "n": 13536,
+     "n_pos": 8813,
+     "prevalence": 0.6510786052009456,
+     "acc": 0.7354462174940898,
+     "f1": 0.750782935486116,
+     "bal_acc": 0.7888750736087304,
+     "false_vacancy_rate": 0.38794961987972315,
+     "false_occupied_rate": 0.03430023290281601,
+     "auc": 0.9149738470532208
+    },
+    "m1_hgb": {
+     "n": 13536,
+     "n_pos": 8813,
+     "prevalence": 0.6510786052009456,
+     "acc": 0.7621897163120568,
+     "f1": 0.7850704413433932,
+     "bal_acc": 0.8033698581909835,
+     "false_vacancy_rate": 0.3329172812890049,
+     "false_occupied_rate": 0.06034300232902816,
+     "auc": 0.8883548567971895
+    }
+   }
+  },
+  "5": {
+   "split": "leave-one-room-out: train rooms [1, 2, 3, 4], test room 5 (all days)",
+   "n_train": 38592,
+   "models": {
+    "majority": {
+     "n": 13536,
+     "n_pos": 5759,
+     "prevalence": 0.4254580378250591,
+     "acc": 0.5745419621749409,
+     "f1": 0.0,
+     "bal_acc": 0.5,
+     "false_vacancy_rate": 1.0,
+     "false_occupied_rate": 0.0,
+     "auc": null
+    },
+    "schedule_48": {
+     "n": 13536,
+     "n_pos": 5759,
+     "prevalence": 0.4254580378250591,
+     "acc": 0.912603427895981,
+     "f1": 0.9055639817993135,
+     "bal_acc": 0.921982416037352,
+     "false_vacancy_rate": 0.015106789373155061,
+     "false_occupied_rate": 0.14092837855214094,
+     "auc": 0.9478164036977706
+    },
+    "schedule_168": {
+     "n": 13536,
+     "n_pos": 5759,
+     "prevalence": 0.4254580378250591,
+     "acc": 0.8750738770685579,
+     "f1": 0.8627769212042522,
+     "bal_acc": 0.8813018664503813,
+     "false_vacancy_rate": 0.07692307692307693,
+     "false_occupied_rate": 0.16047319017616046,
+     "auc": 0.95009073129673
+    },
+    "m1_hgb": {
+     "n": 13536,
+     "n_pos": 5759,
+     "prevalence": 0.4254580378250591,
+     "acc": 0.772901891252955,
+     "f1": 0.6496466833827217,
+     "bal_acc": 0.7368305877793395,
+     "false_vacancy_rate": 0.5051224170862997,
+     "false_occupied_rate": 0.021216407355021217,
+     "auc": 0.9265459860301513
+    }
+   }
+  }
+ }
+}
