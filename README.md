@@ -28,10 +28,10 @@ STR structure · PWR power and batteries · HVAC heating and cooling · H2O plum
 | Part | Where | How to see it |
 |---|---|---|
 | Agent swarm and coordinator (the core) | `agents/`, `coordinator/` | `python scripts/selfcheck.py` |
-| Live dashboard | `dashboard/` | `python -m dashboard.server`, then http://localhost:8765 |
+| Live dashboard | `dashboard/` | the **Live agent swarm** page of the site below, or standalone: `python -m dashboard.server`, then http://localhost:8765 |
 | Pitch website | `index.html` | open it in a browser |
 | Walkthrough, marketing site and demo video | `site/` | open `site/walkthrough/index.html` |
-| Smart-building modules (local site) | `app/site.py`, `app/site_pages/`, `src/cascade/building/` and sibling modules | `streamlit run app/site.py --server.address 127.0.0.1` |
+| **One merged site**: the live agent swarm plus the smart-building modules | `app/site.py`, `app/site_pages/`, `src/cascade/building/` and sibling modules | `streamlit run app/site.py --server.address 127.0.0.1` |
 | Inspection grading cascade (Agent 0's engine) | `src/cascade/`, `app/streamlit_app.py` | [docs/cascade_README.md](docs/cascade_README.md) |
 
 `index.html` at the root is the final pitch website. `site/index.html` is the earlier marketing page that embeds the demo video.
@@ -44,8 +44,8 @@ conda activate origin_hack
 pip install -r requirements-cerebro.txt   # the agents: OpenCV, SciPy, Playwright and friends
 
 python scripts/selfcheck.py               # every agent on its real data, plus the full swarm (15 checks)
-python -m dashboard.server                # live dashboard at http://localhost:8765
-streamlit run app/site.py --server.address 127.0.0.1   # smart-building modules site
+streamlit run app/site.py --server.address 127.0.0.1   # one site: live agent swarm + smart-building modules
+python -m dashboard.server                # optional: the agent console on its own at http://localhost:8765
 pytest -q                                 # unit and pipeline tests, no model and no network
 ```
 
@@ -288,16 +288,16 @@ Design, if built: a laser scan is registered against a baseline point cloud (ICP
 
 ---
 
-## Smart-building modules (local site)
+## The merged site: live agent swarm and smart-building modules
 
-These modules are where the **Next** problem areas start. Each one has a measured result next to a baseline, and every number on the site is read from committed results in `eval/<module>/` and `models/<module>/`. Nothing is deployed; the site runs locally.
+One `streamlit run` shows the whole product. The **Live agent swarm** page starts the agent console inside the site (on port 8765, or `CEREBRO_DASHBOARD_PORT`) and embeds it next to the measured agent results and the demo video; Agent 0 uses its offline OpenCV method there unless `CEREBRO_VISUAL_BACKEND` says otherwise. The smart-building modules are where the **Next** problem areas start. Each one has a measured result next to a baseline, and every number on the site is read from committed results in `eval/<module>/` and `models/<module>/`. Nothing is deployed; the site runs locally.
 
 ```powershell
 conda activate origin_hack
 streamlit run app/site.py --server.address 127.0.0.1
 ```
 
-Pages: Home, Exterior inspection (facade crack model on drone imagery), Interior walls (concrete strength from rebound hammer and UPV), Common-area energy, Clog Watch (pipes), Numeric AI (Chronos forecasting), Rain exposure (LA), Fire plan, and the Building console (building model, water graph, power tree, electrical checks, one ranked problem list). Retraining and precompute use a second env with CUDA torch, Chronos and WNTR; each research note `docs/research/11_*` to `16_*` has a "How to rerun" section, and `docs/FINDINGS_2026-09-26.md` lists what each module can and cannot claim.
+Pages: Home, Live agent swarm (the 4 agents and the coordinator, live), Exterior inspection (facade crack model on drone imagery), Interior walls (concrete strength from rebound hammer and UPV), Common-area energy, Clog Watch (pipes), Numeric AI (Chronos forecasting), Rain exposure (LA), Fire plan, and the Building console (building model, water graph, power tree, electrical checks, one ranked problem list). Retraining and precompute use a second env with CUDA torch, Chronos and WNTR; each research note `docs/research/11_*` to `16_*` has a "How to rerun" section, and `docs/FINDINGS_2026-09-26.md` lists what each module can and cannot claim.
 
 ## Inspection grading cascade
 

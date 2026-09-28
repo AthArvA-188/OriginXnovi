@@ -38,6 +38,21 @@ def _num(x) -> bool:
 
 
 # Each headline returns [(text, label), ...] built only from artifact values, or [] when the artifact is absent.
+def swarm_headline():
+    try:
+        m = json.loads((ROOT / "data" / "samples" / "metrics.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    h, a3 = _get(m, "headline") or {}, _get(m, "agent3") or {}
+    cases, acc, fa = h.get("real_fault_cases_flagged"), a3.get("diagnosis_accuracy_detected"), \
+        a3.get("false_alarm_rate_holdout_normal")
+    if not (_num(cases) and _num(acc) and _num(fa)):
+        return []
+    return [(f"Flagged {cases} real fault cases across {h.get('public_datasets')} public datasets, and named the "
+             f"right chiller fault {acc:.1%} of the time ({fa:.1%} false alarms on runs it never saw).", "REAL"),
+            ("The building and its actions are simulated: the real datasets replay on one clock.", "SIMULATED")]
+
+
 def facade_headline():
     t = _get(_load("facade/tilecls_v1.json"), "sets", "sdnet_test")
     m, h = _get(t, "models", "resnet18_ozgenel_sdnet"), _get(t, "models", "heuristic_crack_mask")
@@ -126,6 +141,9 @@ def fire_headline():
 
 
 CARDS = [
+    ("Live agent swarm", "agent_swarm.py", ":material/hub:",
+     "Four AI agents watch cracks, concrete, batteries and chillers, and one coordinator ranks every problem live.",
+     swarm_headline),
     ("Exterior inspection", "exterior_inspection.py", ":material/apartment:",
      "Upload a facade photo: a crack heatmap shows where to look, then an AI grader explains the worst spots.",
      facade_headline),
@@ -226,6 +244,8 @@ with st.expander("For investors and engineers: how it fits together"):
         "and panels are nearby.\n"
         "- **Specialist models, one queue.** Each module scores its own problem with its own measured method; "
         "the building console ranks everything in one list by risk, consequence and time left.\n"
+        "- **One agent format.** The live agent swarm shows the platform idea running: every agent sends the same "
+        "report shape to one coordinator, so adding a building system means adding one more agent.\n"
         "- **Honest by construction.** Every page separates real, simulated and injected data, shows the naive "
         "baseline next to the model (including where the model loses), and cites its sources and licences.\n"
         "- **People decide.** Cerebro proposes; a named person approves; the decision is logged. Life-safety "

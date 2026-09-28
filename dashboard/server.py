@@ -183,6 +183,23 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, dumps(RT.control(body)).encode(), "application/json")
 
 
+def start_background(port: int = 8765, interval: float = 1.2,
+                     visual_backend: str | None = None) -> ThreadingHTTPServer:
+    """Serve the dashboard from daemon threads inside another process (the Streamlit site embeds it this way).
+
+    Binds first, so a busy port raises OSError before any replay thread starts; requests that arrive while
+    the swarm loads wait in the socket backlog. Returns the server: `server_address[1]` is the bound port
+    (pass port=0 for a free one).
+    """
+    global RT
+    srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    srv.daemon_threads = True
+    RT = Runtime(interval, visual_backend)
+    threading.Thread(target=RT.run, daemon=True, name="cerebro-replay").start()
+    threading.Thread(target=srv.serve_forever, daemon=True, name="cerebro-http").start()
+    return srv
+
+
 def main() -> int:
     global RT
     ap = argparse.ArgumentParser()

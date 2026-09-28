@@ -19,6 +19,7 @@ st.set_page_config(page_title="Pavilion Cerebro", layout="wide", page_icon="\U00
 # (file, title, icon); a page is listed only if its file exists, so a missing module never breaks the site.
 SECTIONS = {
     "Overview": [("home.py", "Home", ":material/home:")],
+    "Agents": [("agent_swarm.py", "Live agent swarm", ":material/hub:")],
     "Inspect": [
         ("exterior_inspection.py", "Exterior inspection", ":material/apartment:"),
         ("interior_walls.py", "Interior walls", ":material/format_paint:"),
