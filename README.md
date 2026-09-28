@@ -1,33 +1,63 @@
 # Pavilion Cerebro
 
-**A coordinated swarm of specialist AI agents for building structural health, damage detection and maintenance prediction.**
+**One brain for the whole building.** Pavilion Cerebro is a swarm of AI agents that watches a building's systems around the clock, ranks every problem by risk × consequence × time, and alerts the right person before a small problem becomes a failure.
 
-Instead of one narrow tool, Pavilion Cerebro runs one agent per building subsystem or data source. Every agent reports to a shared coordinator, which fuses their findings into a whole-building risk picture, ranks what needs attention first, and fires automated mitigation actions before small problems become expensive failures.
+Built by **NOVI-INFRA** for Origin Weekend Fall 2026, Prompt D (Infrastructure & Resilience): *detect infrastructure damage before it fails, and prioritize maintenance and recovery.*
+
+- **Pitch website:** [`index.html`](index.html) (deployed at https://origin-xnovi.vercel.app)
+- **Demo video:** [`site/assets/pavilion_cerebro_demo.mp4`](site/assets/pavilion_cerebro_demo.mp4)
+- **Plain-English walkthrough:** [`site/walkthrough/index.html`](site/walkthrough/index.html)
+- **Business plan:** [`BUSINESS_PLAN.md`](BUSINESS_PLAN.md) · **Team findings:** [`docs/FINDINGS_2026-09-26.md`](docs/FINDINGS_2026-09-26.md)
 
 > **Technical thesis.** Pavilion Cerebro is one platform (one coordinator, one shared agent interface), not a bag of unrelated tools. Every agent, whether it watches cracks, internal sensor telemetry, batteries or HVAC, implements the same interface: it ingests its data, outputs a calibrated 0-1 risk score plus supporting evidence, and reports to the coordinator. That is what makes it a platform rather than a pile of point solutions. It is also why adding a new subsystem later means writing one more agent to the same interface, not rebuilding anything. The coordinator never imports an agent class.
 
-This repo also contains the team's existing inspection grading cascade (`src/cascade/`, documented in [docs/cascade_README.md](docs/cascade_README.md)). Pavilion Cerebro wraps it as Agent 0 without changing any of its code.
-
 ---
 
-## Quickstart (local; this is the working technical demo)
+## Scope: 11 problem areas, one brain
 
-```bash
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements-cerebro.txt
+| Stage | Problem areas | What exists in this repo |
+|---|---|---|
+| **Built** | STR · PWR · HVAC | 4 working agents on real public data (A0 crack vision, A1 concrete + BMS, A2 battery, A3 chiller), the coordinator and the live dashboard |
+| **Next** | H2O · ENV · ELEC · WIRE | Early prototypes on the smart-building site, not yet agents: Clog Watch for pipes (simulated), a facade crack model for drone imagery, rain exposure for facades, and electrical checks in the building console |
+| **Future** | FIRE · LIFT · AIR · CYBER | Each one is another agent on the same interface |
 
-python scripts/selfcheck.py          # every agent standalone on its real data + the full swarm; writes data/samples/metrics.json
-python -m dashboard.server           # live dashboard at http://localhost:8765
+STR structure · PWR power and batteries · HVAC heating and cooling · H2O plumbing · ENV envelope and facade · ELEC switchgear · WIRE wiring · FIRE fire and sprinklers · LIFT elevators · AIR indoor air · CYBER building-network security.
+
+## What's in this repo
+
+| Part | Where | How to see it |
+|---|---|---|
+| Agent swarm and coordinator (the core) | `agents/`, `coordinator/` | `python scripts/selfcheck.py` |
+| Live dashboard | `dashboard/` | `python -m dashboard.server`, then http://localhost:8765 |
+| Pitch website | `index.html` | open it in a browser |
+| Walkthrough, marketing site and demo video | `site/` | open `site/walkthrough/index.html` |
+| Smart-building modules (local site) | `app/site.py`, `app/site_pages/`, `src/cascade/building/` and sibling modules | `streamlit run app/site.py --server.address 127.0.0.1` |
+| Inspection grading cascade (Agent 0's engine) | `src/cascade/`, `app/streamlit_app.py` | [docs/cascade_README.md](docs/cascade_README.md) |
+
+`index.html` at the root is the final pitch website. `site/index.html` is the earlier marketing page that embeds the demo video.
+
+## Quickstart
+
+```powershell
+conda env create -f environment.yml       # Python 3.13; installs src/cascade with the dev and ui extras
+conda activate origin_hack
+pip install -r requirements-cerebro.txt   # the agents: OpenCV, SciPy, Playwright and friends
+
+python scripts/selfcheck.py               # every agent on its real data, plus the full swarm (15 checks)
+python -m dashboard.server                # live dashboard at http://localhost:8765
+streamlit run app/site.py --server.address 127.0.0.1   # smart-building modules site
+pytest -q                                 # unit and pipeline tests, no model and no network
 ```
 
-The processed dataset samples are committed in `data/samples/` (2.4 MB), so the dashboard runs without downloading anything. To rebuild them from the original public sources: `python data/download_datasets.py && python data/prepare_samples.py` (~500 MB into the gitignored `data/raw/`).
+The processed dataset samples are committed in `data/samples/` (2.4 MB), so the self-check and the dashboard run without downloading anything. To rebuild them from the original public sources: `python data/download_datasets.py && python data/prepare_samples.py` (~500 MB into the gitignored `data/raw/`). The agents alone also run in a plain Python 3.9+ virtual environment with `pip install -r requirements-cerebro.txt`.
 
 Optional:
 
-```bash
+```powershell
 python -m playwright install chromium
-python scripts/render_demo_video.py  # frame-rendered walkthrough -> site/assets/pavilion_cerebro_demo.mp4 (+ poster and stills)
-python scripts/build_site.py         # copies measured metrics into the marketing site
+python scripts/render_demo_video.py      # frame-rendered walkthrough -> site/assets/pavilion_cerebro_demo.mp4 (+ poster and stills)
+python scripts/capture_walkthrough.py    # regenerates site/walkthrough/ from a real run
+python scripts/build_site.py             # copies measured metrics into the marketing site
 ```
 
 Agent 0 backend: `CEREBRO_VISUAL_BACKEND=auto|claude|local|opencv` (default `auto`; see Agent 0 below).
@@ -256,9 +286,32 @@ Design, if built: a laser scan is registered against a baseline point cloud (ICP
 
 "34 real fault cases flagged" on the site is: 20 ASHRAE fault runs, 3 NASA cells before EOL, 10 low-UPV readings, and 1 CU-BEMS AC-unit collapse.
 
+---
+
+## Smart-building modules (local site)
+
+These modules are where the **Next** problem areas start. Each one has a measured result next to a baseline, and every number on the site is read from committed results in `eval/<module>/` and `models/<module>/`. Nothing is deployed; the site runs locally.
+
+```powershell
+conda activate origin_hack
+streamlit run app/site.py --server.address 127.0.0.1
+```
+
+Pages: Home, Exterior inspection (facade crack model on drone imagery), Interior walls (concrete strength from rebound hammer and UPV), Common-area energy, Clog Watch (pipes), Numeric AI (Chronos forecasting), Rain exposure (LA), Fire plan, and the Building console (building model, water graph, power tree, electrical checks, one ranked problem list). Retraining and precompute use a second env with CUDA torch, Chronos and WNTR; each research note `docs/research/11_*` to `16_*` has a "How to rerun" section, and `docs/FINDINGS_2026-09-26.md` lists what each module can and cannot claim.
+
+## Inspection grading cascade
+
+The original multi-sensor inspection engine: a small local vision-language model gates every image frame, a heavier model grades flagged frames against industry rubrics (MBEI, NBI, FEMA PDA, IEC 62446-3), and every finding rolls into one consequence-weighted work queue that an inspector reviews and exports. Pavilion Cerebro wraps it as Agent 0 without changing its code. Setup, CLI and outputs: [docs/cascade_README.md](docs/cascade_README.md).
+
 ## Business plan
 
-See [BUSINESS_PLAN.md](BUSINESS_PLAN.md) for the business case. It is kept separate from the technical README on purpose. In summary, Pavilion Cerebro sells one platform per building, and each subsystem agent is an add-on on the same interface, so expansion revenue comes from adding agents rather than new products. The team's go-to-market research is in `docs/research/09_business_models_gtm.md` and `docs/research/04_market_pain_size_regulation.md`.
+[BUSINESS_PLAN.md](BUSINESS_PLAN.md) summarises the business case from the pitch website and separates it from what the code measures.
+
+- **Pricing:** $599 per building per month (software, for buildings that already run automation and cameras), or $1,400 per month with the full sensor kit on a 3-year plan.
+- **Market:** TAM $47.6B; SAM $4.2B a year (~590,000 automation-ready US commercial buildings × $7,188); SOM $21.6M ARR (3,000 buildings by Year 5).
+- **Customers:** real estate owners and REITs, facility management firms, condo associations, hospitals, data centers, campuses, public buildings and insurers.
+
+Market figures are sourced from external research, with links in the website footer. Product figures are measured by our own code, in `data/samples/metrics.json`, `eval/` and the self-check table above.
 
 ## Repo structure
 
@@ -267,12 +320,26 @@ agents/          base.py (BaseAgent, AgentReport), generic.py (the any-series sc
                  structural_visual.py (wraps src/cascade), internal_sensor.py, battery.py, hvac.py
 coordinator/     fusion.py, prioritization.py, mitigation.py, swarm.py (runtime + roadmap stubs)
 dashboard/       server.py (stdlib HTTP + SSE), static/ (index.html, app.js, style.css)
+index.html       the pitch website
+site/            marketing site, walkthrough/ (plain-English walkthrough), assets/ (demo video)
+app/             site.py + site_pages/ (smart-building site), streamlit_app.py (cascade UI)
+src/cascade/     inspection cascade, plus smart-building modules: building/, facade/, interior/, numeric/
 data/            samples/ (committed, real, 2.4 MB), prepare_samples.py, download_datasets.py,
                  synthetic.py (fallback generator, marks anything it writes as SYNTHETIC)
-scripts/         selfcheck.py, render_demo_video.py, build_site.py
-site/            marketing website for Replit (static); site/walkthrough/ is the layperson walkthrough
+eval/, models/   frozen eval sets, per-module results and trained models read by the site
+scripts/         selfcheck.py, render_demo_video.py, capture_walkthrough.py, build_site.py,
+                 plus training, precompute and evaluation scripts per module
+docs/            PRD, decisions, research notes 00-16, team findings, cascade README
+tests/           unit and pipeline tests with fake backends (no model, no network)
 assets/fonts/    IBM Plex (OFL) for the video renderer
-src/cascade/     the existing inspection cascade (unchanged); see docs/cascade_README.md
 ```
 
-Environment note: developed and verified on macOS with the system Python 3.9 in a local `.venv`. The cascade's own `pyproject.toml` asks for Python ≥3.11 (its conda setup is in `environment.yml`), but its tests also pass on 3.9, and Pavilion Cerebro imports it from `src/` without installing it.
+## Honesty rules
+
+- **Real vs simulated.** The detection, fusion, ranking and mitigation logic is real and runs on real public datasets. The building is simulated, and so are the mitigation actions: they are log entries and dashboard state, with no building-control integration yet.
+- **Measured vs sourced.** Accuracy claims come only from our own evaluations, with the sample size stated. Market and business numbers come from the external sources linked on the website, and are never presented as measured.
+- **Scope.** 4 agents are built. The **Next** and **Future** problem areas are not agents yet, and nothing here should imply that all 11 are covered today.
+
+## Team
+
+NOVI-INFRA: Leena Rajan Katkar, Andrew Guadiana, Madhulika Vikraman, Atharva Bhide and Runze Zhang. Contact details are on the [website](index.html).
