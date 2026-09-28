@@ -11,7 +11,7 @@
    "umn_upv_low_readings_flagged": 10,
    "cu_bems_ac1_collapse_flagged": 1
   },
-  "rerank_ms_mean": 0.0492,
+  "rerank_ms_mean": 0.0478,
   "hvac_false_alarm_rate": 0.015,
   "hvac_diagnosis_accuracy": 0.9685,
   "crack_heldout_accuracy": 0.9287,
@@ -175,12 +175,12 @@
     "text": "Flagged Level 2 transfer slab - UHPC repair pour for structural inspection and restricted access"
    }
   ],
-  "rerank_ms_mean": 0.0492,
-  "rerank_ms_max": 0.054,
+  "rerank_ms_mean": 0.0478,
+  "rerank_ms_max": 0.052,
   "rerank_toggles": 15,
   "rerank_toggles_changed_order": 15,
   "health_min": 19.1,
   "health_max": 86.7
  },
- "generated_at": "2026-09-26 00:03:46"
+ "generated_at": "2026-09-26 17:12:20"
 }
