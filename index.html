@@ -226,20 +226,6 @@
   .tile h3{font-size:21px}
   .tile p{font-size:13.5px;line-height:1.45;color:var(--ink-2)}
 
-  .val-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-  .val{padding:18px 18px 16px;border:1.5px solid var(--ink);background:var(--panel);display:grid;gap:8px;box-shadow:var(--x1)}
-  .val.big{background:var(--accent);border-color:var(--accent-deep);color:#fff;box-shadow:1px 1px 0 var(--accent-deep),2px 2px 0 var(--accent-deep),3px 3px 0 var(--accent-deep),4px 4px 0 var(--accent-deep),5px 5px 0 var(--accent-deep),6px 6px 0 var(--accent-deep)}
-  .val .vk{font:600 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;opacity:.8}
-  .val .vv{font:900 clamp(40px,4.4vw,58px)/.85 var(--display);font-variant-numeric:tabular-nums}
-  .val p{font-size:13px;line-height:1.45;opacity:.9}
-  .val a{text-decoration:underline;text-underline-offset:2px}
-  .math{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font:500 13px/1.3 var(--mono);padding:14px;border:1px dashed var(--ink-2);background:var(--panel)}
-  .math b{background:var(--ink);color:#fff;padding:5px 8px;font-weight:600}
-  .math i{font-style:normal;color:var(--muted)}
-  .comps{display:grid;gap:10px}
-  .comp{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:12px;padding:12px 14px;border:1px solid var(--line);background:var(--panel);font-size:13.5px;line-height:1.45}
-  .comp b{font:800 18px/1.1 var(--display);text-transform:uppercase;letter-spacing:.02em}
-  .assume{font-size:12.5px;line-height:1.55;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 
 
   .wf{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;padding:18px 18px 12px;border:1px solid var(--line);background:var(--panel)}
@@ -314,13 +300,12 @@
     .chip span{display:none}
     .biz{grid-template-columns:1fr;padding-block:40svh 6vh;min-height:0}
     .bubble-col{position:relative;top:0}
-    .facts,.tiles,.val-grid{grid-template-columns:1fr}
+    .facts,.tiles{grid-template-columns:1fr}
     .bar-row,.axis{grid-template-columns:1fr}
     .axis div:first-child{display:none}
     .tier.t2{width:88%}.tier.t3{width:76%}
     .tier{grid-template-columns:auto minmax(0,1fr);grid-template-areas:'k v' 'd d';gap:8px 12px}
     .tier .tv{justify-self:end}
-    .comp{grid-template-columns:1fr}
     .tiers2{grid-template-columns:1fr}
     .wf-labels{font-size:11px;gap:6px;padding:6px 4px 0}
     .wf-bars{gap:6px;padding:0 4px}
@@ -362,7 +347,6 @@
     <button type="button" data-jump="pricing">Pricing</button>
     <button type="button" data-jump="market">Market</button>
     <button type="button" data-jump="customers">Customers</button>
-    <button type="button" data-jump="valuation">Valuation</button>
   </nav>
 </header>
 
@@ -493,7 +477,7 @@
       <ol class="steps">
         <li><span class="n">1</span><div><h3>Sense</h3><p>Each agent watches one system: sensor feeds, BMS points, camera and drone images, inspection records.</p></div></li>
         <li><span class="n">2</span><div><h3>Think</h3><p>The coordinator fuses every report into one building risk picture and ranks it by risk × consequence × time.</p></div></li>
-        <li><span class="n">3</span><div><h3>Act</h3><p>Past a threshold it acts: isolates a circuit, closes a valve, throttles a battery, pages the right person.</p></div></li>
+        <li><span class="n">3</span><div><h3>Alert</h3><p>Past a threshold it alerts the right person, with the fix it recommends, such as isolating a circuit or closing a valve.</p></div></li>
         <li><span class="n">4</span><div><h3>Heal</h3><p>It confirms the fix held, logs the cost and updates the building's health score.</p></div></li>
       </ol>
       <div class="code"><span class="c"># one report format for every agent</span>
@@ -572,7 +556,7 @@
       <p class="eyebrow">Market</p>
       <h2>A $47.6B market.</h2>
       <div class="tiers" aria-label="Market tiers">
-        <div class="tier t1"><span class="tk">TAM</span><span class="td">Total addressable market.</span><span class="tv">$47.6B</span></div>
+        <div class="tier t1"><span class="tk">TAM</span><span class="td">Total addressable market.</span><span class="tv">$47.6B ARR</span></div>
         <div class="tier t2"><span class="tk">SAM</span><span class="td">~590,000 US commercial buildings that already run automation × $7,188 a year ($599 a month)</span><span class="tv">$4.2B/yr</span></div>
         <div class="tier t3"><span class="tk">SOM</span><span class="td">3,000 buildings by Year 5 (0.5% of SAM)</span><span class="tv">$21.6M ARR</span></div>
       </div>
@@ -608,26 +592,6 @@
       </div>
     </div>
   </section>
-
-  <section class="chapter biz" id="valuation">
-    <div class="bubble-col">
-      <div class="bubble"><span class="who">Pavilion Cerebro says</span><p>Here is what I'm worth today, and the math for Year 5.</p></div>
-    </div>
-    <div class="panel slab">
-      <p class="eyebrow">Valuation · estimate</p>
-      <h2>Estimated valuation</h2>
-      <div class="val-grid">
-        <div class="val"><span class="vk">Today · pre-seed</span><span class="vv">$12M</span><p>Post-money target, inside the $10M–$15M median SAFE caps for 2025 pre-seed rounds (<a href="https://carta.com/data/state-of-pre-seed-2025/" target="_blank" rel="noopener">Carta</a>).</p></div>
-        <div class="val big"><span class="vk">Year 5 · target</span><span class="vv">$97M–$175M</span><p>$21.6M ARR at 4.5–8.1× revenue, the private SaaS median to top-quartile range (<a href="https://aventis-advisors.com/saas-valuation-multiples/" target="_blank" rel="noopener">Aventis Advisors</a>).</p></div>
-      </div>
-      <div class="math"><b>3,000</b><i>buildings ×</i><b>$7,188</b><i>/ yr =</i><b>$21.6M ARR</b><i>× 4.5–8.1 =</i><b>$97M–$175M</b></div>
-      <div class="comps">
-        <div class="comp"><b>BrainBox AI</b><span>Autonomous HVAC AI in 14,000+ buildings. Acquired by Trane in 2025 after raising about $82M. Price not disclosed.</span></div>
-        <div class="comp"><b>PassiveLogic</b><span>Autonomous building platform. Raised a $74M Series C in September 2025, over $125M in total, with Johnson Controls investing.</span></div>
-      </div>
-      <p class="assume">Assumptions: $599 per building per month; 3,000 buildings by Year 5 (0.5% of the ~590,000 automation-ready US buildings); multiples from private SaaS deals 2015–2026. An internal estimate for discussion, not financial advice.</p>
-    </div>
-  </section>
 </main>
 
 <footer class="site">
@@ -638,10 +602,11 @@
       <p class="eyebrow">Contact us</p>
       <ul>
         <li><b>Leena Rajan Katkar</b> · <a href="mailto:lkatkar@usc.edu">lkatkar@usc.edu</a></li>
-        <li><b>Andrew Guadiana</b> · <a href="mailto:guadiana@usc.edu">guadiana@usc.edu</a></li>
+        <li><b>Andrew Guadiana</b> · <a href="mailto:andrew.guadiana@usc.edu">andrew.guadiana@usc.edu</a></li>
         <li><b>Madhulika Vikraman</b> · <a href="mailto:mvikrama@usc.edu">mvikrama@usc.edu</a></li>
         <li><b>Atharva Bhide</b> · <a href="mailto:asbhide@usc.edu">asbhide@usc.edu</a></li>
         <li><b>Runze Zhang</b> · <a href="mailto:ruznehza@usc.edu">ruznehza@usc.edu</a></li>
+        <li><b>Jie Liu</b> · <a href="mailto:jiliu1012@usc.edu">jiliu1012@usc.edu</a></li>
       </ul>
     </div>
   </div>
@@ -654,10 +619,6 @@
       <li><a href="https://www.grandviewresearch.com/industry-analysis/facility-management-software-market-report" target="_blank" rel="noopener">Grand View Research · FM software</a></li>
       <li><a href="https://www.eia.gov/todayinenergy/detail.php?id=46118" target="_blank" rel="noopener">EIA · 5.9M US commercial buildings (CBECS 2018)</a></li>
       <li><a href="https://www.pnnl.gov/main/publications/external/technical_reports/pnnl-22169.pdf" target="_blank" rel="noopener">PNNL · Building automation adoption</a></li>
-      <li><a href="https://carta.com/data/state-of-pre-seed-2025/" target="_blank" rel="noopener">Carta · State of Pre-Seed 2025</a></li>
-      <li><a href="https://aventis-advisors.com/saas-valuation-multiples/" target="_blank" rel="noopener">Aventis Advisors · SaaS multiples</a></li>
-      <li><a href="https://thelogic.co/news/brainbox-ai-sale-trane-tech/" target="_blank" rel="noopener">The Logic · BrainBox AI sale</a></li>
-      <li><a href="https://www.prnewswire.com/news-releases/rewiring-autonomy-passivelogic-raises-74-million-to-scale-physical-ai-in-the-real-world-302559872.html" target="_blank" rel="noopener">PR Newswire · PassiveLogic Series C</a></li>
       <li><a href="https://newsroom.statefarm.com/state-farm-ting-electrical-fire/" target="_blank" rel="noopener">State Farm · Free Ting sensors</a></li>
       <li><a href="https://www.fm.com/boiler-re/Insights/Understanding-electrical-fires" target="_blank" rel="noopener">FM · Electrical fire statistics</a></li>
       <li><a href="https://bies.lbl.gov/publications/building-analytics-tool-deployment" target="_blank" rel="noopener">Berkeley Lab · Analytics costs and 9% savings</a></li>
@@ -692,7 +653,7 @@ const SYS = [
     wrong:'Energy waste, demand peaks, battery and solar faults, EV charging load',
     measure:'Whole-building and circuit energy, battery temperature and state of health',
     sensors:'Smart meters, submeters, battery management data',
-    reading:'Cell temperature 58 °C and rising', action:'Charge rate throttled to 50%. Facilities paged.' },
+    reading:'Cell temperature 58 °C and rising', action:'Facilities paged to inspect the battery bank.' },
   { code:'ELEC', st:'b', ag:'', name:'Panels & switchgear', chip:'Switchgear', pos:[2.05,1.55,-3.1], sev:8,
     wrong:'Loose or corroded connections heating up, overloads, poor power quality',
     measure:'Heat at connections, current on each circuit, voltage sags and harmonics',
@@ -740,7 +701,7 @@ const SYS = [
     reading:'CO₂ at 1,850 ppm on floor 4', action:'Ventilation raised to 100% outside air.' },
   { code:'CYBER',st:'o', ag:'', name:'Cyber', chip:'BMS controller', pos:[-3.9,3.05,-2.55], sev:3,
     wrong:'BMS controllers exposed to the internet, protocols with no login',
-    measure:'Network traffic to building controllers',
+    measure:'BACnet, the protocol most BMS run on, is old and not secure. A technical expert we interviewed told us AI can solve this problem.',
     sensors:'Network separation, BACnet Secure Connect, traffic monitoring',
     reading:'Controller reachable from outside on port 47808', action:'External traffic blocked. Controller isolated.' }
 ];
@@ -1041,7 +1002,7 @@ const linkMat = new THREE.LineBasicMaterial({ color: C.accent, transparent: true
 const links = new THREE.LineSegments(linkGeo, linkMat); links.frustumCulled = false; scene.add(links);
 
 /* ================= scroll layout ================= */
-const IDS = ['hero', 'scan', 'swarm', 'healthy', 'gap', 'brain', 'pricing', 'market', 'customers', 'valuation'];
+const IDS = ['hero', 'scan', 'swarm', 'healthy', 'gap', 'brain', 'pricing', 'market', 'customers'];
 let secs = [], vw = innerWidth, vh = innerHeight, narrow = false;
 function measure() {
   vw = innerWidth; vh = innerHeight; narrow = vw < 860 || vw / vh < 0.9;
@@ -1061,8 +1022,7 @@ const WIDE = [
   P([0, 7.0, 0], 66, 11, 64, 26, .32, .02, { nx: -.38, ny: -.08, d: 24, s: 1.0 }),
   P([0, 7.0, 0], 69, 9, 62, 26, .3, .02, { nx: -.64, ny: -.3, d: 20, s: .95 }),
   P([0, 7.0, 0], 72, 9, 62, 26, .3, .02, { nx: -.64, ny: -.3, d: 20, s: .95 }),
-  P([0, 7.0, 0], 78, 9, 62, 26, .3, .02, { nx: -.64, ny: -.3, d: 20, s: .95 }),
-  P([0, 7.0, 0], 84, 9, 62, 26, .3, .02, { nx: -.64, ny: -.3, d: 20, s: .95 })
+  P([0, 7.0, 0], 78, 9, 62, 26, .3, .02, { nx: -.64, ny: -.3, d: 20, s: .95 })
 ];
 const NARROW = [
   P([0.4, 5.9, 0], 38, 15, 40, 19, 0, .3, { nx: .55, ny: -.22, d: 30, s: .5 }),
@@ -1073,8 +1033,7 @@ const NARROW = [
   P([0, 7.0, 0], 66, 11, 60, 22, 0, -.3, { nx: .0, ny: .6, d: 26, s: .6 }),
   P([0, 7.0, 0], 69, 9, 60, 22, 0, -.3, { nx: .52, ny: .64, d: 22, s: .6 }),
   P([0, 7.0, 0], 72, 9, 60, 22, 0, -.3, { nx: .52, ny: .64, d: 22, s: .6 }),
-  P([0, 7.0, 0], 78, 9, 60, 22, 0, -.3, { nx: .52, ny: .64, d: 22, s: .6 }),
-  P([0, 7.0, 0], 84, 9, 60, 22, 0, -.3, { nx: .52, ny: .64, d: 22, s: .6 })
+  P([0, 7.0, 0], 78, 9, 60, 22, 0, -.3, { nx: .52, ny: .64, d: 22, s: .6 })
 ];
 function blendPose(a, b, f) {
   const o = { tgt: a.tgt.map((v, i) => lerp(v, b.tgt[i], f)), m: {} };
