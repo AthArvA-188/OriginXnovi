@@ -180,3 +180,21 @@ body.disaster .queue { border-color: var(--critical); }
 }
 
 .nw { white-space: nowrap; }
+
+/* Mid widths, including the console embedded in the Streamlit site (about 860-1300 px wide): health and the
+   swarm map on the left, the priority queue and incident feed beside them, then the four agents full width,
+   instead of pushing the queue below everything. The columns dissolve so each panel can be placed. */
+@media (min-width: 861px) and (max-width: 1300px) {
+  .grid { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+          grid-template-areas: "health queue" "map queue" "agents agents" "roadmap feed"; }
+  .col-left, .col-mid, .col-right { display: contents; }
+  .panel.health { grid-area: health; }
+  .panel.building { grid-area: map; }
+  .panel.queue { grid-area: queue; }
+  .panel.feed { grid-area: feed; }
+  .agents { grid-area: agents; }
+  .roadmap { grid-area: roadmap; grid-template-columns: minmax(0, 1fr); align-content: start; }
+  #feed { max-height: 400px; }
+}
+/* the two read-out blocks inside a card stack when the card is narrow, so values never overlap their labels */
+.split { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }

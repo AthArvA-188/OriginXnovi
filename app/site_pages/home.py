@@ -6,6 +6,7 @@ Nothing is typed in; a missing file shows "not yet run". Top-level Streamlit pag
 
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[2]
 EVAL = ROOT / "eval"
+METRICS = ROOT / "data" / "samples" / "metrics.json"  # written by scripts/selfcheck.py (agent swarm)
 
 LABEL_COLORS = {"REAL": "green", "SIMULATED": "orange", "SYNTHETIC": "orange", "INJECTED": "violet", "RULES": "blue"}
 
@@ -38,11 +40,15 @@ def _num(x) -> bool:
 
 
 # Each headline returns [(text, label), ...] built only from artifact values, or [] when the artifact is absent.
-def swarm_headline():
+def _swarm() -> dict:
     try:
-        m = json.loads((ROOT / "data" / "samples" / "metrics.json").read_text(encoding="utf-8"))
+        return json.loads(METRICS.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return []
+        return {}
+
+
+def swarm_headline():
+    m = _swarm()
     h, a3 = _get(m, "headline") or {}, _get(m, "agent3") or {}
     cases, acc, fa = h.get("real_fault_cases_flagged"), a3.get("diagnosis_accuracy_detected"), \
         a3.get("false_alarm_rate_holdout_normal")
@@ -169,29 +175,73 @@ CARDS = [
 ]
 
 FLOW_SVG = """
-<svg viewBox="0 0 900 150" width="100%" role="img" aria-label="Photos, sensors and public data feed specialist
-models, which feed one ranked list that a person approves" style="max-width:900px;font-family:sans-serif">
+<svg viewBox="0 0 900 150" width="100%" role="img" aria-label="Photos, sensors and public data feed live agents
+and specialist models, which feed one ranked list that a person approves"
+style="max-width:900px;font-family:'IBM Plex Sans',sans-serif">
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-    <path d="M0,0 L10,5 L0,10 z" fill="#8a8984"/></marker></defs>
+    <path d="M0,0 L10,5 L0,10 z" fill="#7d868c"/></marker></defs>
   <g font-size="14" fill="currentColor" text-anchor="middle">
-    <rect x="10" y="30" width="190" height="90" rx="12" fill="#2a78d6" fill-opacity="0.15" stroke="#2a78d6"/>
+    <rect x="10" y="30" width="190" height="90" rx="10" fill="#3987e5" fill-opacity="0.14" stroke="#3987e5"/>
     <text x="105" y="62" font-weight="600">What we see</text>
     <text x="105" y="84">photos, sensors, meters,</text><text x="105" y="102">weather, public records</text>
-    <rect x="245" y="30" width="190" height="90" rx="12" fill="#1baf7a" fill-opacity="0.15" stroke="#1baf7a"/>
-    <text x="340" y="62" font-weight="600">Specialist models</text>
-    <text x="340" y="84">facade, walls, energy,</text><text x="340" y="102">pipes, rain, fire</text>
-    <rect x="480" y="30" width="190" height="90" rx="12" fill="#eb6834" fill-opacity="0.15" stroke="#eb6834"/>
+    <rect x="245" y="30" width="190" height="90" rx="10" fill="#19a974" fill-opacity="0.14" stroke="#19a974"/>
+    <text x="340" y="62" font-weight="600">Specialist AI</text>
+    <text x="340" y="84">4 live agents and 7</text><text x="340" y="102">specialist models</text>
+    <rect x="480" y="30" width="190" height="90" rx="10" fill="#ec835a" fill-opacity="0.14" stroke="#ec835a"/>
     <text x="575" y="62" font-weight="600">One ranked list</text>
     <text x="575" y="84">what matters most,</text><text x="575" y="102">with its evidence</text>
-    <rect x="715" y="30" width="175" height="90" rx="12" fill="#8a8984" fill-opacity="0.15" stroke="#8a8984"/>
+    <rect x="715" y="30" width="175" height="90" rx="10" fill="#7d868c" fill-opacity="0.14" stroke="#7d868c"/>
     <text x="802" y="62" font-weight="600">A person decides</text>
     <text x="802" y="84">approves the first</text><text x="802" y="102">safe step, logged</text>
   </g>
-  <g stroke="#8a8984" stroke-width="2" marker-end="url(#a)">
+  <g stroke="#7d868c" stroke-width="2" marker-end="url(#a)">
     <line x1="202" y1="75" x2="241" y2="75"/><line x1="437" y1="75" x2="476" y2="75"/>
     <line x1="672" y1="75" x2="711" y2="75"/></g>
 </svg>
 """
+
+# The pitch website's 11 problem areas and the stage each one is at.
+SCOPE = [
+    ("built", "STR", "Structure"), ("built", "PWR", "Power & batteries"), ("built", "HVAC", "HVAC & chillers"),
+    ("next", "H2O", "Plumbing & leaks"), ("next", "ENV", "Facade & rain"), ("next", "ELEC", "Switchgear"),
+    ("next", "WIRE", "Wiring in walls"),
+    ("future", "FIRE", "Fire & sprinklers"), ("future", "LIFT", "Elevators"), ("future", "AIR", "Indoor air"),
+    ("future", "CYBER", "Building network"),
+]
+
+
+def _lines(headline):
+    try:
+        return headline()
+    except Exception:  # a malformed artifact must never break the home page
+        return []
+
+
+def kpis_html(lines_per_card) -> str:
+    sw = _get(_swarm(), "headline") or {}
+    live, cases = sw.get("live_agents"), sw.get("real_fault_cases_flagged")
+    tiles = [
+        (len(SCOPE), "problem areas in scope", "#3987e5"),
+        (live if _num(live) else "—", "AI agents live on real data", "#19a974"),
+        (cases if _num(cases) else "—", "real fault cases flagged", "#ec835a"),
+        (sum(1 for lines in lines_per_card if lines), "parts with measured results", "#fab219"),
+    ]
+    return '<div class="pc-kpis">' + "".join(
+        f'<div class="pc-kpi" style="--pc-kpi:{c}"><b>{v}</b><span>{label}</span></div>' for v, label, c in tiles
+    ) + "</div>"
+
+
+def scope_html() -> str:
+    live = (_get(_swarm(), "headline") or {}).get("live_agents")
+    notes = {"built": f"{live} agents live" if _num(live) else "agents live",
+             "next": "prototypes on this site", "future": "one more agent each"}
+    stages = []
+    for stage in ("built", "next", "future"):
+        chips = "".join(f"<span class='pc-chip'><i>{code}</i>{html.escape(name)}</span>"
+                        for s, code, name in SCOPE if s == stage)
+        stages.append(f"<div class='pc-stage {stage}'><div class='pc-stage-h'><b>{stage}</b><em>{notes[stage]}</em>"
+                      f"</div><div class='pc-chips'>{chips}</div></div>")
+    return f"<div class='pc-scope'>{''.join(stages)}</div>"
 
 
 def _link(page_file: str, title: str, icon: str) -> None:
@@ -201,8 +251,13 @@ def _link(page_file: str, title: str, icon: str) -> None:
         st.caption(f"Open **{title}** from the sidebar.")
 
 
+LINES = [_lines(card[4]) for card in CARDS]
+
+st.html('<div class="pc-eyebrow"><span class="pc-dot"></span>NOVI-INFRA presents</div>')
 st.title("Pavilion Cerebro")
-st.subheader("Your building, watched by specialist AI, ranked by what matters, decided by people.")
+st.html('<div class="pc-tagline">Every building needs a brain.</div>'
+        '<p class="pc-lead">Your building, watched by specialist AI, ranked by what matters, decided by people.</p>'
+        + kpis_html(LINES))
 
 st.info(
     "**What this means.** Tall buildings send warning signs every day: a crack on the facade, a damp wall, a "
@@ -214,6 +269,11 @@ st.info(
 
 st.markdown(FLOW_SVG, unsafe_allow_html=True)
 
+st.html('<div class="pc-kicker">Scope</div>')
+st.markdown("#### 11 problem areas, one brain")
+st.html(scope_html())
+
+st.html('<div class="pc-kicker">Measured</div>')
 st.markdown("#### What each part does, and what we measured")
 legend = " ".join(f":{c}-badge[{k}]" for k, c in LABEL_COLORS.items() if k != "RULES")
 st.caption(f"Every result below is read from our evaluation files, on data the model did not train on. {legend} "
@@ -221,14 +281,10 @@ st.caption(f"Every result below is read from our evaluation files, on data the m
            "added on purpose. No result here comes from a customer building yet.")
 
 cols = st.columns(2)
-for i, (title, page, icon, promise, headline) in enumerate(CARDS):
-    with cols[i % 2].container(border=True):
+for i, ((title, page, icon, promise, _), lines) in enumerate(zip(CARDS, LINES)):
+    with cols[i % 2].container(border=True, key=f"pc-card-{i}"):
         st.markdown(f"##### {title}")
         st.write(promise)
-        try:
-            lines = headline()
-        except Exception:  # a malformed artifact must never break the home page
-            lines = []
         if not lines:
             st.caption("Result: not yet run.")
         for text, label in lines:

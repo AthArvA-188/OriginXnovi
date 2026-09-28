@@ -55,8 +55,10 @@ def _metrics() -> dict:
         return {}
 
 
+st.html('<div class="pc-eyebrow"><span class="pc-dot"></span>Agents · live replay</div>')
 st.title("Live agent swarm")
-st.subheader("Four AI agents, one coordinator, every problem ranked as the data replays.")
+st.html('<div class="pc-tagline">Four agents. One coordinator.</div>'
+        '<p class="pc-lead">Every problem ranked by risk × consequence × time, as five real datasets replay.</p>')
 
 st.info(
     "**What this means.** Each agent watches one part of the building on real public data: cracks in photos, "
@@ -72,24 +74,24 @@ lead = list((a2.get("lead_cycles") or {}).values())
 cols = st.columns(4)
 if h.get("real_fault_cases_flagged") is not None:
     b = h.get("real_fault_cases_breakdown") or {}
-    cols[0].metric("Real fault cases flagged", h["real_fault_cases_flagged"],
-                   help=f"{b.get('ashrae_fault_runs_detected_and_diagnosed')} chiller fault runs, "
+    cols[0].metric("Real faults flagged", h["real_fault_cases_flagged"],
+                   border=True, help=f"{b.get('ashrae_fault_runs_detected_and_diagnosed')} chiller fault runs, "
                         f"{b.get('nasa_cells_flagged_before_eol')} battery cells before end of life, "
                         f"{b.get('umn_upv_low_readings_flagged')} weak concrete readings and "
                         f"{b.get('cu_bems_ac1_collapse_flagged')} real air-conditioning failure, "
                         f"across {h.get('public_datasets')} public datasets.")
 if a3.get("diagnosis_accuracy_detected") is not None:
-    cols[1].metric("Chiller faults named correctly", f"{a3['diagnosis_accuracy_detected']:.1%}",
-                   help=f"Of {a3.get('n_detected_windows'):,} detected fault windows. False alarms: "
+    cols[1].metric("Chiller diagnosis", f"{a3['diagnosis_accuracy_detected']:.1%}",
+                   border=True, help=f"Of {a3.get('n_detected_windows'):,} detected fault windows. False alarms: "
                         f"{a3.get('false_alarm_rate_holdout_normal', 0):.1%} of {a3.get('n_holdout_normal_windows')} "
                         f"windows from fault-free runs the agent never saw.")
 if lead:
-    cols[2].metric("Failing battery cells flagged early", f"{len(lead)} of {len(lead)}",
-                   help=f"{min(lead)} to {max(lead)} charge cycles before end of life (NASA Li-ion aging data). "
+    cols[2].metric("Failing cells caught", f"{len(lead)} of {len(lead)}",
+                   border=True, help=f"{min(lead)} to {max(lead)} charge cycles before end of life (NASA Li-ion aging data). "
                         "These are wear warning signs, not fire predictions.")
 if held.get("accuracy") is not None:
     cols[3].metric("Crack check accuracy", f"{held['accuracy']:.1%}",
-                   help=f"Offline OpenCV method on {held.get('n_eval'):,} held-out lab concrete photos, "
+                   border=True, help=f"Offline OpenCV method on {held.get('n_eval'):,} held-out lab concrete photos, "
                         "not yet on real building facades.")
 st.caption(":green-badge[REAL] Measured by `python scripts/selfcheck.py` on public data. "
            ":orange-badge[SIMULATED] The building and its actions: five datasets replayed on one clock.")
@@ -101,7 +103,7 @@ if url is None:
              "or set CEREBRO_DASHBOARD_PORT to a free port, then reload this page.")
 else:
     st.link_button("Open the console full screen", url, icon=":material/open_in_new:")
-    st.iframe(url, height=1450)
+    st.iframe(url, height=2440)  # the console's full height at the page's content width (860-1300 px layout)
     st.caption("Console controls: pause, 1x / 2x / 4x speed, restart, and disaster mode, which switches the "
                "ranking to pure triage by severity.")
 

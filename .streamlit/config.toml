@@ -3,3 +3,38 @@
 # is too small for a minute of 4K drone video (typically several hundred MB; assumption, no clip measured).
 [server]
 maxUploadSize = 1024
+
+# Hide the Deploy button and developer menu; the site runs locally for demos.
+[client]
+toolbarMode = "minimal"
+
+# Pavilion Cerebro brand. The palette matches the swarm console (dashboard/static/style.css) so the embedded
+# console sits in the page with no seam; the fonts match the pitch website (index.html). app/brand.py adds
+# the details a theme cannot express.
+[theme]
+base = "dark"
+primaryColor = "#3987E5"
+backgroundColor = "#0B0D0E"
+secondaryBackgroundColor = "#131618"
+textColor = "#EEF0F1"
+linkColor = "#6AA8F0"
+borderColor = "#262B2F"
+showWidgetBorder = true
+baseRadius = "6px"
+buttonRadius = "6px"
+font = "IBM Plex Sans:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap, sans-serif"
+headingFont = "Big Shoulders Display:https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&display=swap, sans-serif"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap, monospace"
+headingFontSizes = ["3.4rem", "2.4rem", "1.75rem", "1.45rem", "1.3rem", "1.1rem"]
+headingFontWeights = [900, 800, 800, 800, 700, 700]
+greenColor = "#19A974"
+orangeColor = "#EC835A"
+redColor = "#D03B3B"
+yellowColor = "#FAB219"
+blueColor = "#3987E5"
+chartCategoricalColors = ["#3987E5", "#EC835A", "#19A974", "#FAB219", "#A78BFA", "#5FC4D8", "#D03B3B", "#B7BEC3"]
+
+[theme.sidebar]
+backgroundColor = "#0E1112"
+secondaryBackgroundColor = "#131618"
+borderColor = "#262B2F"

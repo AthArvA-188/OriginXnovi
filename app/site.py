@@ -11,6 +11,8 @@ from pathlib import Path
 
 import streamlit as st
 
+import brand
+
 APP = Path(__file__).resolve().parent
 PAGES = APP / "site_pages"
 
@@ -52,4 +54,6 @@ def build_nav() -> dict:
     return nav
 
 
-st.navigation(build_nav()).run()
+nav = st.navigation(build_nav())
+brand.apply()  # theme details and sidebar logo on every page
+nav.run()
