@@ -196,6 +196,14 @@ The visual identity is new, since the existing Streamlit UI had none to reuse: d
 
 The caption stays on screen throughout.
 
+## Three levels, for three audiences
+
+The live dashboard is an expert's bird's-eye view: everything ticking at once, no pauses, built for someone who already knows what "risk score" or "diagnosis confidence" means. Explaining that live, in real time, to a client or a layperson doesn't work — so there are three levels now, slow to fast:
+
+1. **`site/walkthrough/`** — a self-paced, plain-English walkthrough for anyone who isn't an engineer. One real screenshot of the real dashboard, one plain-English idea, per screen, advanced by hand (Next/Back, no autoplay, no jargon). Built by `scripts/capture_walkthrough.py`, which reuses the demo video's own recording and screenshot machinery (`scripts/render_demo_video.py`'s `record()` and `Shooter`) — every image is a real screenshot of a real run, not a mockup, and each agent's screenshot is the moment that agent's own risk score peaked in that run (found automatically, not hand-picked). Regenerate after any change with `python scripts/capture_walkthrough.py`. Open `site/walkthrough/index.html` directly, or serve `site/` and go to `/walkthrough/`.
+2. **`python -m dashboard.server`** — the live, ticking, expert view described above. Use this once someone already understands the pitch and wants to see the real system running.
+3. **`site/index.html`** — the marketing/pitch site (below), plus the demo video, for someone deciding whether to look closer at all.
+
 ## Marketing site (Deliverable 2, deploys to Replit)
 
 `site/` is a static site (HTML/CSS/JS, the same visual identity, SVG flow diagram, embedded demo video, a metrics strip filled from `site/assets/metrics.json`). It does not run or depend on the Python pipeline. To publish it on Replit:
@@ -204,7 +212,7 @@ The caption stays on screen throughout.
 2. Press Run to preview, then Deploy as a static deployment. If Replit's template generates its own `.replit`, keep its `modules` line; the only requirement is that `index.html` is served.
 3. If the dashboard is ever deployed somewhere reachable, set `DASHBOARD_URL` in `site/main.js` so the secondary call to action links to it. Until then it points to local run instructions.
 
-Re-run `python scripts/selfcheck.py && python scripts/build_site.py` before uploading so the numbers on the site match the code.
+Re-run `python scripts/selfcheck.py && python scripts/build_site.py` before uploading so the numbers on the site match the code. `site/walkthrough/` (see "Three levels" above) ships inside `site/` and goes to Replit along with it automatically.
 
 ---
 
@@ -262,7 +270,7 @@ dashboard/       server.py (stdlib HTTP + SSE), static/ (index.html, app.js, sty
 data/            samples/ (committed, real, 2.4 MB), prepare_samples.py, download_datasets.py,
                  synthetic.py (fallback generator, marks anything it writes as SYNTHETIC)
 scripts/         selfcheck.py, render_demo_video.py, build_site.py
-site/            marketing website for Replit (static)
+site/            marketing website for Replit (static); site/walkthrough/ is the layperson walkthrough
 assets/fonts/    IBM Plex (OFL) for the video renderer
 src/cascade/     the existing inspection cascade (unchanged); see docs/cascade_README.md
 ```
