@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pavilion Cerebro — Pitch · Origin Weekend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ─── RESET & BASE ─────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue:    #3040E8;
+    --ink:     #111827;
+    --green:   #0F8A5F;
+    --amber:   #B45309;
+    --muted:   #64748B;
+    --ff-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --ff-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0B1020; font-family: var(--ff-body);
+  }
+
+  /* ─── DECK ─────────────────────────────────────────────────────── */
+  #deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 52px 40px 92px;
+    opacity: 0; pointer-events: none; transform: translateY(20px);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .slide.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+  .slide.exit   { opacity: 0; transform: translateY(-20px); }
+
+  .slide img {
+    max-width: 100%; min-height: 0; flex: 1 1 auto; object-fit: contain;
+    border-radius: 10px; box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+  }
+
+  /* ─── NOTES (script + explainer) ───────────────────────────────── */
+  .notes {
+    flex: 0 0 auto; width: 100%; max-width: 1240px; max-height: 38vh;
+    display: flex; gap: 14px;
+  }
+  body.notes-off .notes { display: none; }
+  .panel {
+    flex: 1 1 0; overflow-y: auto; border-radius: 12px; padding: 14px 22px;
+    background: #F8FAFC; border-left: 4px solid var(--blue);
+  }
+  .panel.explain { display: none; background: #F0FDF4; border-left-color: var(--green); }
+  body.explain-on .panel.explain { display: block; }
+  .panel-head {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+    font-family: var(--ff-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--blue);
+  }
+  .explain .panel-head { color: var(--green); }
+  .panel-head .window { margin-left: auto; color: var(--muted); letter-spacing: 0.04em; }
+  .script p { font-size: 19px; line-height: 1.55; color: var(--ink); }
+  body.explain-on .script p { font-size: 16px; }
+  .script p + p { margin-top: 6px; }
+  .script b { color: var(--blue); font-weight: 700; }
+  .script .pause { font-family: var(--ff-mono); font-size: 13px; color: var(--amber); }
+  .explain ul { list-style: none; }
+  .explain li { font-size: 14.5px; line-height: 1.5; color: var(--ink); padding-left: 14px; position: relative; }
+  .explain li + li { margin-top: 6px; }
+  .explain li::before { content: '•'; position: absolute; left: 0; color: var(--green); }
+  .explain b { font-weight: 700; }
+  .explain li.warn { color: var(--amber); }
+  .explain li.warn::before { content: '!'; color: var(--amber); font-weight: 700; }
+
+  /* ─── TIMER & HELP ─────────────────────────────────────────────── */
+  #timer {
+    position: fixed; top: 14px; right: 20px; z-index: 100;
+    font-family: var(--ff-mono); font-size: 15px; font-weight: 600;
+    color: #fff; background: rgba(0,0,0,0.45); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 6px 14px;
+  }
+  #timer .target { color: rgba(255,255,255,0.5); font-weight: 400; }
+  #timer.warn { color: #FCD34D; border-color: rgba(252,211,77,0.5); }
+  #timer.over { color: #FCA5A5; border-color: rgba(252,165,165,0.6); }
+  #help {
+    position: fixed; top: 20px; left: 20px; z-index: 100;
+    font-family: var(--ff-mono); font-size: 11px; color: rgba(255,255,255,0.45);
+  }
+
+  /* ─── NAV ──────────────────────────────────────────────────────── */
+  #nav {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px; z-index: 100;
+    background: rgba(0,0,0,0.35); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 40px; padding: 10px 20px;
+  }
+  #nav button {
+    background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.75);
+    font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+  }
+  #nav button:hover { color: #fff; background: rgba(255,255,255,0.1); }
+  #counter {
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.6);
+    letter-spacing: 0.04em; min-width: 44px; text-align: center;
+  }
+  .dot-row { display: flex; gap: 6px; align-items: center; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%; cursor: pointer;
+    background: rgba(255,255,255,0.25); transition: background 0.3s, transform 0.3s;
+  }
+  .dot.on { background: #fff; transform: scale(1.3); }
+</style>
+</head>
+<body>
+<div id="deck"></div>
+
+<div id="help">→ next · ← back · N notes · E explain · T timer · R reset</div>
+<div id="timer">0:00 <span class="target">/ 3:00</span></div>
+
+<!-- ─── NAVIGATION ────────────────────────────────────────────────── -->
+<div id="nav">
+  <button id="prev" title="Previous (←)">‹</button>
+  <div class="dot-row" id="dots"></div>
+  <span id="counter">1 / 6</span>
+  <button id="next" title="Next (→)">›</button>
+</div>
+
+<script>
+  // One entry per PDF page. Keep in sync with novi_script.md.
+  // say: spoken lines (**word** = stress, [pause] = one beat).
+  // explain: plain-language notes for the business presenter; lines starting "!" are cautions.
+  const SLIDES = [
+    { title: 'Title', window: '0:00 – 0:25',
+      say: [
+        'Buildings fail **quietly**. Wiring overheats. A chiller slowly leaks refrigerant. A crack keeps growing. Nobody notices until the **yearly inspection**, or until something **breaks**.',
+        'Electrical faults alone start about **39,000 fires** a year in the US. And only about **one in ten** commercial buildings has any automation.',
+        "We're NOVI-INFRA, and this is **Pavilion Cerebro**: one brain for the whole building.",
+      ],
+      explain: [
+        '**Cerebro** is software. Building data (photos, meters, the control system) goes to small AI specialists called **agents**. They report to one **coordinator**, the "brain", which ranks every problem and triggers a response.',
+        '**Chiller**: the big machine that makes cold water for the building\'s air conditioning.',
+        '**"Automated"** means the building has a **BMS** (building management system), the computer that runs heating, cooling and lights. About 90% don\'t have one (PNNL).',
+        '**Picture tags**: STR structure · ENV facade · ELEC switchgear · WIRE circuits · HVAC heating and cooling · H2O pipes · FIRE sprinklers · LIFT elevators · AIR air quality · PWR batteries · CYB control-system security.',
+        '! The 39K fires and $1.85B still need a traceable source. USFA\'s 2023 figure is 23,700 residential electrical fires and over $1.5B in damage.',
+      ]},
+    { title: 'What we heard and found', window: '0:25 – 0:55',
+      say: [
+        'We talked to **eleven** practitioners, engineers and architects. We heard three things.',
+        'Buildings get checked **once a year**, and problems grow in between. Every system has its **own tool**, so nobody sees the whole building. And the rules now want **proof**: the NFPA 70B electrical-maintenance standard, and Florida\'s milestone inspection law.',
+        'Smart buildings are a **121-billion-dollar** market growing 9% a year, yet each big player watches only its own slice.',
+      ],
+      explain: [
+        '**NFPA 70B**: the US standard for maintaining electrical equipment. Since the 2023 edition it is mandatory, so buildings need a documented maintenance program they can show to inspectors and insurers.',
+        '**Florida milestone law**: passed after the 2021 Surfside condo collapse. Older condo buildings of 3+ storeys need structural inspections, repeated every 10 years.',
+        '**TAM, $121.6B**: the global smart-building market (MarketsandMarkets 2026, +9%/yr to 2032). **SAM, $7.1B/yr**: about 5.9M US commercial buildings × about 10% automated × $12k/yr. **SOM, $36M**: about 3,000 buildings × $12k.',
+        '**Competitors**: JCI, Siemens and Honeywell sell control systems tied to their own equipment. BrainBox AI (now Trane) does HVAC energy AI. Eaton does electrical gear. Ting is a home fire-risk plug. None sees the whole building.',
+        '! Only quote a customer if the quote is real. The slide still has a placeholder.',
+      ]},
+    { title: 'Agents sense, one brain acts', window: '0:55 – 1:40',
+      say: [
+        'So this weekend we built it. **Agents sense. One brain acts.** Each agent is a specialist for one system.',
+        "Agent zero spots **cracks** in photos. Agent one checks **concrete health** and the building's control data. Agent two watches **batteries** wear out, and it warned about failing cells more than **30 charge cycles** early. Agent three catches **chiller** faults, and it names the right fault **97%** of the time.",
+        "They report to **one brain**, which ranks every problem by **risk, severity and urgency**. When something turns critical, it acts: slow a battery's charging, switch to a backup chiller, page the team.",
+        'The data is **real**, replayed live. The building and the actions are **simulated**.',
+      ],
+      explain: [
+        '**Agent**: a small program that watches one data source and outputs a **risk score from 0 to 1**, with its evidence.',
+        '**A0 cracks**: classic image processing, 92.9% accurate on 1,600 test photos. Those are lab concrete, not real walls yet.',
+        '**A1 concrete + BMS**: **UPV** sends a sound pulse through concrete, and slower means weaker (like knocking on a melon). It caught 10 of 10 weak readings, and it found a real AC failure in a Bangkok office\'s 2018 data.',
+        '**A2 batteries**: NASA data from batteries worn out in a lab. It flagged 3 of 3 failing cells 32–43 cycles early. They never caught fire, so it spots **warning signs, not fires**.',
+        '**A3 chiller**: ASHRAE (the heating and cooling engineers\' society) test data with injected faults. 1.5% false alarms, 96.9% right fault, and it caught 20 of 28 faulty runs. It misses the mildest leaks.',
+        '**Ranking** = risk (how likely) × consequence (how bad; the weights are our assumptions) × time (open problems escalate).',
+        '! The actions are dashboard log entries only. No real building is connected yet.',
+      ]},
+    { title: 'One brain for the whole building', window: '1:40 – 2:05',
+      say: [
+        'Why does this matter? Today, building-control software sees heating, cooling and power. Drones see the facade. Electrical tools see the wiring. The yearly inspection sees everything, but only **once a year**.',
+        'Cerebro gives one **ranked to-do list**, catches problems **early**, and keeps an **audit-ready** record. Every new system is just **one more agent**.',
+      ],
+      explain: [
+        '**Grid**: rows are tool types and columns are building systems. Solid = watches all the time, half = partly or once a year, empty = blind.',
+        '**The Cerebro row** is where the platform is going, not what is built today. Today there are 4 agents: cracks, concrete, batteries and the chiller.',
+        'If asked: "Every extra system is one more agent plugged into the same brain. We don\'t have to rebuild anything."',
+        '**Audit-ready**: every alert and action is saved with its time and evidence. That is the proof NFPA 70B and insurers ask for.',
+        '! Don\'t say "tamper-proof", and don\'t say it watches all 11 systems today.',
+      ]},
+    { title: 'Business model', window: '2:05 – 2:30',
+      say: [
+        'Our hypothesis is a subscription at about **a thousand dollars per building per month**, a price we still need to test. A hundred buildings means **1.2 million dollars** a year in recurring revenue.',
+        'Owners, REITs and facility-management firms pay for **fewer emergency repairs** and **one team covering more buildings**. We reach our first hundred through **five pilot partners**, then building-automation installers, Florida inspection firms and insurers.',
+      ],
+      explain: [
+        '**ARR** (annual recurring revenue): $1,000 × 12 months × 100 buildings = $1.2M.',
+        '**REIT**: a listed company that owns many buildings. **FM firm**: paid to run buildings for owners.',
+        '**BMS integrators**: they install and service building controls, and they already have the data and the customer. We share revenue with them.',
+        '**Florida inspection firms**: they do the required milestone inspections. Cerebro gives them data between visits. **Insurers**: fewer fire and water claims, so they may offer premium discounts.',
+        '! The slide says "100 customers" but the price is per building. If asked, say "100 buildings".',
+      ]},
+    { title: "What we'd validate next", window: '2:30 – 2:50',
+      say: [
+        'Next is a **30-day pilot** on one real building, a price test with ten facility managers, and civil engineers checking our crack model.',
+        'We know the open questions: data access, real-world accuracy and liability.',
+        'This weekend we built the brain. [pause] Now we want to put it in a **real building**.',
+        "We're NOVI-INFRA. **Thank you.**",
+      ],
+      explain: [
+        '**Pilot**: connect to one real building for 30 days, then compare what Cerebro catches with what the facility team already knew.',
+        '**Plumbing and fire agents** are next. Plumbing has no public dataset, so it needs a partner building\'s data.',
+        '**Data access**: will owners share their data? **Accuracy**: measured on public test data only. **Liability**: who is responsible for a miss or a wrong action? **Sales cycles**: real estate buys slowly.',
+        'Q: "Tested on a real building?" Not yet. That is the pilot. Q: "Does it predict fires?" No, it spots warning signs early. Q: "Setup time or cost?" Unknown, and the pilot will measure it. Don\'t guess.',
+      ]},
+  ];
+
+  const LIMIT = 180; // seconds
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const fmt = s => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\[pause\]/g, '<span class="pause">[pause]</span>');
+  const li = s => s.startsWith('! ') ? `<li class="warn">${fmt(s.slice(2))}</li>` : `<li>${fmt(s)}</li>`;
+
+  // Build slides
+  const deck = document.getElementById('deck');
+  SLIDES.forEach((s, i) => {
+    const sec = document.createElement('section');
+    sec.className = 'slide' + (i === 0 ? ' active' : '');
+    sec.innerHTML =
+      `<img src="slides/slide${i + 1}.png" alt="Slide ${i + 1}: ${esc(s.title)}" />` +
+      `<div class="notes">` +
+        `<div class="panel script"><div class="panel-head"><span>${i + 1} · ${esc(s.title)}</span>` +
+        `<span class="window">${s.window}</span></div>${s.say.map(l => `<p>${fmt(l)}</p>`).join('')}</div>` +
+        `<div class="panel explain"><div class="panel-head"><span>Explain it simply</span></div>` +
+        `<ul>${s.explain.map(li).join('')}</ul></div>` +
+      `</div>`;
+    deck.appendChild(sec);
+  });
+
+  const slides = document.querySelectorAll('.slide');
+  const total  = slides.length;
+  let cur = 0;
+
+  // Build dots
+  const dotsEl = document.getElementById('dots');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.addEventListener('click', e => { e.stopPropagation(); go(i); });
+    dotsEl.appendChild(d);
+  });
+  document.getElementById('counter').textContent = `1 / ${total}`;
+
+  // Stopwatch: starts on the first forward move or on T
+  const timerEl = document.getElementById('timer');
+  let started = null, elapsed = 0, tick = null;
+  const secs = () => elapsed + (started ? (Date.now() - started) / 1000 : 0);
+  function paint() {
+    const t = Math.floor(secs());
+    timerEl.innerHTML = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} <span class="target">/ 3:00</span>`;
+    timerEl.classList.toggle('warn', t >= LIMIT - 15 && t < LIMIT);
+    timerEl.classList.toggle('over', t >= LIMIT);
+  }
+  function start() { if (!started) { started = Date.now(); tick = setInterval(paint, 250); } }
+  function stop()  { if (started) { elapsed = secs(); started = null; clearInterval(tick); paint(); } }
+  function reset() { stop(); elapsed = 0; paint(); }
+
+  function go(n) {
+    n = ((n % total) + total) % total;
+    if (n === cur) return;
+    if (n > cur) start();
+    const prev = cur;
+    slides[prev].classList.remove('active');
+    slides[prev].classList.add('exit');
+    setTimeout(() => slides[prev].classList.remove('exit'), 500);
+    cur = n;
+    slides[cur].classList.add('active');
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i === cur));
+    document.getElementById('counter').textContent = `${cur + 1} / ${total}`;
+  }
+
+  document.getElementById('next').addEventListener('click', e => { e.stopPropagation(); go(cur + 1); });
+  document.getElementById('prev').addEventListener('click', e => { e.stopPropagation(); go(cur - 1); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('notes-off');
+    if (e.key === 'e' || e.key === 'E') document.body.classList.toggle('explain-on');
+    if (e.key === 't' || e.key === 'T') (started ? stop : start)();
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  // Click the slide image to advance (clicks inside the notes don't advance)
+  deck.addEventListener('click', e => {
+    if (!e.target.closest('.notes')) go(cur + 1);
+  });
+</script>
+</body>
+</html>

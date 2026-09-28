@@ -1,0 +1,51 @@
+Pavilion Cerebro, 3-minute pitch script (NOVI-INFRA)
+
+Target: under 3 minutes. (pause) means take one breath.
+
+
+SLIDE 1: The problem (about 30 seconds)
+
+Picture the hottest day of summer. An office tower's air conditioning dies, and the facility manager's phone lights up. The rooftop chiller had been drifting for weeks, but its last check was eleven months ago.
+
+Electrical faults alone start about thirty-nine thousand US fires a year, and only one commercial building in ten has any automated monitoring.
+
+We're NOVI-INFRA, and we built Pavilion Cerebro for facility managers, owners, condo boards and hospitals.
+
+
+SLIDE 2: What we heard (about 25 seconds)
+
+We talked to eleven engineers and architects, and heard three things. Buildings get checked about once a year, and problems grow in between. Every system has its own tool, so nobody sees the whole building. And the rules now want proof, like NFPA 70B and Florida's milestone law.
+
+It's a hundred-and-twenty-billion-dollar market, but the big players each watch their own slice.
+
+
+SLIDE 3: What we built (about 45 seconds)
+
+This weekend we built a team of AI specialists with one manager. Four agents are running. One spots cracks in photos. One checks concrete and building data, and caught a real air-conditioning failure in an office's 2018 records. One flagged every failing battery cell in NASA's test data about thirty cycles early. And one diagnoses chiller faults correctly ninety-seven percent of the time.
+
+The manager ranks problems by how likely, how bad and how soon. When something's critical, it slows a battery's charging, switches chillers or pages the team.
+
+The data is real, but the building and the actions are simulated.
+
+
+SLIDE 4: Why it's different (about 20 seconds)
+
+Today, control systems see heating and power, drones see the facade, and the yearly inspection sees everything, once a year.
+
+Cerebro gives one ranked list, catches problems early, and keeps a record you can hand an inspector or insurer. Each new system is one more agent.
+
+
+SLIDE 5: How we make money (about 30 seconds)
+
+It's a subscription per building, about a thousand dollars a month, a price we still need to test. A hundred buildings is one point two million a year. Owners and facility management firms pay for fewer emergency repairs and one team covering more buildings.
+
+For our first hundred customers, we start with five design partners. We reach twenty-five through building-automation installers, sixty through Florida inspection firms and a hundred through insurers, each on a revenue share.
+
+
+SLIDE 6: What's next (about 25 seconds)
+
+Next is a thirty-day pilot on one real building, a price test with ten facility managers, and civil engineers checking our crack model. The hard parts are data access, real-world accuracy and liability.
+
+We built the crack engine and the agent brain side by side, then plugged them together. (pause) Now we want to see it in a real building.
+
+We're NOVI-INFRA. Thank you.
